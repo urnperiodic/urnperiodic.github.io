@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { games as gamesData } from './data/games';
+import { games as gamesData } from './games';
 import { 
   School, 
   Search, 
@@ -13,7 +13,7 @@ import {
   Heart, 
   ShieldAlert, 
   Gamepad2, 
-  Users, 
+  Users, a
   Layers,
   Sparkles,
   ArrowLeft,
