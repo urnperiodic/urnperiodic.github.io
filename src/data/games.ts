@@ -12,8 +12,8 @@ export const games: Game[] = [
   },
   {
     id: 'game-111',
-    title: 'Chatgpt',
-    description: 'CAN ADD IMAGES. Wait for a minute if you do not get a response. MUTIPLE AIS, INCLUDING CHATGPT.',
+    title: 'Chatgpt (GROQ API)',
+    description: 'Go to the doc and get a API or swap your model if it says max token limit reached. ',
     url: 'https://tharaniidaran-t.github.io/GroqAi/',
     thumbnail: 'https://www.internetmatters.org/wp-content/uploads/2025/06/Chat-GPT-logo.webp',
     category: 'AI'
@@ -21,7 +21,7 @@ export const games: Game[] = [
   {
     id: 'game-2',
     title: 'Gemini',
-    description: 'CAN ADD IMAGES. Wait for a minute if you do not get a response.',
+    description: 'CAN ADD IMAGES. Wait for a minute if you do not get a response. USE CHATGPT IF THIS SAYS "NO RESPONSE." Its also just better.',
     url: 'https://extrastuffforwebsite.vercel.app/',
     thumbnail: 'https://sm.pcmag.com/pcmag_me/review/g/google-gem/google-gemini_yr4d.jpg',
     category: 'AI'
