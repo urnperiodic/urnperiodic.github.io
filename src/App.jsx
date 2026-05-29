@@ -754,7 +754,7 @@ export default function App() {
                             className="w-full mt-3 border border-[var(--accent-color)] hover:bg-[var(--accent-color)] hover:text-black hover:font-bold hover:shadow-[0_0_12px_calc(var(--accent-color))] text-[11px] font-semibold tracking-wider text-[var(--accent-color)] py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all duration-200 self-end"
                           >
                             <Play className="w-3 h-3 fill-current" />
-                            <span>LAUNCH PROGRAM</span>
+                            <span>Open Article</span>
                           </button>
                         </div>
                       </div>
