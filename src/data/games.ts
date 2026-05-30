@@ -243,14 +243,6 @@ export const games: Game[] = [
     thumbnail: 'https://i.ytimg.com/vi/H96rM_liOHo/maxresdefault.jpg',
     category: 'solo'
   },
-   {
-    id: 'game-56',
-    title: 'Pokemon SoulSilver',
-    description: 'yeah',
-    url: '/clpokesoulsilver.html',
-    thumbnail: 'https://www.nintendo.com/eu/media/images/10_share_images/games_15/nintendo_ds_22/SI_NDS_PokemonSoulSilver_enGB_image1600w.jpg',
-    category: 'solo'
-  },
   // ── MULTIPLAYER ──
   {
     id: 'game-17',
