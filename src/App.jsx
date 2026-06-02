@@ -855,33 +855,59 @@ export default function App() {
                   </button>
                   {/* Open in New Tab Button */}
                   <button
-                      onClick={() => {
-                        const win = window.open("", "_blank");
-                    
-                        if (!win) {
-                          alert("Popup blocked. Allow popups for this site.");
-                          return;
-                        }
-                    
-                        win.document.body.style.margin = "0";
-                    
-                        const iframe = win.document.createElement("iframe");
-                        iframe.src = selectedGame.url;
-                        iframe.allow = "fullscreen";
-                        iframe.style.width = "100vw";
-                        iframe.style.height = "100vh";
-                        iframe.style.border = "none";
-                    
-                        win.document.body.appendChild(iframe);
-                      }}
-                      className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-3 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
-                      title="Open Game in New Tab"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline text-[10px] font-bold">
-                        OPEN IN NEW TAB
-                      </span>
-                    </button>
+                    onClick={() => {
+                      const win = window.open("about:blank", "_blank");
+                  
+                      if (!win) {
+                        alert("Popup blocked. Allow popups for this site.");
+                        return;
+                      }
+                  
+                      win.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                          <title>Home - Classroom</title>
+                          <link rel="icon" type="image/png" href="https://ssl.gstatic.com/classroom/favicon.png">
+                          <meta charset="utf-8">
+                          <style>
+                            html, body {
+                              margin: 0;
+                              padding: 0;
+                              width: 100%;
+                              height: 100%;
+                              overflow: hidden;
+                              background: #ffffff;
+                            }
+                  
+                            iframe {
+                              width: 100vw;
+                              height: 100vh;
+                              border: none;
+                              display: block;
+                            }
+                          </style>
+                        </head>
+                        <body>
+                          <iframe
+                            src="${selectedGame.url}"
+                            allow="fullscreen"
+                            referrerpolicy="no-referrer"
+                          ></iframe>
+                        </body>
+                        </html>
+                      `);
+                  
+                      win.document.close();
+                    }}
+                    className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-3 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
+                    title="Open Game in New Tab"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline text-[10px] font-bold">
+                      OPEN IN NEW TAB
+                    </span>
+                  </button>
 
                 </div>
 
