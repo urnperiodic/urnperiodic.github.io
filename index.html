@@ -8,6 +8,594 @@
   <body>
     <div id="root"></div>
     <script type="module" src="./src/main.jsx"></script>
+    <!--
+  ╔══════════════════════════════════════════════════════╗
+  ║  PORTAL CHAT WIDGET — paste before </body>           ║
+  ║  Works on any page of your site.                     ║
+  ╚══════════════════════════════════════════════════════╝
+-->
+
+<!-- Google Fonts (only needed if not already on the page) -->
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+
+<style>
+  /* ── Widget Shell ── */
+  #pcw-root {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 9999;
+    font-family: 'DM Sans', sans-serif;
+    --accent: #00e5b0;
+    --bg: #0e0e18;
+    --surface: #16162a;
+    --surface2: #1e1e32;
+    --border: rgba(255,255,255,0.08);
+    --text: #f0ede8;
+    --muted: #6b6b7e;
+    --red: #ef5050;
+  }
+
+  /* ── Toggle Button ── */
+  #pcw-toggle {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 24px rgba(0,229,176,0.35);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    margin-right: auto;
+  }
+  #pcw-toggle:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 32px rgba(0,229,176,0.45);
+  }
+  #pcw-toggle svg { width: 22px; height: 22px; fill: #0a0a0f; transition: opacity 0.15s; }
+  #pcw-toggle .ico-chat { position: absolute; }
+  #pcw-toggle .ico-close { position: absolute; opacity: 0; }
+  #pcw-root.open #pcw-toggle .ico-chat  { opacity: 0; }
+  #pcw-root.open #pcw-toggle .ico-close { opacity: 1; }
+
+  /* Unread badge */
+  #pcw-badge {
+    position: absolute;
+    top: -3px; right: -3px;
+    background: var(--red);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid #0a0a0f;
+    opacity: 0;
+    transform: scale(0);
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  #pcw-badge.show { opacity: 1; transform: scale(1); }
+
+  /* ── Panel ── */
+  #pcw-panel {
+    width: 320px;
+    height: 420px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,229,176,0.06);
+    margin-bottom: 12px;
+    transform-origin: bottom left;
+    transform: scale(0.85) translateY(12px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.22s cubic-bezier(0.34,1.4,0.64,1), opacity 0.18s ease;
+  }
+  #pcw-root.open #pcw-panel {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* Panel header */
+  #pcw-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(14,14,24,0.95);
+    flex-shrink: 0;
+  }
+  .pcw-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pcw-blink 2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pcw-blink {
+    0%,100%{ opacity:1; } 50%{ opacity:0.25; }
+  }
+  #pcw-header-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--text);
+    flex: 1;
+    letter-spacing: -0.01em;
+  }
+  #pcw-header-title span { color: var(--accent); }
+  #pcw-status {
+    font-size: 0.68rem;
+    color: var(--muted);
+  }
+
+  /* Messages area */
+  #pcw-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scroll-behavior: smooth;
+  }
+  #pcw-messages::-webkit-scrollbar { width: 3px; }
+  #pcw-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .pcw-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 6px;
+    color: var(--muted);
+    padding: 30px 0;
+    font-size: 0.8rem;
+    opacity: 0.7;
+  }
+  .pcw-empty-icon { font-size: 1.8rem; }
+
+  .pcw-msg-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    animation: pcw-rise 0.2s ease both;
+  }
+  @keyframes pcw-rise {
+    from { opacity:0; transform:translateY(6px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .pcw-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 0 3px;
+  }
+  .pcw-author {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .pcw-time {
+    font-size: 0.62rem;
+    color: var(--muted);
+  }
+  .pcw-bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px 12px 12px 12px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    max-width: 88%;
+    color: var(--text);
+    word-break: break-word;
+  }
+
+  .pcw-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 2px 0;
+  }
+  .pcw-divider::before,.pcw-divider::after {
+    content:''; flex:1; height:1px; background:var(--border);
+  }
+  .pcw-divider span {
+    font-size: 0.62rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* Input area */
+  #pcw-input-area {
+    border-top: 1px solid var(--border);
+    padding: 8px;
+    background: rgba(14,14,24,0.95);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  #pcw-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 4px;
+  }
+  .pcw-name-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  #pcw-name {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.75rem;
+    padding: 1px 4px;
+    outline: none;
+    width: 110px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  #pcw-name:focus { border-bottom-color: var(--accent); }
+
+  /* Pulse glow on name when locked and needs attention */
+  #pcw-name.needs-name {
+    border-bottom-color: var(--accent);
+    animation: pcw-name-pulse 1.4s ease-in-out 2;
+  }
+  @keyframes pcw-name-pulse {
+    0%,100% { box-shadow: none; }
+    50%      { box-shadow: 0 2px 10px rgba(0,229,176,0.4); }
+  }
+
+  /* Hint shown when no name is set */
+  #pcw-name-hint {
+    font-size: 0.67rem;
+    color: var(--accent);
+    opacity: 0.75;
+    padding: 0 4px;
+    display: none;
+    align-items: center;
+    gap: 4px;
+    letter-spacing: 0.01em;
+  }
+  #pcw-name-hint.visible { display: flex; }
+
+  #pcw-compose {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px 4px 4px 12px;
+    transition: border-color 0.2s, opacity 0.2s;
+  }
+  #pcw-compose:focus-within:not(.locked) { border-color: rgba(0,229,176,0.3); }
+
+  /* Locked state — greyed out, not interactive */
+  #pcw-compose.locked {
+    opacity: 0.38;
+    cursor: not-allowed;
+  }
+  #pcw-compose.locked #pcw-text,
+  #pcw-compose.locked #pcw-send {
+    pointer-events: none;
+  }
+
+  /* Shake when user tries to click locked compose */
+  @keyframes pcw-shake {
+    0%,100% { transform: translateX(0); }
+    20%     { transform: translateX(-5px); }
+    40%     { transform: translateX(5px); }
+    60%     { transform: translateX(-4px); }
+    80%     { transform: translateX(3px); }
+  }
+  #pcw-compose.shake { animation: pcw-shake 0.35s ease; }
+
+  #pcw-text {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    outline: none;
+    padding: 5px 0;
+  }
+  #pcw-text::placeholder { color: var(--muted); }
+  #pcw-send {
+    background: var(--accent);
+    border: none;
+    border-radius: 7px;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.15s, opacity 0.15s;
+  }
+  #pcw-send:hover { transform: scale(1.08); }
+  #pcw-send:active { transform: scale(0.93); }
+  #pcw-send svg { width: 14px; height: 14px; fill: #0a0a0f; }
+
+  /* Blocked toast */
+  #pcw-toast {
+    position: absolute;
+    bottom: 78px;
+    left: 0;
+    background: #1e0f0f;
+    border: 1px solid rgba(239,80,80,0.3);
+    color: #ef5050;
+    font-size: 0.74rem;
+    padding: 6px 14px;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(4px);
+    transition: opacity 0.2s, transform 0.2s;
+    white-space: nowrap;
+  }
+  #pcw-toast.show { opacity: 1; transform: translateY(0); }
+</style>
+
+<!-- Widget HTML -->
+<div id="pcw-root">
+  <div id="pcw-panel">
+    <div id="pcw-header">
+      <div class="pcw-dot"></div>
+      <div id="pcw-header-title">Portal <span>Chat</span></div>
+      <div id="pcw-status">live</div>
+    </div>
+
+    <div id="pcw-messages">
+      <div class="pcw-empty" id="pcw-empty">
+        <div class="pcw-empty-icon">💬</div>
+        <span>No messages yet!</span>
+      </div>
+    </div>
+
+    <div id="pcw-input-area">
+      <div id="pcw-name-row">
+        <span class="pcw-name-label">as</span>
+        <input id="pcw-name" type="text" placeholder="your name" maxlength="24" autocomplete="off"/>
+      </div>
+      <div id="pcw-name-hint">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        enter a name to start chatting
+      </div>
+      <div id="pcw-compose">
+        <input id="pcw-text" type="text" placeholder="say something…" maxlength="300" autocomplete="off"/>
+        <button id="pcw-send" aria-label="Send">
+          <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <button id="pcw-toggle" aria-label="Toggle chat">
+    <span id="pcw-badge"></span>
+    <!-- Chat icon -->
+    <svg class="ico-chat" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <!-- Close icon -->
+    <svg class="ico-close" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+  </button>
+
+  <div id="pcw-toast">That word is blocked.</div>
+</div>
+
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+  import {
+    getDatabase, ref, push, onChildAdded, query, limitToLast
+  } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA_qbIeZ5rwP-8J5cMUYVlmtGdpwU7fr7Y",
+    authDomain: "chat-f9251.firebaseapp.com",
+    databaseURL: "https://chat-f9251-default-rtdb.firebaseio.com",
+    projectId: "chat-f9251",
+    storageBucket: "chat-f9251.firebasestorage.app",
+    messagingSenderId: "143049478376",
+    appId: "1:143049478376:web:10dd8fe116c3b9e473b95d",
+    measurementId: "G-57D0W1FZ87"
+  };
+
+  // Avoid double-init if Firebase already loaded on page
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const msgsRef = ref(db, 'messages');
+
+  // ── Elements ──
+  const root      = document.getElementById('pcw-root');
+  const toggle    = document.getElementById('pcw-toggle');
+  const badge     = document.getElementById('pcw-badge');
+  const msgsEl    = document.getElementById('pcw-messages');
+  const emptyEl   = document.getElementById('pcw-empty');
+  const nameInput = document.getElementById('pcw-name');
+  const nameHint  = document.getElementById('pcw-name-hint');
+  const compose   = document.getElementById('pcw-compose');
+  const textInput = document.getElementById('pcw-text');
+  const sendBtn   = document.getElementById('pcw-send');
+  const toast     = document.getElementById('pcw-toast');
+
+  // ── State ──
+  let isOpen = false;
+  let unread = 0;
+  let lastDate = null;
+  let toastTimer = null;
+  let isFirstLoad = true;
+
+  // ── Name gate ──
+  function hasName() { return nameInput.value.trim().length > 0; }
+
+  function updateLock() {
+    const locked = !hasName();
+    compose.classList.toggle('locked', locked);
+    nameHint.classList.toggle('visible', locked);
+    textInput.disabled = locked;
+  }
+
+  // Restore saved name and set initial lock state
+  const savedName = localStorage.getItem('chat_name');
+  if (savedName) nameInput.value = savedName;
+  updateLock();
+
+  // Re-evaluate lock whenever name changes
+  nameInput.addEventListener('input', updateLock);
+
+  // Focus name input on Enter in name field if compose is locked
+  nameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && hasName()) { textInput.focus(); }
+  });
+
+  // Shake + nudge when clicking the locked compose area
+  compose.addEventListener('click', () => {
+    if (!hasName()) {
+      compose.classList.remove('shake');
+      void compose.offsetWidth; // reflow to restart animation
+      compose.classList.add('shake');
+      compose.addEventListener('animationend', () => compose.classList.remove('shake'), { once: true });
+
+      // Pulse the name input so they know where to look
+      nameInput.classList.remove('needs-name');
+      void nameInput.offsetWidth;
+      nameInput.classList.add('needs-name');
+      nameInput.addEventListener('animationend', () => nameInput.classList.remove('needs-name'), { once: true });
+      nameInput.focus();
+    }
+  });
+
+  // ── Blocked words ──
+  const BLOCKED = [
+    'fuck','shit','ass','bitch','bastard','crap','piss','dick','cock',
+    'pussy','cunt','whore','slut','fag','nigga','nigger','kike','spic',
+    'wetback','cracker','dyke','tranny','rape','molest','pedo','kill yourself',
+  ];
+  const isBlocked = t => BLOCKED.some(w => t.toLowerCase().includes(w));
+
+  // ── Toggle open/close ──
+  toggle.addEventListener('click', () => {
+    isOpen = !isOpen;
+    root.classList.toggle('open', isOpen);
+    if (isOpen) {
+      unread = 0;
+      badge.textContent = '';
+      badge.classList.remove('show');
+      setTimeout(() => {
+        msgsEl.scrollTop = msgsEl.scrollHeight;
+        // Focus name if not set, otherwise focus message input
+        hasName() ? textInput.focus() : nameInput.focus();
+      }, 50);
+    }
+  });
+
+  // ── Helpers ──
+  function ftime(ts) {
+    return new Date(ts).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+  }
+  function fdate(ts) {
+    const d = new Date(ts), t = new Date();
+    if (d.toDateString() === t.toDateString()) return 'today';
+    const y = new Date(t); y.setDate(t.getDate()-1);
+    if (d.toDateString() === y.toDateString()) return 'yesterday';
+    return d.toLocaleDateString([], { month:'short', day:'numeric' });
+  }
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function hue(name) {
+    let h = 0;
+    for (let i=0; i<name.length; i++) h = (h*31 + name.charCodeAt(i)) & 0xffff;
+    return [160,180,200,260,290,320,340][h % 7];
+  }
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+
+  // ── Render message ──
+  function addMessage({ name, text, timestamp }) {
+    if (emptyEl && emptyEl.parentNode) emptyEl.remove();
+
+    const ts = timestamp || Date.now();
+    const ds = fdate(ts);
+    if (ds !== lastDate) {
+      lastDate = ds;
+      const d = document.createElement('div');
+      d.className = 'pcw-divider';
+      d.innerHTML = `<span>${ds}</span>`;
+      msgsEl.appendChild(d);
+    }
+
+    const row = document.createElement('div');
+    row.className = 'pcw-msg-row';
+    row.innerHTML = `
+      <div class="pcw-meta">
+        <span class="pcw-author" style="color:hsl(${hue(name||'anon')},70%,65%)">${esc(name||'anonymous')}</span>
+        <span class="pcw-time">${ftime(ts)}</span>
+      </div>
+      <div class="pcw-bubble">${esc(text)}</div>
+    `;
+    msgsEl.appendChild(row);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+
+    // Badge if closed and not the initial load batch
+    if (!isOpen && !isFirstLoad) {
+      unread++;
+      badge.textContent = unread > 9 ? '9+' : unread;
+      badge.classList.add('show');
+    }
+  }
+
+  // Load last 60 messages
+  const recent = query(msgsRef, limitToLast(60));
+  let loadCount = 0;
+  onChildAdded(recent, snap => {
+    addMessage(snap.val());
+    loadCount++;
+    // After a short delay, mark initial load done
+    clearTimeout(window._pcwInitTimer);
+    window._pcwInitTimer = setTimeout(() => { isFirstLoad = false; }, 800);
+  });
+
+  // ── Send ──
+  function send() {
+    const name = nameInput.value.trim() || 'anonymous';
+    const text = textInput.value.trim();
+    if (!text) return;
+    if (isBlocked(text)) { showToast('That word is blocked.'); return; }
+
+    localStorage.setItem('chat_name', name);
+    push(msgsRef, { name, text, timestamp: Date.now() });
+    textInput.value = '';
+    textInput.focus();
+  }
+
+  sendBtn.addEventListener('click', send);
+  textInput.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+</script>
   </body>
 </html>
 
