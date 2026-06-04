@@ -419,5 +419,13 @@ export const games: Game[] = [
     url: 'clyanderesimulator.html',
     thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEJtZ7Fkd1QUQOtTNVBsHB2992ICRvmqHIGHUBOIZAqC1BAfat7lwcuqq-CKaq9uhCF21i&s=10',
     category: 'Solo'
+  },
+  {
+    id: 'game-112',
+    title: 'Uno',
+    description: '...',
+    url: 'cluno.html',
+    thumbnail: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/UNO_Logo.svg/1280px-UNO_Logo.svg.png',
+    category: 'Solo'
   }
 ];
