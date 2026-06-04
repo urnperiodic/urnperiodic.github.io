@@ -406,10 +406,10 @@ export const games: Game[] = [
   },
   {
     id: 'game-112',
-    title: 't',
+    title: 'Block Blast',
     description: '',
-    url: 'Acelawyer.html',
-    thumbnail: 'https://static.wikia.nocookie.net/gartic-phone/images/8/87/Garticphone.png/revision/latest/scale-to-width-down/250?cb=20230104102856',
+    url: 'clblockblastv2.html',
+    thumbnail: 'https://play-lh.googleusercontent.com/R0qgNDYYHbRhw6JFsdEbDMqONplEvJx0m0W9wzYVvY3eNF1c2rfBWYjQxW0sLEzFe1E=w240-h480-rw',
     category: 'Solo'
   }
 ];
