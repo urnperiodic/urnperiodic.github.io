@@ -220,6 +220,13 @@ export const games: Game[] = [
     thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuOhDpOLhmmSUkCuI-aDpmhwF7iygOrqUqeg&s',
     category: 'solo'
   },
+  {
+    title: 'Pokemon SoulSilver',
+    description: 'yeah',
+    url: '/clpokesoulsilver.html',
+    thumbnail: 'https://media.gamestop.com/i/gamestop/10077723/Pokemon-SoulSilver-Game-Only---Nintendo-DS?w=768&h=768&fmt=auto',
+    category: 'solo'
+  },
    {
     title: 'Tomodachi Collection',
     description: 'yeah',
