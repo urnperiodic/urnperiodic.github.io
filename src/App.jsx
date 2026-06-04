@@ -30,7 +30,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Lock,
-  Unlock
+  Unlock,
+  LogOut
 } from 'lucide-react';
 
 // Safe storage helper to prevent SecurityError crash in sandboxed iframes
@@ -743,7 +744,7 @@ export default function App() {
       <nav className="border-b border-[var(--card-border)] bg-[var(--header-bg)] py-3.5 px-4 md:px-6 flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors duration-300 sticky top-0 z-50 shadow-sm">
         
         {/* Left Side: Decoy Classroom Title */}
-        <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between">
+        <div className="flex items-center gap-4 self-stretch sm:self-auto justify-between w-full sm:w-auto">
           <div 
             onClick={() => { setFilter('all'); setSelectedGame(null); setSearchQuery(''); }}
             className="flex items-center gap-2.5 cursor-pointer select-none group"
@@ -756,6 +757,20 @@ export default function App() {
               <span className="text-xl font-bold tracking-tight text-[var(--text-primary)] block group-hover:text-[var(--accent-color)] transition-colors">Classroom</span>
             </div>
           </div>
+
+          {/* Sign Out Button right after Classroom */}
+          <button
+            onClick={() => {
+              setIsPasscodeUnlocked(false);
+              setPasscode('');
+              safeStorage.setItem('classroom-passcode-unlocked', 'false');
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-semibold bg-[var(--bg-secondary)] border border-[var(--card-border)] hover:border-red-500/50 hover:bg-red-500/10 text-[var(--text-primary)] hover:text-red-500 transition-all duration-200 cursor-pointer shadow-sm group"
+            title="Sign Out to Lock Screen"
+          >
+            <LogOut className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+            <span>Sign Out</span>
+          </button>
         </div>
 
         {/* Middle Search Bar */}
