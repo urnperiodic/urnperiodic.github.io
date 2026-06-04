@@ -12,6 +12,14 @@ export const games: Game[] = [
   },
   {
     id: 'game-1',
+    title: 'The Final Earth 2',
+    description: 'I love this game bro. Actually best game out there, please try atleast once!',
+    url: 'clfinalearth2.html',
+    thumbnail: 'https://i.ytimg.com/vi/9lZ9dCxejp0/hqdefault.jpg',
+    category: 'BEST GAME OUT THERE'
+  },
+  {
+    id: 'game-1',
     title: 'Shader Pilot',
     description: 'Game that TTM made and It looks good Ig and cool ig. ',
     url: 'https://tharaniidaran-t.github.io/shader-piolet/',
