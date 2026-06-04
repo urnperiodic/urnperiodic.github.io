@@ -63,7 +63,7 @@ export const games: Game[] = [
     title: '2048',
     description: 'Girls.',
     url: 'https://ubg365.github.io/2048/play.html',
-    thumbnail: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/2048_logo.svg/1280px-2048_logo.svg.png',
+    thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSuxqLfXqm07uXPH0qyPu_6MofiU9nlUoq9w&s',
     category: 'Solo'
   },
   {
@@ -147,7 +147,7 @@ export const games: Game[] = [
     title: 'Tomb of the Mask',
     description: 'Fun to play',
     url: 'https://doraedu52.github.io/g26/class-438',
-    thumbnail: 'https://upload.wikimedia.org/wikipedia/commons/9/91/Tomb_of_the_Mask_promo_art.png',
+    thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNHRR0Dx3LhBe3OA0pHR0U_VuPagdWjz1pOg&s',
     category: 'solo' 
   },
   {
@@ -168,21 +168,21 @@ export const games: Game[] = [
     title: 'FIFA 11',
     description: 'yeah',
     url: '/clFIFA11.html',
-    thumbnail: 'https://upload.wikimedia.org/wikipedia/en/f/f5/Fifa11_Game_Cover.jpg',
+    thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQpOYk7hDNvaL46ncyl7PbEdtncc_EaXvXsCw&s',
     category: 'solo'
   },
   {
     title: 'Madden 2002',
     description: 'yeah',
     url: '/clmaddennfl2002.html',
-    thumbnail: 'https://upload.wikimedia.org/wikipedia/en/a/a0/Madden_NFL_2002_Coverart.png',
+    thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRNXrI6cQ7sBJyZenq-Ur4Cz3V8ZQHgWpFf4XEnWDQgkiSMjE37CiA0g7Ew7Lz1dp78kCcWRRIPo179hdLl4G8XJmFxmwSaZ2Gpt97hkw&s=10',
     category: 'solo'
   },
   {
     title: 'Call of Duty 4',
     description: 'yeah',
     url: '/clcod4.html',
-    thumbnail: 'https://upload.wikimedia.org/wikipedia/en/5/5f/Call_of_Duty_4_Modern_Warfare.jpg',
+    thumbnail: 'https://m.media-amazon.com/images/I/61bs4F5yOIL._AC_UF1000,1000_QL80_.jpg',
     category: 'solo'
   },
   {
