@@ -119,8 +119,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [passcode, isPasscodeUnlocked]);
 
-
-
   // Set LocalStorage theme and mode on change
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -133,6 +131,11 @@ export default function App() {
   useEffect(() => {
     safeStorage.setItem('unblocked-favorites', JSON.stringify(favorites));
   }, [favorites]);
+
+  // Hide/show chat widget based on lock state
+  useEffect(() => {
+    document.body.setAttribute('data-locked', isPasscodeUnlocked ? 'false' : 'true');
+  }, [isPasscodeUnlocked]);
 
   // List of Alt links configuration
   const altLinks = [
@@ -160,17 +163,14 @@ export default function App() {
       case 1: // Slope
         return (
           <div className="relative w-full h-full flex items-center justify-center">
-            {/* Grid background effect */}
             <div className="absolute inset-0 opacity-15 overflow-hidden">
               <div className="w-full h-full bg-[linear-gradient(to_bottom,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(to_right,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:16px_16px]" />
               <div className="absolute bottom-0 w-full h-1/2 bg-gradient-to-t from-emerald-500/30 to-transparent" />
             </div>
-            {/* Geometric rolling sphere illustration */}
             <div className="relative">
               <div className="absolute -inset-4 rounded-full bg-emerald-500/20 blur-md animate-pulse" />
               <div className="w-12 h-12 rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 border-2 border-white flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.5)] transform hover:rotate-45 transition-transform duration-500" />
             </div>
-            {/* Grid Line going down */}
             <div className="absolute bottom-3 w-1/2 h-[3px] bg-emerald-400/50 rounded transform rotate-12" />
           </div>
         );
@@ -357,12 +357,10 @@ export default function App() {
 
   // Filter games based on category sidebar, matching search query
   const filteredGames = gamesData.filter(game => {
-    // Left side filters
     if (filter === 'single' && !isSinglePlayerCategory(game.category)) return false;
     if (filter === 'multiplayer' && !isMultiplayerCategory(game.category)) return false;
     if (filter === 'favorites' && !favorites.includes(game.id)) return false;
 
-    // Search query filter
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
       const matchTitle = (game.title || '').toLowerCase().includes(q);
@@ -374,8 +372,6 @@ export default function App() {
     return true;
   });
 
-
-
   if (!isPasscodeUnlocked) {
     return (
       <div className="min-h-screen bg-[var(--bg-color)] text-[var(--text-primary)] flex flex-col items-center justify-center p-4 transition-colors duration-350 relative select-none">
@@ -383,7 +379,6 @@ export default function App() {
         {/* Floating Controls inside Lock Screen */}
         <div className="absolute top-4 right-4 flex items-center gap-3">
           
-          {/* Light/Dark Slider */}
           <div className="flex items-center gap-2 border border-[var(--card-border)] bg-[var(--bg-secondary)] py-1.5 px-2.5 rounded-full shadow-sm">
             <div 
               onClick={() => setMode(prev => prev === 'light' ? 'dark' : 'light')}
@@ -400,7 +395,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Theme custom capsule */}
           <div className="border border-[var(--card-border)] bg-[var(--bg-secondary)] px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm">
             <div className="flex items-center gap-1.5">
               {[
@@ -424,7 +418,7 @@ export default function App() {
 
         </div>
 
-        {/* Lock Card Content Container */}
+        {/* Lock Card */}
         <div className={`w-full max-w-sm bg-[var(--card-bg)] border border-[var(--card-border)] rounded-3xl p-6 md:p-8 shadow-2xl transition-all duration-300 flex flex-col items-center gap-6 ${isShake ? 'animate-shake' : ''}`}>
           
           <div className="text-center">
@@ -432,7 +426,6 @@ export default function App() {
             <p className="text-xs text-[var(--text-muted)] mt-1.5 leading-relaxed">This is a paid Science, Math, ELA, and Social Studies article website. Please enter a correct password to continue to the website.</p>
           </div>
 
-          {/* Indicators for passcode digits */}
           <div className="flex justify-center gap-4 py-2">
             {[0, 1, 2, 3].map((index) => {
               const isFilled = passcode.length > index;
@@ -449,7 +442,6 @@ export default function App() {
             })}
           </div>
 
-          {/* Secure Pad Grid */}
           <div className="grid grid-cols-3 gap-3.5 w-full max-w-[245px] mt-2">
             {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
               <button
@@ -493,10 +485,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col transition-colors duration-300">
-      {/* 🚀 CLASSROOM HEADER DECOY MOCKED SYSTEM */}
+      {/* HEADER */}
       <nav className="border-b border-[var(--card-border)] bg-[var(--header-bg)] py-3.5 px-4 md:px-6 flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors duration-300 sticky top-0 z-50 shadow-sm">
         
-        {/* Left Side: Decoy Classroom Title */}
         <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between">
           <div 
             onClick={() => { setFilter('all'); setSelectedGame(null); setSearchQuery(''); }}
@@ -512,7 +503,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Middle Search Bar with Clean Pill Input */}
         <div className="relative w-full max-w-sm sm:mx-4">
           <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[var(--text-muted)]">
             <Search className="h-4 w-4" />
@@ -526,23 +516,19 @@ export default function App() {
           />
         </div>
 
-        {/* Right Side Controls: Credit text, Light-Dark Mode Slider, & Dynamic Visual Theme Capsule */}
         <div className="flex items-center gap-3 md:gap-4 self-stretch sm:self-auto justify-between sm:justify-end flex-wrap sm:flex-nowrap">
           
-          {/* Credit Note as requested */}
           <div className="text-[11px] font-mono select-none opacity-80 pl-1">
             <span className="text-xs opacity-50 block sm:inline mr-1">made by</span>
             <span className="font-bold text-[var(--accent-color)] tracking-wider">™ AND GRANDDIA2</span>
           </div>
 
-          {/* 🌓 custom visual slider for dark-light mode transition */}
           <div className="flex items-center gap-2 border border-[var(--card-border)] bg-[var(--bg-secondary)] py-1 md:py-1.5 px-2.5 rounded-full shadow-sm">
             <div 
               onClick={() => setMode(prev => prev === 'light' ? 'dark' : 'light')}
               className="relative w-[50px] h-6 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 select-none transition-all duration-300"
               title="Slide to change Mode (Light / Dark)"
             >
-              {/* Sliding Indicator Ball */}
               <div 
                 className={`w-5 h-5 rounded-full bg-[var(--accent-color)] shadow-md transition-all duration-350 ease-out flex items-center justify-center text-[10px] transform ${
                   mode === 'dark' ? 'translate-x-6' : 'translate-x-0'
@@ -553,7 +539,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Theme custom capsule (excluding black and white) */}
           <div className="border border-[var(--card-border)] bg-[var(--bg-secondary)] px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm">
             <div className="flex items-center gap-1.5">
               {[
@@ -578,7 +563,7 @@ export default function App() {
 
       </nav>
 
-      {/* 📍 ALT LINKS BAR */}
+      {/* ALT LINKS BAR */}
       <section className="bg-[var(--bg-secondary)] border-b border-[var(--card-border)] py-3 px-4 md:px-6 transition-colors duration-300">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center gap-3">
           <div className="text-[10px] font-mono tracking-widest uppercase opacity-60 self-center">
@@ -600,12 +585,10 @@ export default function App() {
         </div>
       </section>
 
-
-
-      {/* MAIN CONTAINER: SIDEBAR + GAMES COMPONENT CONTAINER */}
+      {/* MAIN CONTAINER */}
       <div className="flex-1 flex flex-col md:flex-row max-w-8xl w-full mx-auto p-4 md:p-6 gap-6 self-center">
         
-        {/* LEFT NAV PANEL - CAT SIDEBAR */}
+        {/* SIDEBAR */}
         <aside className={`transition-all duration-300 ease-in-out shrink-0 flex flex-col gap-2 overflow-hidden ${
           sidebarOpen ? 'w-full md:w-64' : 'w-full md:w-14'
         }`}>
@@ -667,16 +650,12 @@ export default function App() {
 
         </aside>
 
-        {/* MAIN BODY DISPLAY */}
+        {/* MAIN BODY */}
         <main className="flex-1 min-w-0">
           
           {!selectedGame ? (
-            /* ========================================================
-               📚 LIBRARY LIST VIEW - MOCK CLASSROOMS SECTION
-               ======================================================== */
             <div className="flex flex-col gap-6">
               
-              {/* Count Banner and title */}
               <div className="flex justify-between items-center border-l-4 border-[var(--accent-color)] pl-3">
                 <div>
                   <h2 className="text-lg font-black uppercase tracking-wider text-[var(--text-primary)]">
@@ -691,7 +670,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Grid of equally-sized games */}
               {filteredGames.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 border border-dashed border-[var(--card-border)] rounded-2xl bg-[var(--bg-secondary)]">
                   <Gamepad2 className="w-16 h-16 text-[var(--text-muted)] stroke-1 opacity-40 animate-pulse" />
@@ -709,7 +687,6 @@ export default function App() {
                         className="custom-card flex flex-col rounded-xl overflow-hidden cursor-pointer h-[360px]"
                         style={{ contentVisibility: 'auto' }}
                       >
-                        {/* Artwork container */}
                         <div className="relative h-48 bg-neutral-950 flex-shrink-0 flex items-center justify-center border-b border-[var(--card-border)] overflow-hidden">
                           {game.thumbnail ? (
                             <img 
@@ -722,12 +699,10 @@ export default function App() {
                             renderGameArt(game)
                           )}
 
-                          {/* Category Tag on Top-Right */}
                           <span className="absolute top-2.5 right-2.5 text-[8px] font-bold uppercase tracking-widest bg-black/75 backdrop-blur-sm text-white border border-white/10 px-2.5 py-0.5 rounded-full inline-block z-10">
                             {game.category}
                           </span>
 
-                          {/* Heart bookmark shortcut button on top-left */}
                           <button
                             onClick={(e) => toggleFavorite(e, game.id)}
                             className="absolute top-2.5 left-2.5 p-1.5 rounded-full bg-black/40 hover:bg-black/80 text-white/90 border border-white/10 hover:text-rose-500 hover:scale-110 active:scale-95 transition-all duration-200"
@@ -737,7 +712,6 @@ export default function App() {
                           </button>
                         </div>
 
-                        {/* Title and descriptions */}
                         <div className="p-4 flex-1 flex flex-col justify-between">
                           <div className="space-y-1.5">
                             <h3 className="text-sm font-black text-[var(--text-primary)] line-clamp-1 group-hover:text-[var(--accent-color)] leading-snug">
@@ -748,7 +722,6 @@ export default function App() {
                             </p>
                           </div>
 
-                          {/* Action Button */}
                           <button
                             onClick={() => { setSelectedGame(game); setZoom(1); }}
                             className="w-full mt-3 border border-[var(--accent-color)] hover:bg-[var(--accent-color)] hover:text-black hover:font-bold hover:shadow-[0_0_12px_calc(var(--accent-color))] text-[11px] font-semibold tracking-wider text-[var(--accent-color)] py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all duration-200 self-end"
@@ -765,15 +738,10 @@ export default function App() {
 
             </div>
           ) : (
-            /* ========================================================
-               🎮 ACTIVE PLAY GAME SCREEN WITH ZOOM & ZOOM CONTROLS
-               ======================================================== */
             <div className="flex flex-col gap-4 animate-fade-in">
               
-              {/* Controls bar layout */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border border-[var(--card-border)] bg-[var(--bg-secondary)] rounded-xl py-3 px-4 gap-3 shadow-inner">
                 
-                {/* Back Button */}
                 <button
                   onClick={() => setSelectedGame(null)}
                   className="flex items-center gap-2 border border-[var(--card-border)] hover:border-[var(--accent-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)] transition-all font-mono py-1.5 px-3.5 rounded-lg text-xs font-bold leading-normal cursor-pointer"
@@ -782,7 +750,6 @@ export default function App() {
                   <span>Go back</span>
                 </button>
 
-                {/* Title & category badge info */}
                 <div className="flex items-center gap-2.5">
                   <span className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-2">
                     {selectedGame.title}
@@ -792,10 +759,8 @@ export default function App() {
                   </span>
                 </div>
 
-                {/* Action Console: zoom control, reload, fullscreen, panic shortcut key */}
                 <div className="flex items-center gap-2 flex-wrap">
                   
-                  {/* Zoom controls */}
                   <div className="flex items-center bg-[var(--bg-color)] border border-[var(--card-border)] rounded-lg overflow-hidden p-0.5">
                     <button
                       onClick={() => setZoom(z => Math.max(0.4, z - 0.1))}
@@ -819,11 +784,9 @@ export default function App() {
                       className="p-1 px-1.5 text-xs text-[var(--accent-color)] font-mono hover:bg-[var(--card-bg)] rounded transition-colors"
                       title="Reset Zoom"
                     >
-                
                     </button>
                   </div>
 
-                  {/* Reload button */}
                   <button
                     onClick={() => {
                       const iframe = document.getElementById('game-frame');
@@ -835,7 +798,6 @@ export default function App() {
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>
 
-                  {/* Maximize Frame Button */}
                   <button
                     onClick={() => {
                       const container = document.getElementById('frame-viewport');
@@ -853,16 +815,14 @@ export default function App() {
                     <Maximize2 className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline text-[10px] font-bold">FULLSCREEN</span>
                   </button>
-                  {/* Open in New Tab Button */}
+
                   <button
                     onClick={() => {
                       const win = window.open("about:blank", "_blank");
-                  
                       if (!win) {
                         alert("Popup blocked. Allow popups for this site.");
                         return;
                       }
-                  
                       win.document.write(`
                         <!DOCTYPE html>
                         <html>
@@ -871,55 +831,32 @@ export default function App() {
                           <link rel="icon" type="image/png" href="https://ssl.gstatic.com/classroom/favicon.png">
                           <meta charset="utf-8">
                           <style>
-                            html, body {
-                              margin: 0;
-                              padding: 0;
-                              width: 100%;
-                              height: 100%;
-                              overflow: hidden;
-                              background: #ffffff;
-                            }
-                  
-                            iframe {
-                              width: 100vw;
-                              height: 100vh;
-                              border: none;
-                              display: block;
-                            }
+                            html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #ffffff; }
+                            iframe { width: 100vw; height: 100vh; border: none; display: block; }
                           </style>
                         </head>
                         <body>
-                          <iframe
-                            src="${selectedGame.url}"
-                            allow="fullscreen"
-                            referrerpolicy="no-referrer"
-                          ></iframe>
+                          <iframe src="${selectedGame.url}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
                         </body>
                         </html>
                       `);
-                  
                       win.document.close();
                     }}
                     className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-3 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
                     title="Open Game in New Tab"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline text-[10px] font-bold">
-                      OPEN IN NEW TAB
-                    </span>
+                    <span className="hidden sm:inline text-[10px] font-bold">OPEN IN NEW TAB</span>
                   </button>
 
                 </div>
 
               </div>
 
-              {/* Game Viewport Container with zoom styling */}
               <div 
                 id="frame-viewport"
                 className="w-full h-[65vh] min-h-[420px] rounded-2xl border border-[var(--card-border)] bg-black overflow-hidden relative shadow-lg"
               >
-                
-                {/* Embedded Frame */}
                 <div 
                   className="w-full h-full duration-150 transition-transform origin-top-left"
                   style={{ 
@@ -936,12 +873,8 @@ export default function App() {
                     allowFullScreen
                     referrerPolicy="no-referrer"
                     sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-                  useEffect(() => {
-  document.body.setAttribute('data-locked', isPasscodeUnlocked ? 'false' : 'true');
-}, [isPasscodeUnlocked]);
                   />
                 </div>
-
               </div>
 
             </div>
@@ -949,7 +882,6 @@ export default function App() {
 
         </main>
       </div>
-
 
     </div>
   );
