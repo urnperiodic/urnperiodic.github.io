@@ -84,13 +84,13 @@ export default function App() {
     const nextPasscode = passcode + digit;
     setPasscode(nextPasscode);
 
-    if (nextPasscode === '0609') {
-      setTimeout((10) => {
+    if (nextPasscode === '06092012') {
+      setTimeout(() => {
         setIsPasscodeUnlocked(true);
         safeStorage.setItem('classroom-passcode-unlocked', 'true');
         setPasscode('');
       }, 150);
-    } else if (nextPasscode.length === 4) {
+    } else if (nextPasscode.length === 8) {
       setTimeout(() => {
         setIsShake(true);
         setErrorCount(prev => prev + 1);
