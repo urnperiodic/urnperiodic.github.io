@@ -183,6 +183,11 @@ export default function App() {
     return () => window.removeEventListener('keydown', handlePanic);
   }, []);
 
+  // Set browser tab title to Home - Classroom
+  useEffect(() => {
+    document.title = "Home - Classroom";
+  }, []);
+
   // Set LocalStorage theme and mode on change
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -1060,23 +1065,58 @@ export default function App() {
 
       {/* ALT LINKS BAR */}
       <section className="bg-[var(--bg-secondary)] border-b border-[var(--card-border)] py-3 px-4 md:px-6 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center gap-3">
-          <div className="text-[10px] font-mono tracking-widest uppercase opacity-60 self-center">
-            ALT LINKS
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+            <div className="text-[10px] font-mono tracking-widest uppercase opacity-60 self-center">
+              ALT LINKS
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {altLinks.map((link, idx) => (
+                <a
+                  key={idx}
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs bg-[var(--card-bg)] border border-[var(--card-border)] py-1.5 px-3 rounded-full hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-all duration-200 font-mono shadow-sm flex items-center gap-1 cursor-pointer"
+                >
+                  <span>{idx + 1}</span>
+                </a>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {altLinks.map((link, idx) => (
-              <a
-                key={idx}
-                href={link.url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs bg-[var(--card-bg)] border border-[var(--card-border)] py-1.5 px-3 rounded-full hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-all duration-200 font-mono shadow-sm flex items-center gap-1 cursor-pointer"
-              >
-                <span>{idx + 1}</span>
-              </a>
-            ))}
-          </div>
+
+          <button
+            onClick={() => {
+              const win = window.open("about:blank", "_blank");
+              if (!win) {
+                alert("Popup blocked! Please allow popups to open the site in about:blank.");
+                return;
+              }
+              win.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <title>Home - Classroom</title>
+                  <link rel="icon" type="image/png" href="https://ssl.gstatic.com/classroom/favicon.png">
+                  <meta charset="utf-8">
+                  <style>
+                    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0c0a09; }
+                    iframe { width: 100vw; height: 100vh; border: none; display: block; }
+                  </style>
+                </head>
+                <body>
+                  <iframe src="${window.location.origin}${window.location.pathname}${window.location.search}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+                </body>
+                </html>
+              `);
+              win.document.close();
+            }}
+            className="text-xs bg-[var(--accent-color)] text-[var(--bg-color)] border border-[var(--accent-color)] py-1.5 px-3.5 rounded-full hover:opacity-90 active:scale-98 transition-all duration-200 font-mono font-bold shadow-[0_2px_8px_var(--accent-shadow)] flex items-center gap-1.5 cursor-pointer md:ml-auto"
+            title="Open entire site inside about:blank tab to cloak history"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>CLOAK IN ABOUT:BLANK</span>
+          </button>
         </div>
       </section>
 
