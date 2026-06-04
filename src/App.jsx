@@ -569,7 +569,7 @@ export default function App() {
         </div>
 
         {/* ==================== ARTICLES SECTION ==================== */}
-        <div className="w-full max-w-4xl bg-[var(--card-bg)] border border-[var(--card-border)] rounded-3xl p-5 md:p-6 shadow-2xl transition-all duration-300 flex flex-col gap-4 select-text max-h-[90vh] md:max-h-[640px] overflow-hidden">
+        <div className="w-full max-w-4xl bg-[var(--card-bg)] border border-[var(--card-border)] rounded-3xl p-5 md:p-6 shadow-2xl transition-all duration-300 flex flex-col gap-4 select-text max-h-[90vh] md:h-[600px] overflow-hidden">
           
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--card-border)]">
             <div>
@@ -577,20 +577,19 @@ export default function App() {
                 <BookOpen className="text-[var(--accent-color)] w-5 h-5" />
                 Examples of some articles
               </h3>
-              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Scientific analyses, cyber-security digests & gaming reviews by Gemini-Pro AI</p>
             </div>
             <div className="flex items-center gap-1.5 self-start sm:self-auto uppercase tracking-wider text-[10px] font-mono bg-[var(--bg-secondary)] py-1 px-2 rounded-md border border-[var(--card-border)] text-[var(--accent-color)]">
               <Sparkles className="w-3.5 h-3.5 animate-pulse text-yellow-400" />
-              <span>AI-Generated Archive</span>
+              <span>AI generated examples</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 h-full overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1 min-h-0 overflow-hidden">
             {/* Left lists & creator pane (cols 2) */}
-            <div className="md:col-span-2 flex flex-col gap-3 overflow-y-auto pr-1">
+            <div className="md:col-span-2 flex flex-col gap-3 overflow-hidden h-full">
               
               {/* Internal search inside articles */}
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 <input
                   type="text"
                   placeholder="Search articles..."
@@ -602,7 +601,7 @@ export default function App() {
               </div>
 
               {/* Feed items */}
-              <div className="flex flex-col gap-2 max-h-[220px] md:max-h-none overflow-y-auto py-0.5">
+              <div className="flex-1 flex flex-col gap-2 overflow-y-auto py-0.5 scrollbar-thin">
                 {filteredArticles.length === 0 ? (
                   <div className="text-center py-4 text-xs text-[var(--text-muted)] font-mono">
                     No articles found matching query
@@ -614,24 +613,24 @@ export default function App() {
                       <div
                         key={art.id}
                         onClick={() => setSelectedArticleId(art.id)}
-                        className={`p-3 rounded-2xl border text-left cursor-pointer transition-all duration-200 ${
+                        className={`p-2 md:p-2.5 rounded-xl border text-left cursor-pointer transition-all duration-200 ${
                           isSelected
                             ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)] shadow-sm scale-[1.01]'
                             : 'bg-[var(--bg-secondary)] border-[var(--card-border)] hover:border-[var(--text-muted)]/40'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-1.5 mb-1 flex-wrap">
-                          <span className="text-[9px] font-bold font-mono tracking-wider px-1.5 py-0.5 rounded bg-[var(--input-fill)] text-[var(--accent-color)] uppercase">
+                        <div className="flex items-center justify-between gap-1 mb-0.5 flex-wrap">
+                          <span className="text-[8px] font-bold font-mono tracking-wider px-1.5 py-0.5 rounded bg-[var(--input-fill)] text-[var(--accent-color)] uppercase">
                             {art.category}
                           </span>
-                          <span className="text-[9px] text-[var(--text-muted)] font-mono">
+                          <span className="text-[8px] text-[var(--text-muted)] font-mono">
                             {art.readTime}
                           </span>
                         </div>
-                        <h4 className="text-xs font-bold leading-tight text-[var(--text-primary)] line-clamp-1 mb-0.5">
+                        <h4 className="text-[11px] font-bold leading-snug text-[var(--text-primary)] line-clamp-1">
                           {art.title}
                         </h4>
-                        <p className="text-[10px] text-[var(--text-muted)] mt-1 font-mono">
+                        <p className="text-[9px] text-[var(--text-muted)] mt-0.5 font-mono">
                           {art.date}
                         </p>
                       </div>
@@ -641,7 +640,7 @@ export default function App() {
               </div>
 
               {/* Creator board container */}
-              <div className="bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-2xl p-3 mt-auto flex flex-col gap-2">
+              <div className="bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-2xl p-3 flex-shrink-0 flex flex-col gap-2">
                 <div className="flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
                   <span className="text-xs font-bold text-[var(--text-primary)] font-mono">Interactive AI Writer</span>
@@ -697,7 +696,7 @@ export default function App() {
             </div>
 
             {/* Right expanded active details reader card (cols 3) */}
-            <div className="md:col-span-3 flex flex-col bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-2xl overflow-hidden h-[300px] md:h-auto">
+            <div className="md:col-span-3 flex flex-col bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-2xl overflow-hidden h-[300px] md:h-full">
               {selectedArticle ? (
                 <div className="flex flex-col h-full overflow-hidden">
                   {/* Article banner */}
@@ -719,7 +718,7 @@ export default function App() {
                   </div>
 
                   {/* Article body */}
-                  <div className="p-4 overflow-y-auto text-left flex-grow max-h-[180px] md:max-h-none scrollbar-thin">
+                  <div className="p-4 overflow-y-auto text-left flex-1 min-h-0 scrollbar-thin">
                     {renderFormattedText(selectedArticle.content)}
                   </div>
                 </div>
