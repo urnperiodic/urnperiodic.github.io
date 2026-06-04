@@ -97,6 +97,7 @@ export default function App() {
   const [articles, setArticles] = useState(initialArticles);
   const [selectedArticleId, setSelectedArticleId] = useState(initialArticles[0].id);
   const [articleSearch, setArticleSearch] = useState('');
+  const [selectedArticleCategory, setSelectedArticleCategory] = useState('All');
   const [newArticleGame, setNewArticleGame] = useState(gameOptions[0].value);
   const [newArticleTone, setNewArticleTone] = useState(toneOptions[0].value);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
@@ -114,6 +115,7 @@ export default function App() {
           setTimeout(() => {
             const article = generateMockAIArticle(newArticleGame, newArticleTone);
             setArticles((prevArticles) => [article, ...prevArticles]);
+            setSelectedArticleCategory(article.category);
             setSelectedArticleId(article.id);
             setIsGeneratingArticle(false);
           }, 200);
@@ -439,6 +441,9 @@ export default function App() {
 
   if (!isPasscodeUnlocked) {
     const filteredArticles = articles.filter(art => {
+      const matchesCategory = selectedArticleCategory === 'All' || art.category === selectedArticleCategory;
+      if (!matchesCategory) return false;
+
       const q = articleSearch.toLowerCase().trim();
       if (!q) return true;
       return art.title.toLowerCase().includes(q) || 
@@ -446,7 +451,7 @@ export default function App() {
              art.category.toLowerCase().includes(q);
     });
 
-    const selectedArticle = articles.find(art => art.id === selectedArticleId) || articles[0];
+    const selectedArticle = filteredArticles.find(art => art.id === selectedArticleId) || filteredArticles[0] || articles[0];
 
     const renderFormattedText = (text) => {
       return text.split('\n').map((line, idx) => {
@@ -533,6 +538,32 @@ export default function App() {
               {/* Left Column - Articles selection */}
               <div className="md:col-span-2 flex flex-col gap-3 overflow-hidden h-full">
                 
+                {/* Subject Specific Sections */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 flex-shrink-0 scrollbar-none select-none">
+                  {['All', 'Science', 'Mathematics', 'ELA', 'Social Studies'].map((cat) => {
+                    const isSelected = selectedArticleCategory === cat;
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => {
+                          setSelectedArticleCategory(cat);
+                          const firstInCat = articles.find(art => cat === 'All' || art.category === cat);
+                          if (firstInCat) {
+                            setSelectedArticleId(firstInCat.id);
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-mono border font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-98 ${
+                          isSelected
+                            ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                            : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border-[var(--card-border)] hover:border-[var(--text-muted)]/50 hover:text-[var(--text-primary)]'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <div className="relative flex-shrink-0">
                   <input
                     type="text"
@@ -754,6 +785,32 @@ export default function App() {
             {/* Left lists & creator pane (cols 2) */}
             <div className="md:col-span-2 flex flex-col gap-3 overflow-hidden h-full">
               
+              {/* Subject Specific Sections */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 flex-shrink-0 scrollbar-none select-none">
+                {['All', 'Science', 'Mathematics', 'ELA', 'Social Studies'].map((cat) => {
+                  const isSelected = selectedArticleCategory === cat;
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        setSelectedArticleCategory(cat);
+                        const firstInCat = articles.find(art => cat === 'All' || art.category === cat);
+                        if (firstInCat) {
+                          setSelectedArticleId(firstInCat.id);
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] font-mono border font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-98 ${
+                        isSelected
+                          ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                          : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border-[var(--card-border)] hover:border-[var(--text-muted)]/50 hover:text-[var(--text-primary)]'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
+
               {/* Internal search inside articles */}
               <div className="relative flex-shrink-0">
                 <input
