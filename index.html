@@ -118,7 +118,7 @@
   }
   .pcw-dot {
     width: 7px; height: 7px;
-    border-radius: 50%;
+    border-radius: 50%;F
     background: var(--accent);
     animation: pcw-blink 2s ease-in-out infinite;
     flex-shrink: 0;
@@ -774,6 +774,7 @@ const BLOCKED = [
 
   sendBtn.addEventListener('click', send);
   textInput.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+  body[data-locked="true"] #pcw-root { display: none !important; }
 </script>
   </body>
 </html>
