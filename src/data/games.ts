@@ -411,5 +411,13 @@ export const games: Game[] = [
     url: 'clblockblastv2.html',
     thumbnail: 'https://play-lh.googleusercontent.com/R0qgNDYYHbRhw6JFsdEbDMqONplEvJx0m0W9wzYVvY3eNF1c2rfBWYjQxW0sLEzFe1E=w240-h480-rw',
     category: 'Solo'
+  },
+  {
+    id: 'game-112',
+    title: 'yandere Simulator',
+    description: 'totally requested by some1...',
+    url: 'clyanderesimulator.html',
+    thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEJtZ7Fkd1QUQOtTNVBsHB2992ICRvmqHIGHUBOIZAqC1BAfat7lwcuqq-CKaq9uhCF21i&s=10',
+    category: 'Solo'
   }
 ];
