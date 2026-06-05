@@ -24,6 +24,13 @@ export const games: Game[] = [
     category: 'Game'
   },
   {
+    title: 'unblocked anime stuff',
+    description: '',
+    url: 'https://streamex.sh/s',
+    thumbnail: 'https://media.licdn.com/dms/image/v2/C4D0BAQHfLNZeLxAnSw/company-logo_200_200/company-logo_200_200/0/1660365825078/streamx_logo?e=2147483647&v=beta&t=pgzHh-mNGlpjcTsC6qxYkW1kRSaOzk0MZlOCL46CmQ0',
+    category: 'Game'
+  },
+  {
     title: 'Chatgpt (GROQ API)',
     description: 'Go to the doc and get a API or swap your model if it says max token limit reached. ',
     url: 'https://tharaniidaran-t.github.io/GroqAI2/',
