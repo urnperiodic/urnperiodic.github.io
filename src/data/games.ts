@@ -10,6 +10,13 @@ export const games: Game[] = [
     category: 'Fun'
   },
   {
+    title: 'Chatgpt',
+    description: 'I used ai to make some of the game.',
+    url: 'https://chatgpt.org/',
+    thumbnail: 'https://upload.wikimedia.org/wikipedia/en/5/58/Cities_Skylines_cover_art.jpg',
+    category: 'Fun'
+  },
+  {
     title: 'The Final Earth 2',
     description: 'I love this game bro. Actually best game out there, please try atleast once!',
     url: 'clfinalearth2.html',
