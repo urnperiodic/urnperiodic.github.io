@@ -212,7 +212,7 @@ export default function App() {
     { name: 'Alt Link 2', url: 'https://classroonn.github.io' },
     { name: 'Alt Link 3', url: 'https://IIMS-sucksasaschool.github.io/' },
     { name: 'Alt Link 4', url: 'https://ciassroonn.github.io' },
-    { name: 'Alt Link 5', url: 'about:blank' }
+    { name: 'Alt Link 5', url: 'https://acutusinvictus.github.io' }
   ];
 
   // Handle addition/removal of favorites
