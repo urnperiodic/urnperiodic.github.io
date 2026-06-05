@@ -395,5 +395,12 @@ export const games: Game[] = [
     url: 'aceattorney.html',
     thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_YlHon89nCvWBzs71pzFmcJWQ4O7zmvfo07Zv85mpQddjo0kLlNWmLEIRqMj1o3BSTy0zsWyLEgrjQUt8ssfh-nkPFBxhKcM216lujQ&s=10',
     category: 'Solo'
+  },
+  {
+    title: '20 Questions',
+    description: '...',
+    url: 'https://script.google.com/macros/s/AKfycbyUrnTBOG7GX18cuwZyso8g60AeCiUJ0z0jaMFtbj1ef8NnxhjMKGSUyANQnEHIhEYj9Q/exec',
+    thumbnail: 'https://m.media-amazon.com/images/I/61mPeDyQewL._AC_UF894,1000_QL80_.jpg',
+    category: 'Multiplayer'
   }
 ];
