@@ -255,6 +255,13 @@ export const games: Game[] = [
     thumbnail: 'https://crazycattle3d.github.io/index.png',
     category: 'solo'
   },
+  {
+    title: 'Pokemon Stadium 2',
+    description: 'yeah',
+    url: '/clpokemonstadium2.html',
+    thumbnail: 'https://upload.wikimedia.org/wikipedia/en/b/ba/Pok%C3%A9mon_Stadium_2_Coverart.png',
+    category: 'solo'
+  },
   // ── MULTIPLAYER ──
   {
     title: 'Animals Volleyball',
