@@ -1855,6 +1855,13 @@ export default function App() {
                       } catch (err) {
                         // ignore
                       }
+
+                      // Sever opener relations to hide initiator
+                      try {
+                        win.opener = null;
+                      } catch (err) {
+                        // ignore
+                      }
                     } else {
                       window.open(link.url, "_blank");
                     }
@@ -1878,16 +1885,16 @@ export default function App() {
                 style={{ colorScheme: mode }}
               >
                 <option value="" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank (Default)</option>
-                <option value="#1" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#1</option>
-                <option value="#2" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#2</option>
-                <option value="#3" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#3</option>
-                <option value="#4" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#4</option>
-                <option value="#5" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#5</option>
-                <option value="#6" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#6</option>
-                <option value="#7" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#7</option>
-                <option value="#8" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#8</option>
-                <option value="#9" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#9</option>
-                <option value="#10" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#10</option>
+                <option value="#1" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>#1</option>
+                <option value="#2" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>#2</option>
+                <option value="#3" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>#3</option>
+                <option value="#4" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>#4</option>
+                <option value="#5" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>#5</option>
+                <option value="#6" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>#6</option>
+                <option value="#7" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>#7</option>
+                <option value="#8" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>#8</option>
+                <option value="#9" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>#9</option>
+                <option value="#10" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>#10</option>
               </select>
             </div>
 
@@ -1947,6 +1954,13 @@ export default function App() {
                   if (aboutBlankSuffix) {
                     win.location.hash = aboutBlankSuffix;
                   }
+                } catch (err) {
+                  // ignore
+                }
+
+                // Sever opener relations to hide initiator
+                try {
+                  win.opener = null;
                 } catch (err) {
                   // ignore
                 }
@@ -2527,7 +2541,8 @@ export default function App() {
                   {/* Open in New Tab button */}
                   <button
                     onClick={() => {
-                      const win = window.open("about:blank", "_blank");
+                      const targetUrl = "about:blank" + (aboutBlankSuffix || '');
+                      const win = window.open(targetUrl, "_blank");
                       if (!win) {
                         alert("Popup blocked. Allow popups for this site.");
                         return;
@@ -2562,6 +2577,22 @@ export default function App() {
                         </html>
                       `);
                       win.document.close();
+
+                      // Set location hash after writing to force browser to register hash parameter in address bar
+                      try {
+                        if (aboutBlankSuffix) {
+                          win.location.hash = aboutBlankSuffix;
+                        }
+                      } catch (err) {
+                        // ignore
+                      }
+
+                      // Sever opener relations to hide initiator
+                      try {
+                        win.opener = null;
+                      } catch (err) {
+                        // ignore
+                      }
                     }}
                     className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-3 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
                     title="Open Game in New Tab"
