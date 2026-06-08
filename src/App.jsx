@@ -172,7 +172,7 @@ export default function App() {
     const inputPass = (customPass !== undefined ? customPass : passcode).trim().toLowerCase();
     if (!inputPass) return;
 
-    if (inputPass === 'ttt0609' || inputPass === '2026' || inputPass === 'games') {
+    if (inputPass === 'ttt0609' || inputPass === '1378' || inputPass === '') {
       setTimeout(() => {
         setViewModeAndSave('games');
         setPasscode('');
