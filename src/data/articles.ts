@@ -1,1135 +1,2145 @@
-import { Article } from '../types';
-
-export const initialArticles: Article[] = [
-  // ==================== SCIENCE ARTICLES (10) ====================
-  {
-    id: 'sci-1',
-    title: 'Newton\'s Laws of Motion: The Physics of Movement',
-    subtitle: 'Grade 8 • Physical Science • Forces and Motion',
-    content: `### Overview
-Three centuries ago, Sir Isaac Newton formulated three fundamental laws of physics. Together, they explain how and why objects move or change direction. These principles govern everything from the kicking of a soccer ball to the orbit of spacecraft.
-
-### The First Law: Inertia
-The first law states that an object at rest will stay at rest, and an object in motion will stay in motion with a constant velocity, unless acted upon by an unbalanced force.
-* Inertia is the tendency of matter to resist any change in state of motion.
-* For example, when a car stops suddenly, your body continues moving forward—which is why seatbelts are essential.
-* Massive objects have greater inertia, making them harder to start or stop.
-
-### The Second Law: Force and Acceleration
-The second law establishes a direct mathematical relationship between force, mass, and acceleration.
-* Mathematically written as: Force = Mass × Acceleration (F = ma)
-* If you apply the same force to a tennis ball and a bowling ball, the tennis ball will accelerate much faster because of its smaller mass.
-* Acceleration is measured in meters per second squared (m/s²).
-
-### The Third Law: Action and Reaction
-The third law states that for every action, there is an equal and opposite reaction.
-* Forces always exist in pairs.
-* When you take a step forward, your foot pushes backward on the ground, and the ground pushes forward on your foot with equal force.
-* Rockets launch by burning fuel and shooting gas downward. This action creates an equal and opposite upward reaction on the rocket.`,
-    date: 'Jun 04, 2026',
-    category: 'Science',
-    readTime: '4 min read'
-  },
-  {
-    id: 'sci-2',
-    title: 'Plate Tectonics: Earth\'s Restless Outer Shell',
-    subtitle: 'Grade 8 • Earth Science • Geology',
-    content: `### Earth\'s Layers and Plates
-Earth's outer crust—the lithosphere—is not one single piece. Instead, it is broken into giant, interlocking slabs called tectonic plates. These plates float and drag atop a hot, semi-fluid mantle layer called the asthenosphere.
-
-### Types of Plate Boundaries
-Plates interact at three main types of boundaries, producing dramatic geological features:
-1. **Divergent Boundaries:** Plates pull apart. Magma rises from the mantle to fill the gap, cooling to form new crust. This occurs at mid-ocean ridges and deep rift valleys.
-2. **Convergent Boundaries:** Plates collide. If an oceanic plate strikes a continental plate, the heavier oceanic plate sinks beneath in a process called subduction, creating volcanoes and trenches. If two continental plates collide, they buckle upward to form towering mountain ranges like the Himalayas.
-3. **Transform Boundaries:** Plates slide horizontally past each other. Friction binds the rocks, storing energy. When the plates suddenly slip, they release this stored energy as a major earthquake, such as along California's San Andreas Fault.
-
-### Continental Drift Evidence
-Alfred Wegener proposed the theory of continental drift in 1912. His key lines of evidence included:
-* The jigsaw-like fit of South America and Africa.
-* Matching fossils of ancient reptiles found on continents separated by wide oceans.
-* Identical mountain ranges of matching rock types spanning oceans.`,
-    date: 'Jun 03, 2026',
-    category: 'Science',
-    readTime: '5 min read'
-  },
-  {
-    id: 'sci-3',
-    title: 'The Periodic Table: Nature\'s Building Blocks',
-    subtitle: 'Grade 8 • Chemical Science • Chemistry Principles',
-    content: `### Dmitry Mendeleev\'s Masterpiece
-In 1869, Russian chemist Dmitry Mendeleev organized the known chemical elements according to their atomic masses and properties. He created the Periodic Table, which successfully predicted the existence of elements that had not yet been discovered.
-
-### Understanding Atomic Anatomy
-Every box on the periodic table represents a unique type of atom. An element's properties are dictated by its atomic structure:
-* **Atomic Number:** The number of protons inside the atom's nucleus. This serves as the element's unique chemical signature.
-* **Atomic Mass:** The weighted average mass of the protons and neutrons inside the nucleus.
-* **Valence Electrons:** The electrons orbiting the outermost ring. These determine how reactive an element is with other elements.
-
-### Families of Elements
-The vertical columns are called groups, while horizontal rows are called periods. Groups share similar chemical attributes:
-* **Group 1 (Alkali Metals):** Highly reactive metals that will explode when placed in water (e.g., Sodium).
-* **Group 17 (Halogens):** Extremely reactive nonmetals that readily bond with alkali metals (e.g., Chlorine to make NaCl salt).
-* **Group 18 (Noble Gases):** Complete outer electron shells make these gases entirely stable, nonreactive, and inert (e.g., Helium, Neon).`,
-    date: 'Jun 02, 2026',
-    category: 'Science',
-    readTime: '4 min read'
-  },
-  {
-    id: 'sci-4',
-    title: 'The Electromagnetic Spectrum: Light Beyond Our Eyes',
-    subtitle: 'Grade 8 • Physical Science • Waves and Radiation',
-    content: `### Wave Energy and Dual Nature
-Electromagnetic radiation travels through space as wave energy. All electromagnetic waves move at the universal speed of light, but they vary in wavelength and frequency.
-
-### The Spectrum Breakdown
-From longest wavelength (lowest energy) to shortest wavelength (highest energy), the spectrum includes:
-* **Radio Waves:** Carry communication signals for radios, TVs, and cellphones.
-* **Microwaves:** Heat water molecules in food and transmit satellite data.
-* **Infrared:** Felt as heat radiating off warm bodies; used inside thermal vision equipment.
-* **Visible Light:** The tiny band of wavelengths detectable by human eyes, spanning from red to violet.
-* **Ultraviolet (UV):** Invisible rays from the sun that can cause sunburns or feed solar energy.
-* **X-Rays:** High-energy rays that pass through muscle tissue but bounce off dense bones, aiding medicine.
-* **Gamma Rays:** Shortest waves with maximum energy, produced by supernovas and radioactive decay.
-
-### High Frequency vs. Low Frequency
-Wave frequency is inversely proportional to wavelength. Short waves have high frequencies that carry substantial energy. High-frequency waves (like UV, X-rays, and gamma) contain enough energy to strip electrons from atoms—a process called ionization that can damage biological tissue.`,
-    date: 'Jun 01, 2026',
-    category: 'Science',
-    readTime: '4 min read'
-  },
-  {
-    id: 'sci-5',
-    title: 'Mitosis vs. Meiosis: Understanding Cell Division',
-    subtitle: 'Grade 8 • Life Science • Cellular Reproduction',
-    content: `### Why Cells Divide
-Cell division represents the primary mechanism for survival, growth, tissue repair, and the reproduction of all living organisms. Living structures organize this process through two distinct methods depending on the cell's ultimate role.
-
-### Mitosis: Cloning for Growth
-Mitosis divides a single body cell (somatic cell) into two genetically identical daughter cells.
-* Occurs for growth (like healing a cut) and tissue replacement.
-* The starting cell is diploid (having two sets of chromosomes).
-* Steps: Prophase, Metaphase, Anaphase, Telophase (PMAT).
-* Results in two exact genetic replicas of the original parent cell.
-
-### Meiosis: Creating Genetic Diversity
-Meiosis divides a specialized cell twice to create four genetically unique gametes (sex cells: sperm and eggs).
-* Meiosis reduces the chromosome count by half to create haploid cells.
-* This reduction guarantees that when fertilization occurs, the offspring has the correct number of chromosomes.
-* During Prophase I, homologous chromosomes exchange segments—a critical step called 'crossing over'.
-* This genetic recombination produces unique offspring, driving natural selection and evolution.`,
-    date: 'May 30, 2026',
-    category: 'Science',
-    readTime: '5 min read'
-  },
-  {
-    id: 'sci-6',
-    title: 'Chemical Changes: Equations and Conservation of Mass',
-    subtitle: 'Grade 8 • Chemical Science • Reactions and Equations',
-    content: `### Physical vs. Chemical Changes
-A physical change alters form or state (like freezing water into ice) but leaves chemical identity intact. A chemical change rearranges atoms, forming entirely new molecules with unique properties (like burning wood).
-
-### Indicators of a Chemical Reaction
-Several observable indicators suggest a chemical reaction has taken place:
-1. Significant bubble production (gas release).
-2. Unexpected temperature change (exothermic or endothermic).
-3. The formation of a solid precipitate in a liquid solution.
-4. An unexpected color change (like rusting iron).
-
-### Law of Conservation of Mass
-The Law of Conservation of Mass states that mass cannot be created or destroyed in a chemical reaction.
-* Every atom present in the initial reactants must exist in the final products.
-* To satisfy this law, scientists balance chemical equations using coefficients.
-* In the equation: 2H₂ + O₂ → 2H₂O, notice how there are exactly 4 hydrogen atoms and 2 oxygen atoms on both sides of the reaction arrow.`,
-    date: 'May 28, 2026',
-    category: 'Science',
-    readTime: '4 min read'
-  },
-  {
-    id: 'sci-7',
-    title: 'Gravity and Orbit: Force That Shapes the Universe',
-    subtitle: 'Grade 8 • Physical Science • Astronomy',
-    content: `### Ultimate Gravitational Attraction
-Gravity is an attractive force that pulls any two objects with mass toward each other. In our solar system, gravity is the cosmic glue that keeps planets orbiting the sun and moons orbiting their parent planets.
-
-### Mass vs. Distance Factors
-Isaac Newton's Universal Law of Gravitation details that gravitational force relies on two primary factors:
-1. **Mass:** More massive objects exert a exponentially stronger gravitational pull. Because the sun contains 99.8% of our solar system's mass, its massive gravity dominates local space.
-2. **Distance:** As the distance between two objects increases, their gravitational attraction drops off sharply.
-
-### The Mechanics of Orbit
-An orbit represents a delicate balance between forward motion (inertia) and the downward pull of gravity.
-* If a planet moved too slowly, solar gravity would pull it into a collision with the sun.
-* If a planet moved too quickly, its inertia would slide it out of orbit and shoot it into deep space.
-* Space stations orbit Earth in a constant state of freefall, gliding continuously horizontal to the planet's curve.`,
-    date: 'May 26, 2026',
-    category: 'Science',
-    readTime: '4 min read'
-  },
-  {
-    id: 'sci-8',
-    title: 'The Hydrological Water Cycle and Earth\'s Ecosystems',
-    subtitle: 'Grade 8 • Earth Science • Hydrology',
-    content: `### Earth\'s Master Water Cycle
-Every water drop we drink has cycled Earth over millions of years. This hydrological water cycle keeps Earth's fresh water moving between land, rivers, oceans, and our atmospheric layers.
-
-### Stages of Cycle Transport
-* **Evaporation:** High heat from the sun energizes surface water, letting molecules rise as vapor.
-* **Transpiration:** Living plants dump water vapor into air through tiny leaf pores called stomata.
-* **Condensation:** Rising vapor cools off in upper altitudes and clumps onto microscopic dust particles, creating clouds.
-* **Precipitation:** As clouds saturate, gravity draws moisture back to the surface as rain, sleet, or snow.
-
-### Ecosystem Balance Impact
-Runoff fills local fresh rivers and aquifers while weathering soils, shifting minerals down to oceans. Climate disruptions alter the cycle's balance, producing severe drought patterns in some zones while triggering major flood cycles in other regions.`,
-    date: 'May 24, 2026',
-    category: 'Science',
-    readTime: '4 min read'
-  },
-  {
-    id: 'sci-9',
-    title: 'Cellular Respiration: How Organisms Release Energy',
-    subtitle: 'Grade 8 • Life Science • Cellular Metabolism',
-    content: `### Powering the Living Cell
-Plants store solar energy as glucose, but cells cannot use glucose directly as fuel. Organisms must break down those sugars into a molecular battery called ATP (Adenosine Triphosphate). This critical extraction process is cellular respiration.
-
-### Mitochondria: Cellular Powerhouses
-In eukaryotic organisms, respiration takes place inside double-memmbrane organelles called mitochondria.
-* The overall process is summarized by the reaction: Glucose + Oxygen → Carbon Dioxide + Water + ATP energy.
-* Organisms breathe in Oxygen and exhale Carbon Dioxide as a direct metabolic waste product of this process.
-
-### Aerobic vs. Anaerobic Respiration
-* **Aerobic Respiration:** Requires oxygen. Highly efficient, yielding approximately 36 ATP molecules per glucose sugar.
-* **Anaerobic Respiration (Fermentation):** Occurs when oxygen is absent (like working sprint muscles hard). It yields only 2 ATP molecules and releases lactic acid, creating muscle fatigue.`,
-    date: 'May 22, 2026',
-    category: 'Science',
-    readTime: '4 min read'
-  },
-  {
-    id: 'sci-10',
-    title: 'Mendelian Genetics: Deciphering Punnett Squares',
-    subtitle: 'Grade 8 • Life Science • Heredity and Genetics',
-    content: `### Gregor Mendel\'s Pea Experiments
-In the 1850s, an Austrian monk named Gregor Mendel cross-pollinated pea plants, revealing the fundamental laws of inheritance. He discovered that offspring inherit traits as discrete packages of genetic code called genes.
-
-### Understanding Alleles
-Genes exist in variations called alleles:
-* **Dominant Allele:** A strong allele that overrides other versions (written as a capital letter: T).
-* **Recessive Allele:** A weaker allele masked by a dominant partner (written as a lowercase letter: t).
-* **Genotype:** The specific combination of alleles (e.g., TT, Tt, or tt).
-* **Phenotype:** The observable physical trait (e.g., tall or short height).
-
-### Drawing a Punnett Square
-A Punnett Square is a predictive 2x2 grid representing possible allele combinations in offspring.
-* Parents pass one of their two alleles to each child.
-* If two heterozygous tall parents (Tt) breed, the square shows genotypes: 25% TT, 50% Tt, and 25% tt.
-* This results in a phenotype ratio of 3:1—three tall children to one short child.`,
-    date: 'May 20, 2026',
-    category: 'Science',
-    readTime: '5 min read'
-  },
-
-  // ==================== MATHEMATICS ARTICLES (10) ====================
-  {
-    id: 'math-1',
-    title: 'The Pythagorean Theorem: Geometry\'s Ancient Equation',
-    subtitle: 'Grade 8 • Mathematics • Geometry & Triangles',
-    content: `### Right Triangle Fundamentals
-The Pythagorean Theorem is one of geometry's most famous and practical mathematical rules. It applies strictly and exclusively to right triangles—triangles that contain exactly one 90-degree right angle.
-
-### The Famous Formula
-In a right triangle, the side opposite the 90-degree angle is the longest side, called the **hypotenuse** (labeled c). The other two shorter sides are called **legs** (labeled a and b).
-The theorem relates these sides mathematically:
-* Formula: a² + b² = c²
-* In plain terms: if you draw squares on the legs of a right triangle, the combined area of those two squares matches the area of the square on the hypotenuse.
-
-### Finding a Missing Side
-You can use the theorem to determine a missing length:
-1. Finding hypotenuse: if legs are 3 and 4, then 3² + 4² = 9 + 16 = 25. Thus c = √25 = 5.
-2. Finding a leg: if leg is 8 and hypotenuse is 10, then 8² + b² = 10² → 64 + b² = 100 → b² = 36. Thus b = 6.
-
-### Pythagorean Triples
-Sets of three whole numbers that perfectly satisfy the formula are called Pythagorean Triples.
-* Common examples: (3, 4, 5), (5, 12, 13), (8, 15, 17).
-* Multiples of triples are also triples: doubling (3, 4, 5) creates the triple (6, 8, 10).`,
-    date: 'Jun 04, 2026',
-    category: 'Mathematics',
-    readTime: '5 min read'
-  },
-  {
-    id: 'math-2',
-    title: 'Linear Functions: Graphing Slopes and Intercepts',
-    subtitle: 'Grade 8 • Mathematics • Functions and Algebra',
-    content: `### What Is a Linear Function?
-A function represents a mathematical rule that takes an input (x) and gives a single output (y). When plotted on a coordinate grid, a linear function creates a perfectly straight line, showing a constant rate of change.
-
-### Slope-Intercept Equation Model
-To work with linear equations, mathematicians use slope-intercept form:
-* Equation format: y = mx + b
-* **x:** The independent input value.
-* **y:** The dependent output value.
-* **m:** The slope—or rate of change. This determines the line's steepness.
-* **b:** The y-intercept. This is where the line crosses the vertical y-axis (where x = 0).
-
-### Calculating the Slope (m)
-Slope measures steepness as ratio of vertical change (rise) to horizontal change (run).
-* m = (Change in y) / (Change in x)
-* Between coordinates (1, 3) and (3, 7): the y values change by +4, and the x values by +2.
-* Slope m = 4 / 2 = 2.
-
-### Types of Slopes
-1. **Positive Slope:** The line rises from left to right.
-2. **Negative Slope:** The line drops from left to right.
-3. **Zero Slope:** Perfectly horizontal line (where y = constant).
-4. **Undefined Slope:** Perfectly vertical line (where x = constant).`,
-    date: 'Jun 03, 2026',
-    category: 'Mathematics',
-    readTime: '4 min read'
-  },
-  {
-    id: 'math-3',
-    title: 'Systems of Linear Equations: Intersecting Possibilities',
-    subtitle: 'Grade 8 • Mathematics • Simultaneous Equations',
-    content: `### Real-World Scenarios
-A system of equations consists of two or more equations sharing the same variables. Systems model common real-world choices: which cell phone plan is cheaper, or how long it takes a faster runner to catch up to a slower runner.
-
-### Three Types of Solutions
-When you graph two linear equations on a single coordinate plane, three geometric outcomes can occur:
-1. **One Unique Solution (Lines Intersect):** The lines meet at exactly one coordinate point (x, y). This coordinate is the only set of values satisfying both equations simultaneously.
-2. **No Solution (Parallel Lines):** The lines have identical slopes but different intercepts. Because they never touch, no coordinate can satisfy both.
-3. **Infinite Solutions (Same Line):** The equations describe the exact same line. Every single point on the line is a solution.
-
-### Methods for Solving
-Algebra offers multiple ways to solve a system of equations:
-* **Substitution Method:** Solve one equation for a variable, then plug that value into the other equation.
-* **Elimination Method:** Add or subtract the two equations to cancel one variable entirely, making it easy to solve for the remaining variable.`,
-    date: 'Jun 02, 2026',
-    category: 'Mathematics',
-    readTime: '4 min read'
-  },
-  {
-    id: 'math-4',
-    title: 'Scientific Notation: Expressing Cosmic and Microscopic Scale',
-    subtitle: 'Grade 8 • Mathematics • Number Systems',
-    content: `### Reading Extreme Dimensions
-In science, we deal with extreme sizes. The mass of the Earth is 5,970,000,000,000,000,000,000,000 kilograms, and the width of a human strand of DNA is 0.0000000025 meters. Writing these out wastes space. Scientific notation offers a elegant, standardized solution.
-
-### Standard Form Guidelines
-Scientific notation writes extremely large or small numbers in a standard format:
-* Format: a × 10ⁿ
-* **a:** Represents a coefficient greater than or equal to 1, but strictly less than 10.
-* **n:** An integer exponent representing the power of ten.
-
-### Positive and Negative Exponents
-* **Positive Exponent (Large Numbers):** The exponent shows how many times you multiply by 10 (or how many times to slide the decimal to the right). E.g., 4.5 × 10⁵ = 450,000.
-* **Negative Exponent (Small Numbers):** The exponent shows division by 10 (moving the decimal to the left). E.g., 3.8 × 10⁻⁴ = 0.00038.
-
-### Multiplying and Dividing in Notation
-* **Multiplication Rule:** Multiply the coefficients, then add the exponents: (2 × 10⁴) × (3 × 10⁶) = 6 × 10¹⁰.
-* **Division Rule:** Divide the coefficients, then subtract the exponents: (8 × 10⁸) / (2 × 10³) = 4 × 10⁵.`,
-    date: 'Jun 01, 2026',
-    category: 'Mathematics',
-    readTime: '4 min read'
-  },
-  {
-    id: 'math-5',
-    title: 'Irrational Numbers: Exploring Square Roots',
-    subtitle: 'Grade 8 • Mathematics • Real Numbers',
-    content: `### The Real Number System
-The real number system divides into two separate families: rational numbers and irrational numbers. Understanding what lies in between is essential to algebraic geometry.
-
-### Rational Numbers
-Rational numbers are those that can be written as a clean fraction: a/b (where a and b are integers, and b is not 0).
-* Decimals of rational numbers either terminate (like 1/4 = 0.25) or repeat infinitely in a clear pattern (like 1/3 = 0.333...).
-
-### Irrational Numbers
-Irrational numbers cannot be written as fractions. When expressed as decimals, they continue infinitely without any repeating pattern.
-* The most famous irrational number is Pi (π ≈ 3.14159...).
-* Square roots of non-perfect squares are also irrational. For example, √2 is irrational (1.41421356...).
-
-### Estimating Irrational Roots
-We can estimate the value of an irrational square root by finding the closest perfect squares.
-* Consider √20. The closest perfect squares are 16 (4²) and 25 (5²).
-* Therefore, √20 lies between 4 and 5.
-* Because 20 is mid-way between 16 and 25, √20 is approximately 4.5.`,
-    date: 'May 30, 2026',
-    category: 'Mathematics',
-    readTime: '4 min read'
-  },
-  {
-    id: 'math-6',
-    title: 'Congruent and Similar Figures: Scale and Proportions',
-    subtitle: 'Grade 8 • Mathematics • Geometry',
-    content: `### Geometric Transformations
-In geometry, we perform transformations that turn, slide, flip, or resize physical figures on a coordinate plane. These changes dictate whether resulting shapes are congruent or similar.
-
-### Congruency: Identical Math Duplicates
-Two shapes are **congruent** if they share the exact same size and shape. You can rotate or slide a figure, but its angles and side lengths remain unchanged.
-* Congruent transformations include translations (slides), rotations (turns), and reflections (flips).
-* Corresponding side lengths are equal, and corresponding angles are equal.
-
-### Similarity: Scaled Ratios
-Two shapes are **similar** if they share the same shape, but have different sizes.
-* Similarity transformations involve dilations—scaling a figure up or down using a scale factor.
-* In similar figures, corresponding angles remain congruent.
-* Corresponding side lengths are proportional: they all scale by the same ratio (for example, doubling every side).
-
-### Calculating Scale Factor
-The scale factor (k) is the ratio of a side in the new figure to the corresponding side in the original figure: k = New / Original. If k > 1, the shape enlarges; if 0 < k < 1, the shape shrinks.`,
-    date: 'May 28, 2026',
-    category: 'Mathematics',
-    readTime: '5 min read'
-  },
-  {
-    id: 'math-7',
-    title: 'Volume Formulas: Cylinders, Cones, and Spheres',
-    subtitle: 'Grade 8 • Mathematics • Geometry-Three Dimensions',
-    content: `### Calculating 3D Space
-Volume is a measure of the three-dimensional space enclosed inside a solid boundary. In 8th-grade geometry, students transition from simple boxes to curved figures: cylinders, cones, and spheres.
-
-### Cylinder Volume
-A cylinder is shaped like an aluminum can. It has a flat circular base and vertical walls.
-* V = πr²h
-* **r:** The radius of the circular base.
-* **h:** The total height of the cylinder.
-
-### Cone Volume
-A cone is shaped like a party hat. It has a circular footprint that tapers up to a single top apex.
-* V = (1/3)πr²h
-* If a cone and a cylinder share the same height and radius, the cone's volume is exactly one-third of the cylinder's volume. It takes three cones of water to fill one matching cylinder.
-
-### Sphere Volume
-A sphere is shaped like a basketball. It is perfectly symmetrical around its center point.
-* V = (4/3)πr³
-* Notice how spheres only require the radius (r) to calculate volume, as they have no height or distinct bases. Always compute using order of operations (cubing the radius first).`,
-    date: 'May 26, 2026',
-    category: 'Mathematics',
-    readTime: '4 min read'
-  },
-  {
-    id: 'math-8',
-    title: 'Bivariate Data: Reading Scatter Plots',
-    subtitle: 'Grade 8 • Mathematics • Probability & Statistics',
-    content: `### Univariate vs. Bivariate
-While univariate data describes a single variable (like height), bivariate data measures two separate variables for each subject (like height vs shoe size) to see if they relate.
-
-### Reading Scatter Plots
-Scatter plots map bivariate data as independent coordinate points on a grid, letting statisticians eyeball trends:
-1. **Positive Association:** As the independent variable (x) increases, the dependent variable (y) also increases. Points rise diagonally. E.g., time spent studying vs test scores.
-2. **Negative Association:** As x increases, y decreases. Points drop diagonally. E.g., speed of a car vs drive travel time.
-3. **No Association:** Points are scattered randomly like paint splatters. Knowing x tells you nothing about y.
-
-### Line of Best Fit
-A line of best fit is a straight line drawn through the center of clustered points in a scatter plot. It allows you to write a y = mx + b model to make predictions for values outside the studied data points.
-
-### Outliers
-An outlier is an odd data point that sits far away from the main cluster of points, indicating an unusual case that warrants investigation.`,
-    date: 'May 24, 2026',
-    category: 'Mathematics',
-    readTime: '4 min read'
-  },
-  {
-    id: 'math-9',
-    title: 'The Constant of Proportionality: Everyday Rates',
-    subtitle: 'Grade 8 • Mathematics • Algebra',
-    content: `### Ratios and Constant Proportions
-Ratios compare two values using division. When the ratio of two related quantities stays completely constant, we describe the relationship as proportional.
-
-### Constant value of Proportionality (k)
-* A relationship represents k = y / x.
-* This is written as: y = kx.
-* The number 'k' represents the unit rate or scale constant. On a cartesian coordinate graph, this relationship always draws a straight line that intersects the center coordinates (0, 0).
-
-### Finding the Value in Life Scale
-If you purchase 5 textbooks for $45, the mathematical constant remains 45 / 5 = 9.
-* Therefore, the unit cost k = 9.
-* We write the general equation as: y = 9x.
-* This constant factor lets architects draw scales for models or lets food developers multiply recipes for large-scale operations.`,
-    date: 'May 22, 2026',
-    category: 'Mathematics',
-    readTime: '4 min read'
-  },
-  {
-    id: 'math-10',
-    title: 'Algebraic Inequalities: Solving Multi-Step Expressions',
-    subtitle: 'Grade 8 • Mathematics • Algebra Equations',
-    content: `### Equations vs. Inequalities
-An equation states that two expressions are mathematically equal. An inequality states that one expression is greater than, less than, or equal to another, yielding a range of possible answers.
-
-### Key Inequality Symbols
-* **<:** Strictly less than (drawn as open circle on a number line).
-* **>:** Strictly greater than (open circle).
-* **≤:** Less than or equal to (solid filled circle).
-* **≥:** Greater than or equal to (solid filled circle).
-
-### The Golden Rule of Inequalities
-Solving inequalities follows identical habits to solving standard equations, with one critical warning:
-* **The Negative Rule:** When multiplying or dividing both sides of an inequality by a negative number, you **MUST** flip the direction of the inequality sign.
-* Solving: −2x + 5 > 13 → −2x > 8. Dividing both sides by −2 yields x < −4 (reversing the sign!).
-
-### Graphing the Solution Set
-A solution set like x < −4 represents an infinite number of decimal values. To visualize this on a number line, you draw an open circle at −4, then shade a glowing arrow pointing left.`,
-    date: 'May 20, 2026',
-    category: 'Mathematics',
-    readTime: '5 min read'
-  },
-
-  // ==================== ELA ARTICLES (10) ====================
-  {
-    id: 'ela-1',
-    title: 'The Rhetoric of Persuasion: Ethos, Pathos, and Logos',
-    subtitle: 'Grade 8 • ELA • Writing & Argumentation',
-    content: `### The Ancient Art of Argument
-More than 2,000 years ago, Greek philosopher Aristotle analyzed art of rhetoric—the method of using language to persuade an audience. He identified three pathways of persuasion: ethos, pathos, and logos. Successful writers blend all three to build compelling claims.
-
-### Ethos: Credibility and Trust
-Ethos relies on the character, credentials, or moral authority of the writer or speaker.
-* An audience is far more likely to believe an argument if they respect the person making it.
-* E.g., "As a medical doctor with twenty years of practice, I advise taking this vaccine."
-* Writers establish ethos by using professional grammar, referencing reliable sources, and acknowledging opposing arguments fairly.
-
-### Pathos: Emotional Connection
-Pathos targets the audience's emotions—their fears, values, hopes, or empathy.
-* This tactic bypasses logic to stir the heart and inspire immediate action.
-* E.g., classical charity flyers showing shivering, hungry puppies in cages to encourage small donations.
-* While highly effective, excessive reliance on pathos can make an argument feel cheap or manipulative.
-
-### Logos: Logic and Evidence
-Logos appeals to the intellect, relying on hard data, statistics, rational structure, and fact-based logic.
-* E.g., "Enacting this law will lower street emissions by 34%, as demonstrated in the climate study's data."
-* Logos forms the absolute backbone of academic research and forensic science.`,
-    date: 'Jun 04, 2026',
-    category: 'ELA',
-    readTime: '4 min read'
-  },
-  {
-    id: 'ela-2',
-    title: 'Unlocking Literary Tone, Mood, and Atmosphere',
-    subtitle: 'Grade 8 • ELA • Literary Analysis',
-    content: `### A Common Source of Confusion
-Beginning readers frequently swap the terms **tone** and **mood**. While both elements describe the emotional ecosystem of a story, they originate from different angles of composition.
-
-### Tone: The Author\'s Attitude
-Tone represents the author's specific attitude toward their subject, characters, or audience.
-* The tone is calculated and controlled by the author's vocabulary choices and sentence constructions.
-* Adjectives describing tone: satirical, objective, nostalgic, cynical, solemn, or playful.
-* If a writer describes a character's achievement as a "lucky break," their tone leans skeptical. If they label it a "hard-won victory," their tone is admiring.
-
-### Mood: The Reader\'s Feelings
-Mood describes the emotional atmosphere that the reader feels while reading a passage.
-* The mood is the emotional footprint left on the reader's imagination, crafted by descriptions of settings and background sounds.
-* Adjectives describing mood: eerie, tense, peaceful, gloomy, suspenseful, or whimsical.
-* Consider a setting description: "Rain clawed at the rotting window frame as shadows expanded across the hallway." This choice generates a tense and eerie mood.
-
-### The Interplay
-An author uses a specific tone to construct the overall mood. For example, a cynical and sarcastic author tone can create an amusing and lighthearted mood for the reader. When analyzing literature, always ask: who is talking, what language are they selecting, and how does it make me feel?`,
-    date: 'Jun 03, 2026',
-    category: 'ELA',
-    readTime: '4 min read'
-  },
-  {
-    id: 'ela-3',
-    title: 'The Art of Symbolism: Writing Beyond the Literal',
-    subtitle: 'Grade 8 • ELA • Literary Devices',
-    content: `### Defining the Symbol
-Literary symbolism occurs when an author uses a concrete object, character, or action to represent an abstract idea. Symbolism allows writers to inject multilayered meanings into their stories without explicitly lecturing the reader.
-
-### Classical Literary Symbols
-Many elements carry common, deeply recognized symbolic weight across literature:
-* **The Owl:** Represents wisdom and scholarly observation.
-* **Spring:** Symbolizes birth, renewal, youth, and fresh beginnings.
-* **Winter:** Symbolizes aging, cold isolation, and death.
-* **Running Water:** Often signifies spiritual cleansing, rebirth, or the unstoppable passage of time.
-
-### Contextual Symbols
-Some symbols are unique to a specific novel, gaining meaning slowly through the plot:
-* In F. Scott Fitzgerald's *The Great Gatsby*, the glowing green light at the end of the dock stands for Jay Gatsby's distant, unreachable hopes and dreams.
-* In William Golding's *Lord of the Flies*, a simple conch shell starts as a symbol of civilization and order, but its eventual destruction represents the collapse of law.
-
-### Analyzing Symbolic Elements
-When analyzing symbols, look for objects that:
-1. Reoccur multiple times at pivotal moments of the plot.
-2. Receive highly detailed descriptions out of proportion to their practical function.
-3. Are associated with strong emotional reactions from the characters.`,
-    date: 'Jun 02, 2026',
-    category: 'ELA',
-    readTime: '4 min read'
-  },
-  {
-    id: 'ela-4',
-    title: 'The Hero\'s Journey: Analyzing Character Arcs',
-    subtitle: 'Grade 8 • ELA • Literary Structures',
-    content: `### Joseph Campbell\'s Monomyth
-In 1949, mythologist Joseph Campbell identified a universal pattern that forms the backbone of countless legends and epics across human history, from ancient Greek myths to modern films like *Star Wars* or *The Hobbit*. He called this structural archetype the **Hero's Journey** (or Monomyth).
-
-### The Three Operational Phases
-The journey divides into three core phases:
-1. **Departure (The Call to Adventure):** The hero starts in a mundane, comfortable world. An unexpected crisis or messenger issues a call to action. Initially, the hero hesitates, but after receiving guidance from a mentor, they cross the threshold into the unknown.
-2. **Initiation (The Abyss & Transformation):** The hero faces distinct trials, encountering allies and enemies. They escalate toward a supreme ordeal—their lowest point of confrontation. Here, they undergo a symbolic death and rebirth, gaining deep wisdom or power.
-3. **Return (The Road Back):** The hero returns to their original community, bearing a gift, cure, or boon. They are transformed, using their journey to protect or elevate their home.
-
-### Why the Pattern Perseveres
-The Hero's Journey is not just a layout for adventure. It operates as a psychological metaphor for growing up. Facing trials, confronting fears, undergoing internal change, and returning stronger mirrors the transition from childhood to adulthood.`,
-    date: 'Jun 01, 2026',
-    category: 'ELA',
-    readTime: '5 min read'
-  },
-  {
-    id: 'ela-5',
-    title: 'Active vs. Passive Voice: Sentence Structure Mastery',
-    subtitle: 'Grade 8 • ELA • Grammar & Composition',
-    content: `### Sentences as Action Delivery
-Every complete sentence contains a subject performing or receiving an action. The active or passive voice determines whether the subject is the "doer" of the action or the "receiver."
-
-### Active Voice: Direct and Energetic
-In the active voice, the subject of the sentence performs the action.
-* Structure: Subject → Verb → Object
-* E.g., "The wildfire destroyed the historic town."
-* Active voice makes your writing direct, active, concise, and energetic.
-
-### Passive Voice: indirect and Object-Focused
-In the passive voice, the subject receives the action. The actor is either tacked onto the end of the sentence or omitted entirely.
-* Structure: Object → helping verb + past participle → by Subject
-* E.g., "The historic town was destroyed by the wildfire."
-* E.g., "The window was shattered." (actor is completely unknown).
-
-### When to Select Passive Voice
-Though teachers tell writers to avoid passive voice, it has legitimate uses:
-1. When the actor is unknown: "My car keys were stolen yesterday."
-2. In scientific reports to emphasize the experiment, not the researcher: "The chemical compound was heated to 100 degrees."
-3. To shift focus or deflect accountability: "Mistakes were made."`,
-    date: 'May 30, 2026',
-    category: 'ELA',
-    readTime: '4 min read'
-  },
-  {
-    id: 'ela-6',
-    title: 'Context Clues: Deciphering Complex Sentences',
-    subtitle: 'Grade 8 • ELA • Vocabulary Strategies',
-    content: `### Reading Unfamiliar Language
-When you stumble across an unfamiliar word in a text, pulling out a dictionary can disrupt your reading flow. Skilled readers use context clues—the surrounding words, sentences, and hints—to estimate the word's meaning.
-
-### Types of Context Clues
-1. **Definition/Explanation:** The author defines the word right after using it. "The explorer encountered a *chasm*, which is a deep, gaping dropoff in the rock face."
-2. **Synonym/Restatement:** The author uses a simpler word with a similar meaning close by. "Clarissa was *resolute*; she remained firm and unyielding despite the setbacks."
-3. **Antonym/Contrast:** The author provides a word with the opposite meaning, signaling it with transition words like *however*, *but*, or *contrarily*. "Unlike his talkative and outgoing sister, Arthur was *laconic*."
-4. **Example/Illustration:** The author lists specific instances. "The marsh was filled with *noxious* compounds, such as sulfur dioxide, sulfuric acid, and decaying organic sludge."
-5. **Inference/General Context:** The reader combines prior knowledge with general clues. "With zero rain for six months, the fields became completely *arid*, crackling under the heat."`,
-    date: 'May 28, 2026',
-    category: 'ELA',
-    readTime: '4 min read'
-  },
-  {
-    id: 'ela-7',
-    title: 'Understanding Allegories: Metaphorical Masterpieces',
-    subtitle: 'Grade 8 • ELA • Advanced Literary Devices',
-    content: `### Double-Layered Storytelling
-An allegory is a story, poem, or picture that can be interpreted to reveal a hidden, second layer of meaning—typically a moral, political, or historical message. While the surface characters are engaging, they serve as symbols for real-world historical figures, concepts, or events.
-
-### Famous Literary Allegories
-* **George Orwell\'s *Animal Farm*:** On the surface, a group of barnyard animals rebels against a farmer. Allegorically, the plot retells the events of the Russian Revolution of 1917 and the rise of totalitarianism under Joseph Stalin.
-* **Arthur Miller\'s *The Crucible*:** A play dramatizing the Salem witch trials of 1692. Metaphorically, Miller wrote it to criticize the anti-communist "Red Scare" and McCarthyism happening in the United States during the 1950s.
-
-### Analyzing an Allegorical Text
-To decrypt an allegory, pay attention to:
-1. Historical parallels in dates, timelines, or battles.
-2. Highly exaggerated or flat characters representing ideological viewpoints (e.g., greed, hard labor, or blind loyalty).
-3. The moral resolution. What lesson does the struggle deliver about humanity?`,
-    date: 'May 26, 2026',
-    category: 'ELA',
-    readTime: '5 min read'
-  },
-  {
-    id: 'ela-8',
-    title: 'Central Message: Dissecting Theme vs. Topic',
-    subtitle: 'Grade 8 • ELA • Reading Strategies',
-    content: `### Decoding Underlying Meanings
-A recurring mistake in ELA homework is confusing a book\'s topic with its theme. Master analytical readers understand that identifying a topic is just the starting point—finding the theme reveals why the story was written.
-
-### The Breakdown Differences
-* **Topic:** The literal subject. Stated in a single word or simple phrase. E.g., "Love," "Betrayal," or "Revenge."
-* **Theme:** The thesis or universal statement the author creates about that topic. Must be structured as a complete, independent sentence. E.g., "Blind desire for revenge can destroy a person\'s own values and community."
-
-### Formulating the Statement
-A clean theme statement should never name specific characters, dates, or plot events. It must contain a universal insight that applies cleanly to the broad human condition outside the boundary of the fictional text. Avoid cheesy clichés like "Always be honest" and instead elaborate on the realistic consequences of human choices.`,
-    date: 'May 24, 2026',
-    category: 'ELA',
-    readTime: '4 min read'
-  },
-  {
-    id: 'ela-9',
-    title: 'Dramatic Irony: When the Audience Knows Best',
-    subtitle: 'Grade 8 • ELA • Theater and Literature',
-    content: `### Three Varieties of Irony
-Irony is a literary tool that plays with expectations. It exists in three main varieties:
-1. **Verbal Irony:** Saying the opposite of what you mean (sarcasm).
-2. **Situational Irony:** An event occurs that directly contradicts expectations (a fire station burning down).
-3. **Dramatic Irony:** Occurs when the reader or audience knows a critical piece of information that the characters do not.
-
-### The Mechanics of Suspense
-Dramatic irony is a masterclass in building suspense. When the audience knows a killer is hiding in the closet, a character simply reaching for the doorknob makes the audience gasp. The character behaves normally, unaware of the trap, while the viewer suffers in anticipation.
-
-### Classical Examples in Literature
-* In Shakespeare's *Romeo and Juliet*, the audience knows Juliet has only taken a sleeping potion, but Romeo genuinely believes she is dead. His tragic choice to drink poison stems directly from this gap in knowledge.
-* In Sophocles' *Oedipus Rex*, the main character is searching for a murderer, unaware to himself—though highly obvious to the audience—that he is the killer.`,
-    date: 'May 22, 2026',
-    category: 'ELA',
-    readTime: '4 min read'
-  },
-  {
-    id: 'ela-10',
-    title: 'Analyzing Poetry: Rhythm, Meter, and Rhyme Scheme',
-    subtitle: 'Grade 8 • ELA • Poetry and Poetic Devices',
-    content: `### Poetry: Language in Motion
-While prose follows standard sentence and paragraph layouts, poetry compresses language into intentional structures of rhythm, sound, and visual space. Reading poetry requires examining its structural mechanics.
-
-### Rhyme Scheme patterns
-A rhyme scheme is the ordered pattern of end rhymes in a poem.
-* It is mapped using capital letters (A, B, C...).
-* For example, an **ABAB** scheme means the first and third lines rhyme (A), while the second and fourth lines rhyme (B).
-* Common patterns include rhyming couplets (AABB) and alternating stanzas (ABAB).
-
-### Understanding Meter and Rhythm
-Meter is the structural pattern of stressed and unstressed syllables inside a line of poetry, creating its musical beat.
-* **The Iamb:** An unstressed syllable followed by a stressed syllable (da-DUM).
-* **Iambic Pentameter:** A line containing five iambic feet (ten syllables total: da-DUM da-DUM da-DUM da-DUM da-DUM).
-* This classic meter mimics the rhythm of a beating heart and is the primary structure of Shakespeare's sonnets.`,
-    date: 'May 20, 2026',
-    category: 'ELA',
-    readTime: '5 min read'
-  },
-
-  // ==================== SOCIAL STUDIES ARTICLES (10) ====================
-  {
-    id: 'soc-1',
-    title: 'The U.S. Constitution: Framing a Balanced Union',
-    subtitle: 'Grade 8 • Social Studies • American Civics',
-    content: `### The Philadelphia convention
-In May 1787, fifty-five delegates gathered in Philadelphia, Pennsylvania. Initially, their mission was to repair the weak Articles of Confederation. Instead, they spent four months debating, compromising, and drafting an entirely new document: the United States Constitution.
-
-### Crucial Compromises
-Crafting the Constitution required settling massive disagreements between states:
-* **The Great Compromise:** Addressed legislative representation. Small states wanted equal representation, while large states wanted representation based on population. The compromise created a bicameral (two-house) Congress with a Senate (equal representation) and a House of Representatives (based on population).
-* **Three-Fifths Compromise:** A deeply controversial debate over slavery. Southern states wanted enslaved people counted for population representation but not taxation. The compromise calculated five enslaved individuals as matching three free citizens—a calculation that heavily boosted southern political power until the Civil War.
-
-### Core Democratic Principles
-1. **Separation of Powers:** Division of federal authority among three branches (Executive, Legislative, Judicial).
-2. **Checks and Balances:** Interlocking vetoes and reviews that protect against single-branch tyranny.
-3. **Federalism:** The sharing of political power between the national federal government and individual state governments.`,
-    date: 'Jun 04, 2026',
-    category: 'Social Studies',
-    readTime: '5 min read'
-  },
-  {
-    id: 'soc-2',
-    title: 'The Industrial Revolution: Iron, Steam, and Society',
-    subtitle: 'Grade 8 • Social Studies • World History',
-    content: `### The Transition from Farm to Factory
-Beginning in Great Britain in the mid-1700s, the Industrial Revolution was a massive shift from cottage industries and hand tools to steam-powered machinery and factory mass-production. This transformation fundamentally changed where and how people lived.
-
-### The Steam Engine Catalyst
-James Watt's steam engine was the engine of industrialization:
-* Powered by coal, steam engines ran looms, spun cotton, and pumped iron mines.
-* Steam power soon revolutionized transport, leading to steamships and steam locomotives.
-* Railroads knit continents together, slashing the time and cost of moving raw goods.
-
-### The Rise of Cities (Urbanization)
-Industrialization triggered rapid urbanization as millions of farmworkers relocated to find work in urban factories.
-* Cities grew too quickly, lacking basic sanitation, clean sewers, or zoning codes.
-* Working-class families huddled into crowded, disease-prone tenement buildings.
-* Early factories were dark and dangerous, with shifts lasting 14 hours and relying on child labor.
-* Over decades, worker unions and reform movements fought for safety codes, 8-hour workdays, and child labor laws.`,
-    date: 'Jun 03, 2026',
-    category: 'Social Studies',
-    readTime: '5 min read'
-  },
-  {
-    id: 'soc-3',
-    title: 'The Silk Road: Connecting the Ancient World',
-    subtitle: 'Grade 8 • Social Studies • Ancient History',
-    content: `### Ancient Globalization Network
-The Silk Road was not a single paved road. Instead, it was an interlocking network of land and sea trade routes extending over 4,000 miles, connecting China and East Asia to India, Persia, the Middle East, and the Roman Empire.
-
-### Valuable Traded Commodities
-Due to the long, dangerous journey across deserts and mountain passes, merchants dealt primarily in luxury items of high value-to-weight ratios:
-* **China:** Guarded the secret of silk production, exchanging it for gold, silver, and warhorses. They also traded paper and gunpowder.
-* **India:** Exported valuable spices, precious gems, and cotton textiles.
-* **Rome:** Sent glassware, fine wines, and olive oil eastward.
-
-### The Diffusion of Ideas and Religion
-The greatest legacy of the Silk Road was not the silk, but the transfer of culture, ideas, and technology:
-* **Buddhism:** Traveled from India along trade routes to become a major religion in China and Japan.
-* **Paper-making:** Developed in China, this technology moved westward, paving the way for the European Renaissance.
-* **Pathogens:** Trade routes also acted as superhighways for disease, letting the Black Death travel from Asia to devastate Europe in the 1300s.`,
-    date: 'Jun 02, 2026',
-    category: 'Social Studies',
-    readTime: '4 min read'
-  },
-  {
-    id: 'soc-4',
-    title: 'The Fall of the Roman Republic: Julius Caesar\'s Rise',
-    subtitle: 'Grade 8 • Social Studies • World History',
-    content: `### The Virtues of Republican Rome
-For nearly five centuries, Rome governed itself as a republic. Power was divided between the Senate (ruling elite), magistrates, and assemblies. Citizens prized their constitution, which sought to block any single man from gaining supreme power.
-
-### Sowing the Seeds of Collapse
-As Rome conquered the Mediterranean, its internal balance began to fracture:
-1. Massive wealth flooded in, but it centralized in the hands of elite senators, driving poor farmers out of business.
-2. Ambitious generals (like Marius and Sulla) began offering land to poor recruits, creating private armies loyal to their general rather than to the Roman state.
-
-### Julius Caesar and the Rubicon Crossing
-In 49 BCE, general Julius Caesar commanded a massive, battle-hardened army in Gaul. The Senate, fearing his power, ordered him to disband his legion and return to Rome. Instead, Caesar marched his troops to the Rubicon River—the symbolic northern boundary of Italy.
-* Crossing the Rubicon with an active army was an act of treason that launched a massive civil war.
-* Caesar emerged victorious, declaring himself "Dictator for Life" in 44 BCE.
-* Fearing the absolute death of democracy, a conspieracy of senators assassinated Caesar. However, rather than saving the republic, the assassination triggered a fresh round of civil wars that culminated in Caesar's adopted son, Augustus, becoming Rome's first absolute Emperor.`,
-    date: 'Jun 01, 2026',
-    category: 'Social Studies',
-    readTime: '5 min read'
-  },
-  {
-    id: 'soc-5',
-    title: 'Allianced Escalation: The Outbreak of World War I',
-    subtitle: 'Grade 8 • Social Studies • Modern World History',
-    content: `### The MAGNITUDE of European Tension
-By 1914, Europe was a powder keg waiting for a spark. Hostilities had mounted for decades, driven by four underlying factors (often summarized as M-A-I-N):
-* **Militarism:** Countries raced to build massive standing armies and modern steel navies.
-* **Alliances:** Countries signed secret mutual-defense treaties, promising to fight if an ally was attacked.
-* **Imperialism:** European powers competed globally for colonies and resource wealth in Africa and Asia.
-* **Nationalism:** Intense, aggressive pride fueled rivalries between world powers.
-
-### The Spark: Assassination in Sarajevo
-On June 28, 1914, Archduke Franz Ferdinand, heir to the Austro-Hungarian throne, was assassinated in Sarajevo by a Serbian nationalist named Gavrilo Princip.
-
-### The Alliance Dominoes Fall
-Rather than a localized conflict, the interlocking treaties triggered a massive chain reaction:
-1. July 28: Austria-Hungary declares war on Serbia.
-2. July 30: Russia mobilizes its army to defend its ally Serbia.
-3. August 1: Germany (Austria-Hungary's ally) declares war on Russia.
-4. August 3: Germany invades Belgium to strike France (Russia's ally), forcing Great Britain to enter the war.
-Within a single week, the world's most powerful nations had plunged into a global war that would cost over twenty million lives.`,
-    date: 'May 30, 2026',
-    category: 'Social Studies',
-    readTime: '5 min read'
-  },
-  {
-    id: 'soc-6',
-    title: 'Westward Movement: Manifest Destiny and Native Lands',
-    subtitle: 'Grade 8 • Social Studies • American History',
-    content: `### Manifest Destiny Concept
-In the 1800s, American expansion was driven by the ideology of Manifest Destiny—the belief that the United States was divinely ordained to expand across the North American continent, from the Atlantic to the Pacific.
-
-### Key Expansion Acquisitions
-The U.S. added vast territories through various methods:
-* **The Louisiana Purchase (1803):** Bought from France for $15 million, doubling the country's size.
-* **Annexation of Texas (1845):** Sparked tensions that led directly to the Mexican-American War.
-* **Oregon Treaty (1846):** Settled boundaries with Great Britain.
-
-### The Cost to Native Populations
-This expansion came at a tragic, devastating cost to Native American nations:
-* **The Indian Removal Act (1830):** President Andrew Jackson authorized the forced relocation of southeastern tribes to lands west of the Mississippi River.
-* **The Trail of Tears:** The Cherokee Nation was marched at gunpoint over 1,000 miles. Over 4,000 Cherokee died from starvation, exposure, and disease.
-* **The Plains Indian Wars:** As homesteaders and railroads carved up the West, the U.S. military engaged in decades of warfare with Plains tribes, eventually forcing them onto restricted reservations.`,
-    date: 'May 28, 2026',
-    category: 'Social Studies',
-    readTime: '4 min read'
-  },
-  {
-    id: 'soc-7',
-    title: 'The Magna Carta: Laying the Foundations of Law',
-    subtitle: 'Grade 8 • Social Studies • Civic Foundations',
-    content: `### King John\'s Absolute Abuse
-By 1215, England was ruled by King John, an autocrat who raised taxes arbitrarily, confiscated noble estates, and imprisoned rivals without trial. Fed up with his abuses, a group of powerful English barons rebelled.
-
-### The Confrontation at Runnymede
-In June 1215, the barons trapped King John at Runnymede and forced him to sign a document called the **Magna Carta** (Latin for "Great Charter").
-
-### Core Legal Legacy
-Though initially intended to protect only the elite nobility, the charter established critical legal concepts that form the basis of modern democracies:
-1. **Rule of Law:** No citizen—not even a ruling king—is above the law. Everyone must follow the same rules.
-2. **Due Process:** The government cannot seize property or imprison citizens without following established legal steps.
-3. **Trial by Jury:** Enshrined in Clause 39, which states that no free man shall be imprisoned except by the lawful judgment of his peers.
-* Centuries later, the drafts of the U.S. Bill of Rights borrowed directly from these foundational guidelines.`,
-    date: 'May 26, 2026',
-    category: 'Social Studies',
-    readTime: '4 min read'
-  },
-  {
-    id: 'soc-8',
-    title: 'Medieval Feudalism: The Social Scale of Europe',
-    subtitle: 'Grade 8 • Social Studies • Medieval European Civics',
-    content: `### Decentralized Protection System
-Following the fall of the Western Roman Empire in 476 CE, Europe lacked a strong central government or military. To protect against pillaging invaders (like Vikings), a political and social system called **feudalism** emerged.
-
-### The Feudal Pyramid Structure
-Feudalism operated on an hierarchy of mutual obligations:
-* **The King:** Claimed ownership of all land in the kingdom, dividing and gifting large chunks (fiefs) to trusted lords in exchange for loyalty and tax revenue.
-* **Lords/Nobles:** Ruled their fiefs, serving as local judges and tax collectors. They pledged knights to defend the king.
-* **Knights:** Highly trained mounted soldiers who received small parcels of land from lords in exchange for military service. They followed a strict code of conduct called chivalry.
-* **Serfs/Peasants:** The vast majority of the population (over 90%). They were legally bound to work the land on a lord's manor. Serfs could not leave without permission, laboring to feed the kingdom in exchange for safety behind the manor walls.`,
-    date: 'May 24, 2026',
-    category: 'Social Studies',
-    readTime: '4 min read'
-  },
-  {
-    id: 'soc-9',
-    title: 'The Road to Revolution: Taxation without Voice',
-    subtitle: 'Grade 8 • Social Studies • American History',
-    content: `### The Cost of Empire Security
-Following the French and Indian War in 1763, Great Britain emerged victorious but deeply in debt. British Parliament believed the North American colonists—who had benefited from British protection—should pay their fair share.
-
-### Hostile Tax Legislation
-Parliament passed a series of highly controversial tax acts:
-* **The Stamp Act (1765):** Taxed all paper goods, from ship documents to playing cards.
-* **The Townshend Acts (1767):** Taxed key imported necessities including glass, painters\' lead, and paper.
-* **The Tea Act (1773):** Monopolized low-cost British tea sales, undercutting local colonial merchants.
-
-### "No Taxation Without Representation"
-Colonists rebelled, not because of the tax cost, but because of the constitutional principle. They argued that because colonists had no elected representatives in the distant British Parliament, any tax passed there was unconstitutional. Protest exploded, prompting violent clashes and boycotts that culminated in the outbreak of the Revolutionary War.`,
-    date: 'May 22, 2026',
-    category: 'Social Studies',
-    readTime: '4 min read'
-  },
-  {
-    id: 'soc-10',
-    title: 'The Great Depression: Economic Crash and Recovery',
-    subtitle: 'Grade 8 • Social Studies • Modern U.S. History',
-    content: `### The End of the Roaring Twenties
-During the 1920s, the U.S. economy boomed. People bought cars, radios, and homes on credit. Stock prices climbed to astronomical levels, fueled by risky speculation and buying stock on margin (using borrowed money).
-
-### The Market Crash of 1929
-On October 29, 1929—known as "Black Tuesday"—the stock market bubble burst. Stock prices collapsed, wiping out fortunes in a single day and triggering a massive economic downturn:
-* Fearing bankruptcy, people rushed to banks to withdraw cash. This caused widespread bank runs. Over 9,000 banks failed, losing millions of dollars of life savings.
-* Factories closed, causing unemployment to skyrocket to an unprecedented 25% by 1933.
-
-### FDR and the New Deal Reform
-In 1932, Franklin D. Roosevelt was elected president, promising a "New Deal" for the American people based on three Rs:
-1. **Relief:** Providing immediate aid and food to starving, out-of-work citizens.
-2. **Recovery:** Creating massive federal jobs programs (like the Civilian Conservation Corps) to build schools, parks, and dams.
-3. **Reform:** Passing hard regulations (like the FDIC to guarantee bank deposits) to prevent future economic crashes.`,
-    date: 'May 20, 2026',
-    category: 'Social Studies',
-    readTime: '5 min read'
-  }
-];
-
-export const subjectOptions = [
-  { value: 'Science', label: 'Science' },
-  { value: 'Mathematics', label: 'Mathematics' },
-  { value: 'ELA', label: 'English Language Arts' },
-  { value: 'Social Studies', label: 'Social Studies' }
-];
-
-export const gameOptions = subjectOptions;
-
-export const toneOptions = [
-  { value: 'Informational', description: 'Clear, fact-based expository writing with headings and key terms' },
-  { value: 'Narrative Nonfiction', description: 'Story-driven prose that puts a human face on real events or concepts' },
-  { value: 'Persuasive / Argumentative', description: 'Claim, evidence, and reasoning structure with a clear position' },
-  { value: 'Compare & Contrast', description: 'Side-by-side analysis of two topics, ideas, or historical events' }
-];
-
-export function generateMockAIArticle(subject: string, tone: string): Article {
-  const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-  const articleId = `art-custom-${Date.now()}`;
-
-  let title = '';
-  let content = '';
-  let category = subject;
-
-  if (tone === 'Informational') {
-    if (subject === 'Science') {
-      title = `Photosynthesis: How Plants Convert Sunlight into Food`;
-      content = `### What Is Photosynthesis?
-Photosynthesis is the process by which green plants, algae, and some bacteria use sunlight, water, and carbon dioxide to produce glucose (a sugar) and oxygen. It is the foundation of nearly all life on Earth because it creates the energy that flows through food chains.
-
-The overall chemical equation is:
-6CO₂ + 6H₂O + light energy → C₆H₁₂O₆ + 6O₂
-
-### Where Does It Happen?
-Photosynthesis takes place inside chloroplasts—organelles found in plant cells that contain a green pigment called chlorophyll. Chlorophyll absorbs red and blue wavelengths of light most efficiently, reflecting green light back to our eyes (which is why plants appear green).
-
-### The Two Stages
-1. **Light-Dependent Reactions:** Occur in the thylakoid membranes. Sunlight splits water molecules, releasing oxygen as a byproduct and producing energy carriers (ATP and NADPH).
-2. **Calvin Cycle (Light-Independent):** Occurs in the stroma. The plant uses ATP and NADPH to convert carbon dioxide into glucose through a series of enzyme-driven reactions.
-
-### Why It Matters
-* Photosynthesis produces the oxygen in Earth's atmosphere.
-* It is the primary source of energy for almost all ecosystems.
-* Understanding it helps scientists develop more efficient solar energy systems.`;
-    } else if (subject === 'Mathematics') {
-      title = `Understanding Integers and Absolute Value on the Number Line`;
-      content = `### What Are Integers?
-Integers are the set of whole numbers and their opposites: {..., -3, -2, -1, 0, 1, 2, 3, ...}. Unlike fractions or decimals, integers have no partial values. They appear on a number line extending infinitely in both directions from zero.
-
-### Positive and Negative Integers
-* **Positive integers** (greater than zero) appear to the right of zero on the number line.
-* **Negative integers** (less than zero) appear to the left.
-* **Zero** is neither positive nor negative.
-
-Negative integers model real-world situations such as temperatures below freezing, depths below sea level, and financial debt.
-
-### Absolute Value
-The absolute value of an integer is its distance from zero on the number line, regardless of direction. Distance is always non-negative.
-
-We write absolute value using vertical bars: |−7| = 7 and |7| = 7.
-
-Key rules:
-1. The absolute value of zero is zero: |0| = 0
-2. The absolute value of any nonzero number is positive.
-3. Opposites have the same absolute value: |−n| = |n|
-
-### Comparing and Ordering Integers
-On the number line, numbers increase from left to right. Therefore:
-* −10 < −3 (farther left = smaller value)
-* −1 > −100
-* Always place integers on a number line before comparing to avoid errors.`;
-    } else if (subject === 'ELA') {
-      title = `Theme vs. Topic: Understanding the Central Message of a Text`;
-      content = `### The Difference Between Topic and Theme
-Beginning readers often confuse a story's topic with its theme. The topic is simply what a story is about—stated in one or two words (e.g., "friendship," "war," "growing up"). The theme is the deeper message the author conveys about that topic—a complete sentence that expresses a universal truth.
-
-* **Topic:** Courage
-* **Theme:** True courage means doing the right thing even when no one is watching.
-
-### How Authors Develop Theme
-Authors rarely state their theme directly. Instead, they develop it through:
-1. **Character change:** What lesson does the main character learn? Their transformation often reveals the theme.
-2. **Conflict and resolution:** How a conflict is resolved communicates what the author believes is right or true.
-3. **Repeated symbols or motifs:** Objects, colors, or images that appear multiple times often carry thematic weight.
-4. **Dialogue:** Key conversations between characters frequently hint at the central message.
-
-### Distinguishing Multiple Themes
-Complex literary works often carry more than one theme. A novel about a young immigrant might simultaneously explore themes of identity, belonging, and perseverance. A strong reader can identify which theme the author develops most fully.
-
-### Writing a Theme Statement
-A strong theme statement:
-* Is a complete sentence (not just a word or phrase)
-* Does not name specific characters or plot events
-* Expresses a truth that applies to real life, not just the story
-* Avoids clichés like "Be yourself" or "Never give up" without deeper context`;
-    } else {
-      title = `The Three Branches of U.S. Government: A System of Checks and Balances`;
-      content = `### Why Three Branches?
-When the Founders designed the United States government in 1787, they feared concentrated power above all else. Their solution was separation of powers—dividing authority among three distinct branches so that no single person or group could dominate the government.
-
-### The Legislative Branch (Congress)
-Congress is the lawmaking body of the federal government, split into two chambers:
-* **Senate:** 100 senators, two from each state, serving six-year terms.
-* **House of Representatives:** 435 members, apportioned by state population, serving two-year terms.
-
-Congress writes and passes federal laws, controls the national budget, and can declare war.
-
-### The Executive Branch (President)
-The President of the United States is elected every four years and limited to two terms. The executive branch:
-* Enforces federal laws
-* Commands the military as Commander-in-Chief
-* Appoints federal judges and Cabinet members
-* Can veto (reject) bills passed by Congress
-
-### The Judicial Branch (Federal Courts)
-The Supreme Court—nine justices appointed for life—heads the judicial branch. Federal courts:
-* Interpret whether laws follow the Constitution
-* Can strike down laws as unconstitutional (judicial review)
-
-### Checks and Balances in Action
-Each branch limits the others:
-1. Congress passes a law → President can veto it → Congress can override the veto with a two-thirds vote.
-2. President appoints a Supreme Court justice → Senate must confirm the appointment.
-3. Supreme Court can declare a presidential action unconstitutional.
-
-This interlocking system ensures that power remains balanced and accountable to the American people.`;
+import { useState, useEffect, useRef } from 'react';
+import { games as gamesData } from './data/games';
+import { initialArticles, gameOptions, toneOptions, generateMockAIArticle } from './data/articles';
+import FlashcardsWorkspace from './components/FlashcardsWorkspace';
+import QuizWorkspace from './components/QuizWorkspace';
+import GrammarCheckerWorkspace from './components/GrammarCheckerWorkspace';
+import { 
+  School, 
+  Search, 
+  Play, 
+  ExternalLink, 
+  RotateCcw, 
+  Maximize2, 
+  Minimize2, 
+  Plus, 
+  Minus, 
+  Heart, 
+  ShieldAlert, 
+  Gamepad2, 
+  Users, 
+  Layers,
+  Sparkles,
+  ArrowLeft,
+  Volume2,
+  Tv,
+  MessageSquare,
+  Globe,
+  Dribbble,
+  BookOpen,
+  Github,
+  Compass,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  Lock,
+  Unlock,
+  LogOut,
+  Copy,
+  Code,
+  Share2,
+  Download,
+  Check,
+  X
+} from 'lucide-react';
+
+// Safe storage helper to prevent SecurityError crash in sandboxed iframes
+const safeStorage = {
+  getItem: (key) => {
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      return null;
     }
-  } else if (tone === 'Narrative Nonfiction') {
-    title = `A Day in the Life: ${subject === 'Social Studies' ? 'A Colonial American Child' : subject === 'Science' ? 'Inside a Rain Forest' : subject === 'Mathematics' ? 'How a Bridge Gets Built' : 'The Night Maya Found Her Voice'}`;
-    content = `### A Story Rooted in Fact
-${subject === 'ELA' || subject === 'Mathematics'
-  ? `Maya had always been told she was a quiet girl. In her seventh-grade classroom, she sat in the third row by the window, watching other students raise their hands with the easy confidence she desperately wanted. Then one Tuesday morning, her teacher assigned something different: a spoken-word poetry performance.
+  },
+  setItem: (key, value) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      // Ignore security errors
+    }
+  }
+};
 
-For Maya, words had always lived safely on paper. Speaking them aloud—in front of people who would watch her face and hear her voice shake—felt impossible. But the assignment had a deadline, and the deadline was Friday.
+export default function App() {
+  const [theme, setTheme] = useState(() => {
+    const saved = safeStorage.getItem('unblocked-theme');
+    return saved && ['cyborg', 'violet', 'ice', 'rose-pine', 'none'].includes(saved) ? saved : 'none';
+  });
+  const [mode, setMode] = useState(() => {
+    return safeStorage.getItem('unblocked-mode') || 'dark';
+  });
+  const [filter, setFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedGame, setSelectedGame] = useState(null);
+  const [zoom, setZoom] = useState(1);
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const stored = safeStorage.getItem('unblocked-favorites');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
 
-### The Process of Finding a Voice
-What Maya discovered that week mirrors what researchers in literacy development call the "revision-to-performance arc." Writers who read their work aloud process language differently than those who revise silently. The act of speaking forces attention to rhythm, pacing, and word choice in ways that quiet revision often misses.
+  const [viewMode, setViewMode] = useState(() => {
+    const saved = safeStorage.getItem('classroom-view-mode');
+    if (saved === 'games') return 'games';
+    return 'articles'; // Innocent educational syllabus base is shown on first startup
+  });
 
-By Thursday night, Maya had revised her poem eleven times. Not because the words were wrong, but because she was learning what they sounded like—and learning, slowly, that her voice was strong enough to carry them.`
-  : `The rain forest does not sleep. At 4:47 in the morning, long before the first shaft of light reaches the forest floor, the first layer of sound begins: the low resonant call of a howler monkey, carrying through three miles of humid air to mark territorial boundaries.
+  const isPasscodeUnlocked = viewMode === 'games';
 
-By the time a scientist named Dr. Esperanza Cruz arrived at her research station at 5:15 a.m., the canopy above her was already alive with movement. Her team was studying the interdependence of species in the Peruvian Amazon—specifically, how the removal of a single keystone species could collapse an entire food web.
+  const setViewModeAndSave = (mode) => {
+    setViewMode(mode);
+    safeStorage.setItem('classroom-view-mode', mode);
+    safeStorage.setItem('classroom-passcode-unlocked', mode === 'games' ? 'true' : 'false');
+  };
 
-### What the Data Revealed
-Over fourteen months, Dr. Cruz's team catalogued over 1,200 species interactions within a single 10-hectare study plot. The results confirmed what ecologists have long theorized but rarely measured at this resolution: the loss of just three fig tree species in this region would directly eliminate food sources for 47 vertebrate species—triggering a cascade that would ultimately affect over 200 species in the surrounding ecosystem.`}
+  const [passcode, setPasscode] = useState('');
+  const [isShake, setIsShake] = useState(false);
+  const [errorCount, setErrorCount] = useState(0);
 
-### What This Teaches Us
-Behind every piece of narrative nonfiction is documented research. The emotions are real, the characters are real, and the science or history they experience is accurate. This genre invites readers into lived experience while delivering factual content—because facts remembered through story tend to stay longer.`;
-  } else if (tone === 'Persuasive / Argumentative') {
-    title = `${subject === 'Science' ? 'Schools Should Teach Environmental Science Every Year' : subject === 'Mathematics' ? 'Financial Literacy Should Be a Required Math Course' : subject === 'ELA' ? 'Reading Classic Literature Still Matters in the Digital Age' : 'Students Should Learn a Second Language Starting in Elementary School'}`;
-    content = `### The Claim
-${subject === 'Mathematics'
-  ? `Every high school student in the United States should be required to complete at least one semester of financial literacy as part of their mathematics curriculum. The ability to balance a budget, understand compound interest, and navigate taxes is not optional knowledge—it is survival knowledge. Yet most schools leave students completely unprepared.`
-  : subject === 'ELA'
-  ? `In an era of short-form video and algorithmic content, requiring students to read classic literature may seem outdated. It is not. The complex sentence structures, ambiguous characters, and layered themes found in enduring works of literature develop exactly the kind of critical thinking that modern digital life tends to erode.`
-  : subject === 'Science'
-  ? `Environmental science education should be embedded in every grade level from kindergarten through twelfth grade—not offered as a single elective. Climate change, resource depletion, and biodiversity loss are the defining challenges of this century. Students cannot address problems they were never taught to understand.`
-  : `Research consistently shows that children who begin learning a second language before age ten achieve higher fluency and retain the language for life. Despite this evidence, most American school districts do not introduce foreign language instruction until middle school—a delay with real and measurable consequences.`}
+  // Articles and Custom AI article generator states
+  const [activeEduTab, setActiveEduTab] = useState('articles'); // 'articles' | 'flashcards' | 'grammar' | 'quiz'
+  const [articles, setArticles] = useState(initialArticles);
+  const [selectedArticleId, setSelectedArticleId] = useState(initialArticles[0].id);
+  const [articleSearch, setArticleSearch] = useState('');
+  const [selectedArticleCategory, setSelectedArticleCategory] = useState('All');
+  const [newArticleGame, setNewArticleGame] = useState(gameOptions[0].value);
+  const [newArticleTone, setNewArticleTone] = useState(toneOptions[0].value);
+  const [customPromptText, setCustomPromptText] = useState(`Write an educational, informational article focusing on ${gameOptions[0].value} concepts suited for school reading.`);
+  const [isPromptUserModified, setIsPromptUserModified] = useState(false);
+  const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
 
-### Evidence
-* Studies published in peer-reviewed journals show that early exposure to a subject dramatically increases long-term retention and application.
-* Countries that prioritize this subject area consistently outperform the United States on international assessments.
-* Surveys of adults overwhelmingly report wishing they had received more instruction in this area during their school years.
+  // Classroom/Games Cloak/Decoy State
+  const [useClassroomDecoy, setUseClassroomDecoy] = useState(false);
 
-### Addressing the Counterargument
-Critics argue that the curriculum is already overcrowded and that adding requirements displaces other essential subjects. This argument mistakes breadth for quality. Integration—not addition—is the answer. ${subject} concepts can be woven into existing coursework without displacing it.
+  const handleGenerateArticle = () => {
+    if (isGeneratingArticle) return;
+    setIsGeneratingArticle(true);
+    setGenerationProgress(0);
 
-### Conclusion
-The evidence is clear. Expanding ${subject} education is not an idealistic goal—it is a practical investment in students who will face a world that demands these skills. Schools that fail to adapt are failing their students.`;
-  } else {
-    // Compare & Contrast
-    title = `${subject === 'Science' ? 'Photosynthesis vs. Cellular Respiration: Two Sides of the Same Coin' : subject === 'Mathematics' ? 'Mean, Median, and Mode: Choosing the Right Measure of Center' : subject === 'ELA' ? 'Fiction vs. Nonfiction: How Form Shapes Meaning' : 'Ancient Greece vs. Ancient Rome: Foundations of Western Civilization'}`;
-    content = `### Introduction
-Understanding concepts in isolation is useful. Understanding how they relate to—and differ from—each other is more powerful. This article compares two closely related ${subject.toLowerCase()} ideas that students frequently confuse.
+    const interval = setInterval(() => {
+      setGenerationProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            const article = generateMockAIArticle(newArticleGame, newArticleTone, customPromptText);
+            setArticles((prevArticles) => [article, ...prevArticles]);
+            setSelectedArticleCategory(article.category);
+            setSelectedArticleId(article.id);
+            setIsGeneratingArticle(false);
+          }, 200);
+          return 100;
+        }
+        return prev + 5;
+      });
+    }, 45);
+  };
 
-### Similarities
-Both share a common foundation:
-* They emerge from the same broader system or historical context.
-* Each plays an essential and complementary role in how the subject area functions.
-* Students who master one concept are significantly better positioned to understand the other.
+  const handlePasswordSubmit = (customPass) => {
+    const inputPass = (customPass !== undefined ? customPass : passcode).trim().toLowerCase();
+    if (!inputPass) return;
 
-### Key Differences
-${subject === 'Science'
-  ? `**Photosynthesis** converts light energy into chemical energy stored as glucose (C₆H₁₂O₆), releasing oxygen as a byproduct. It occurs in plant chloroplasts and requires sunlight.
+    if (inputPass === 'ttt0609' || inputPass === '2026' || inputPass === 'games') {
+      setTimeout(() => {
+        setViewModeAndSave('games');
+        setPasscode('');
+      }, 150);
+    } else if (inputPass === '0609') {
+      setTimeout(() => {
+        setViewModeAndSave('articles');
+        setPasscode('');
+      }, 150);
+    } else if (
+      inputPass === '1212' || 
+      inputPass === '1111' || 
+      ['school', 'classroom', 'study', 'science', 'math', 'education', 'admin', 'password', 'open', 'class'].includes(inputPass)
+    ) {
+      setTimeout(() => {
+        setViewModeAndSave('articles');
+        setPasscode('');
+      }, 150);
+    } else {
+      setTimeout(() => {
+        setIsShake(true);
+        setErrorCount(prev => prev + 1);
+        setTimeout(() => {
+          setIsShake(false);
+          setPasscode('');
+        }, 500);
+      }, 100);
+    }
+  };
 
-**Cellular respiration** breaks down glucose to release usable energy (ATP), consuming oxygen and releasing carbon dioxide. It occurs in the mitochondria of nearly all living cells, including plants and animals.
+  const handleDigitInput = (digit) => {
+    if (viewMode === 'games') return;
+    const nextPasscode = passcode + digit;
+    setPasscode(nextPasscode);
 
-In short: photosynthesis stores energy; cellular respiration releases it. One builds; the other burns.`
-  : subject === 'Mathematics'
-  ? `The **mean** (average) is sensitive to outliers. A single extreme value can pull the mean far from where most data actually clusters.
+    // Instant matching for rapid-pins (2026, 0609, 1212, 1111)
+    if (nextPasscode === '2026') {
+      setTimeout(() => {
+        setViewModeAndSave('games');
+        setPasscode('');
+      }, 150);
+    } else if (nextPasscode === '0609' || nextPasscode === '1212' || nextPasscode === '1111') {
+      setTimeout(() => {
+        setViewModeAndSave('articles');
+        setPasscode('');
+      }, 150);
+    } else if (nextPasscode.length >= 4 && !isNaN(nextPasscode)) {
+      setTimeout(() => {
+        setIsShake(true);
+        setErrorCount(prev => prev + 1);
+        setTimeout(() => {
+          setIsShake(false);
+          setPasscode('');
+        }, 500);
+      }, 200);
+    }
+  };
 
-The **median** (middle value when data is ordered) is resistant to outliers. It better represents the center when data is skewed.
+  useEffect(() => {
+    if (viewMode !== 'locked') return;
+    
+    const handleKeyDown = (e) => {
+      // If focused inside the text input, let native browser behavior take over. Only intercept Enter/Escape.
+      if (document.activeElement?.tagName === 'INPUT') {
+        if (e.key === 'Escape') {
+          setPasscode('');
+        }
+        return;
+      }
 
-The **mode** (most frequent value) is most useful for categorical data or when identifying the most common response.
+      if (e.key >= '0' && e.key <= '9') {
+        handleDigitInput(e.key);
+      } else if (e.key === 'Backspace') {
+        setPasscode(prev => prev.slice(0, -1));
+      } else if (e.key === 'Escape') {
+        setPasscode('');
+      } else if (e.key === 'Enter') {
+        handlePasswordSubmit();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [passcode, viewMode]);
 
-Rule of thumb: use the median for income data, housing prices, or any distribution with outliers. Use the mean for symmetric distributions without extreme values.`
-  : subject === 'ELA'
-  ? `**Fiction** uses invented characters, settings, and events to explore emotional truths. The author is not constrained by what happened—only by what rings true. Its purpose is often to generate empathy and insight through story.
+  // Automated trigger checks for "0609" and "2026" within the article system's search tab
+  useEffect(() => {
+    if (articleSearch === '2026' || articleSearch.toLowerCase() === 'ttt0609') {
+      setViewModeAndSave('games');
+      setArticleSearch('');
+    } else if (articleSearch === '0609') {
+      setViewModeAndSave('locked');
+      setArticleSearch('');
+    }
+  }, [articleSearch]);
 
-**Nonfiction** is bound to documented facts, real people, and verifiable events. The author\'s interpretation matters, but the record cannot be invented. Its purpose is to inform, analyze, or persuade using evidence.
+  // Global keydown listeners for quick keystroke combinations
+  useEffect(() => {
+    let sequenceBuffer = '';
+    const handleGlobalSequence = (e) => {
+      // Avoid intercepting if targeted on search input to let them type fully
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+        return;
+      }
+      if (e.key >= '0' && e.key <= '9') {
+        sequenceBuffer += e.key;
+        if (sequenceBuffer.length > 4) {
+          sequenceBuffer = sequenceBuffer.slice(-4);
+        }
+        
+        if (sequenceBuffer === '0609') {
+          setViewModeAndSave('locked');
+          setPasscode('');
+          sequenceBuffer = '';
+        } else if (sequenceBuffer === '2026') {
+          setViewModeAndSave('games');
+          setPasscode('');
+          sequenceBuffer = '';
+        }
+      } else if (e.key === 'Escape') {
+        sequenceBuffer = '';
+      }
+    };
+    window.addEventListener('keydown', handleGlobalSequence);
+    return () => window.removeEventListener('keydown', handleGlobalSequence);
+  }, [viewMode]);
 
-Both forms can be equally sophisticated and literary. The difference lies in their relationship to fact—not in their quality or complexity.`
-  : `**Ancient Greece** (c. 800–146 BCE) pioneered democracy, philosophy, and scientific inquiry. Greek city-states like Athens and Sparta operated independently and often competed. Greek culture emphasized individual intellectual achievement.
+  // Global Panic Key Handler
+  useEffect(() => {
+    const handlePanic = (e) => {
+      if (e.key === '[' || e.key === ']') {
+        e.preventDefault();
+        setViewModeAndSave('articles');
+        setSelectedGame(null); // Instantly close active game to clear screen
+      }
+    };
+    window.addEventListener('keydown', handlePanic);
+    return () => window.removeEventListener('keydown', handlePanic);
+  }, []);
 
-**Ancient Rome** (c. 753 BCE–476 CE) built upon Greek foundations while adding engineering, law, and large-scale governance. Rome unified vast territories under a single political system—first a republic, then an empire—prioritizing order, military strength, and civic infrastructure.
+  // Set dynamic browser tab title & favicon based on current section & decoy toggle
+  useEffect(() => {
+    const updateFavicon = (href) => {
+      let link = document.querySelector("link[rel*='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = href;
+    };
 
-Greece gave the Western world its ideas. Rome gave it the institutions to spread and sustain them.`}
+    const bookSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
+    )}`;
 
-### Which Is More Important?
-This is a false choice. Both are essential. The deeper lesson is that most important concepts exist in relationship to each other—and genuine understanding requires knowing not just what something is, but how it compares to what it is not.`;
+    const gamepadSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="3"/><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01"/></svg>`
+    )}`;
+
+    if (viewMode === 'articles') {
+      document.title = "StudyTools";
+      updateFavicon(bookSvgDataUri);
+    } else if (viewMode === 'games') {
+      if (useClassroomDecoy) {
+        document.title = "Home - Classroom";
+        updateFavicon("https://ssl.gstatic.com/classroom/favicon.png");
+      } else {
+        document.title = "StudyTools";
+        updateFavicon(bookSvgDataUri);
+      }
+    } else {
+      // Default to StudyTools for locked/welcome screens
+      document.title = "StudyTools";
+      updateFavicon(bookSvgDataUri);
+    }
+  }, [viewMode, useClassroomDecoy]);
+
+  // Sync custom prompt text with dropdown selections if not manually customized
+  useEffect(() => {
+    if (!isPromptUserModified) {
+      setCustomPromptText(`Write an educational, ${newArticleTone.toLowerCase()} article focusing on ${newArticleGame} concepts suited for school reading.`);
+    }
+  }, [newArticleGame, newArticleTone, isPromptUserModified]);
+
+  // Set LocalStorage theme and mode on change
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-mode', mode);
+    safeStorage.setItem('unblocked-theme', theme);
+    safeStorage.setItem('unblocked-mode', mode);
+  }, [theme, mode]);
+
+  // Set LocalStorage favorites on change
+  useEffect(() => {
+    safeStorage.setItem('unblocked-favorites', JSON.stringify(favorites));
+  }, [favorites]);
+
+  // Hide/show chat widget based on lock state
+  useEffect(() => {
+    document.body.setAttribute('data-locked', isPasscodeUnlocked ? 'false' : 'true');
+  }, [isPasscodeUnlocked]);
+
+  // List of Alt links configuration
+  const altLinks = [
+    { name: 'Alt Link 1', url: 'https://granddia3.github.io' },
+    { name: 'Alt Link 2', url: 'https://classroonn.github.io' },
+    { name: 'Alt Link 3', url: 'https://IIMS-sucksasaschool.github.io/' },
+    { name: 'Alt Link 4', url: 'https://ciassroonn.github.io' },
+    { name: 'Alt Link 5', url: 'about:blank' }
+  ];
+
+  // Handle addition/removal of favorites
+  const toggleFavorite = (e, gameId) => {
+    e.stopPropagation();
+    if (favorites.includes(gameId)) {
+      setFavorites(favorites.filter(id => id !== gameId));
+    } else {
+      setFavorites([...favorites, gameId]);
+    }
+  };
+
+  // Helper method to draw beautiful game art based on game title / id
+  const renderGameArt = (game) => {
+    const iconSize = 48;
+    switch (game.id) {
+      case 1: // Slope
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            {/* Grid background effect */}
+            <div className="absolute inset-0 opacity-15 overflow-hidden">
+              <div className="w-full h-full bg-[linear-gradient(to_bottom,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(to_right,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:16px_16px]" />
+              <div className="absolute bottom-0 w-full h-1/2 bg-gradient-to-t from-emerald-500/30 to-transparent" />
+            </div>
+            <div className="relative">
+              <div className="absolute -inset-4 rounded-full bg-emerald-500/20 blur-md animate-pulse" />
+              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 border-2 border-white flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.5)] transform hover:rotate-45 transition-transform duration-500" />
+            </div>
+            <div className="absolute bottom-3 w-1/2 h-[3px] bg-emerald-400/50 rounded transform rotate-12" />
+          </div>
+        );
+      case 2: // 2048
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="grid grid-cols-2 gap-1 bg-amber-950/20 p-2 rounded">
+              <div className="w-8 h-8 rounded bg-amber-500 flex items-center justify-center text-xs font-black text-black">2</div>
+              <div className="w-8 h-8 rounded bg-orange-500 flex items-center justify-center text-xs font-black text-white">0</div>
+              <div className="w-8 h-8 rounded bg-yellow-500 flex items-center justify-center text-xs font-black text-white">4</div>
+              <div className="w-8 h-8 rounded bg-amber-600 flex items-center justify-center text-xs font-black text-white animate-bounce">8</div>
+            </div>
+          </div>
+        );
+      case 3: // Retro Bowl
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="absolute top-2 left-2 text-[10px] font-mono text-blue-400 opacity-60">QUARTERBACK</div>
+            <div className="relative w-14 h-8 bg-amber-800 rounded-full border-y-[3px] border-white/60 flex items-center justify-center shadow-lg transform -rotate-12">
+              <div className="w-1 h-6 bg-white/80 absolute" />
+              <div className="w-3 h-[2px] bg-white translate-x-2 absolute" />
+              <div className="w-3 h-[2px] bg-white -translate-x-2 absolute" />
+            </div>
+          </div>
+        );
+      case 4: // Flappy Bird
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="absolute inset-y-0 right-6 w-5 h-full flex flex-col justify-between py-2">
+              <div className="w-full h-8 bg-green-500 rounded-b border-2 border-white/40" />
+              <div className="w-full h-12 bg-green-500 rounded-t border-2 border-white/40" />
+            </div>
+            <div className="relative w-10 h-8 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full border-2 border-white flex items-center justify-center shadow-md animate-bounce">
+              <div className="absolute right-1 w-3 h-3 bg-white rounded-full border border-black flex items-center justify-center">
+                <div className="w-1.5 h-1.5 bg-black rounded-full" />
+              </div>
+              <div className="absolute left-1 w-3 h-2 bg-orange-500 rounded-lg" />
+              <div className="absolute bottom-1 w-4 h-2 bg-white/80 rounded-full border border-black/40 rotate-12" />
+            </div>
+          </div>
+        );
+      case 5: // Pacman Retro
+        return (
+          <div className="relative w-full h-full flex items-center justify-center gap-2">
+            <div className="w-10 h-10 bg-yellow-400 rounded-full border-r-4 border-transparent rotate-45 animate-pulse" />
+            <div className="w-2 h-2 bg-white rounded-full" />
+            <div className="w-2 h-2 bg-white/60 rounded-full" />
+            <div className="w-2 h-2 bg-white/30 rounded-full" />
+          </div>
+        );
+      case 6: // Tunnel rush
+        return (
+          <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+            <div className="absolute w-24 h-24 border-2 border-dashed border-purple-500/40 rounded-full animate-spin" />
+            <div className="absolute w-16 h-16 border border-purple-500/30 rounded-full animate-ping" />
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border border-white" />
+          </div>
+        );
+      case 7: // Chess
+        return (
+          <div className="relative w-full h-full flex items-center justify-center bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.05)_0%,transparent_70%)]">
+            <div className="border border-white/20 p-1 bg-black/40 rounded flex flex-col gap-0.5">
+              <div className="flex gap-0.5">
+                <div className="w-4 h-4 bg-white" />
+                <div className="w-4 h-4 bg-stone-700" />
+              </div>
+              <div className="flex gap-0.5">
+                <div className="w-4 h-4 bg-stone-700" />
+                <div className="w-4 h-4 bg-white" />
+              </div>
+            </div>
+            <div className="absolute text-2xl font-semibold transform hover:scale-110 duration-200">♟️</div>
+          </div>
+        );
+      case 8: // Bubble shooter
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="absolute top-3 flex gap-2">
+              <div className="w-4 h-4 bg-cyan-400 rounded-full shadow-[0_0_8px_cyan]" />
+              <div className="w-4 h-4 bg-red-400 rounded-full shadow-[0_0_8px_red]" />
+              <div className="w-4 h-4 bg-yellow-400 rounded-full shadow-[0_0_8px_yellow]" />
+            </div>
+            <div className="absolute bottom-2 w-2 h-8 bg-zinc-400 rounded-full origin-bottom rotate-45 animate-pulse" />
+          </div>
+        );
+      case 9: // Crossy Road
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="absolute inset-x-0 h-4 bg-neutral-800/80 border-y border-neutral-700" />
+            <div className="w-8 h-8 bg-white border border-neutral-300 rounded flex flex-col items-center justify-center transform hover:translate-y-[-6px] transition-transform shadow-lg">
+              <div className="w-2 h-2 bg-red-500 rounded-full mt-1" />
+              <div className="w-3 h-1.5 bg-yellow-500 rounded-b mt-0.5" />
+            </div>
+          </div>
+        );
+      case 10: // Solitaire
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="w-9 h-14 bg-white border border-neutral-200 rounded-md shadow-md flex flex-col justify-between p-1 text-red-600 transform hover:-translate-y-2 hover:rotate-6 duration-300">
+              <span className="text-[9px] font-black leading-none">A</span>
+              <span className="text-sm self-center">♥️</span>
+              <span className="text-[9px] font-black leading-none self-end scale-y-[-1]">A</span>
+            </div>
+            <div className="absolute w-9 h-14 bg-red-600 border border-white rounded-md shadow-md flex flex-col justify-between p-1 text-white -translate-x-3 translate-y-1 transform hover:rotate-12 duration-300">
+              <div className="w-full h-full border border-white/20 rounded flex items-center justify-center text-xs">✨</div>
+            </div>
+          </div>
+        );
+      case 11: // Doodle jump
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="absolute w-8 h-1.5 bg-green-500 rounded bottom-6" />
+            <div className="w-8 h-10 bg-lime-400 rounded-t-full border border-green-600 flex flex-col items-center relative animate-bounce shadow">
+              <div className="w-4 h-1.5 bg-lime-500 rounded absolute -bottom-1" />
+              <div className="flex gap-1 mt-2">
+                <div className="w-1.5 h-1.5 bg-black rounded-full" />
+                <div className="w-1.5 h-1.5 bg-black rounded-full" />
+              </div>
+              <div className="w-1.5 h-4 bg-lime-600 rounded-full mt-1" />
+            </div>
+          </div>
+        );
+      case 12: // Classroom portal
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="bg-sky-500/10 p-3 rounded-full border border-sky-400/20">
+              <MessageSquare className="text-sky-400 w-10 h-10 animate-pulse" />
+            </div>
+          </div>
+        );
+      case 13: // Youtube stealth
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="w-14 h-10 bg-red-600 rounded-lg flex items-center justify-center shadow-lg relative cursor-pointer transform hover:scale-105 duration-200">
+              <Play className="fill-white text-white w-5 h-5 ml-0.5" />
+            </div>
+          </div>
+        );
+      case 14: // Stealth proxy frame
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="bg-zinc-800 p-3 rounded-lg border-2 border-zinc-700 flex flex-col items-center gap-1 shadow-md">
+              <Globe className="text-zinc-300 w-8 h-8 animate-spin" style={{ animationDuration: '8s' }} />
+            </div>
+          </div>
+        );
+      case 15: // Sim Life
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="bg-pink-500/10 p-4 rounded-full border border-pink-400/30">
+              <Users className="text-pink-400 w-8 h-8 hover:rotate-12 duration-200" />
+            </div>
+          </div>
+        );
+      case 16: // Sandbox Island
+        return (
+          <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-t from-emerald-950 to-amber-950 opacity-40" />
+            <div className="relative w-12 h-12 bg-amber-800 rounded-md border-t-[8px] border-emerald-500 shadow-xl flex items-center justify-center font-mono font-bold text-white/50 text-[10px]">
+              3D
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <Gamepad2 className="text-neutral-400 w-12 h-12" />
+          </div>
+        );
+    }
+  };
+
+  const isSinglePlayerCategory = (cat) => {
+    if (!cat) return true;
+    const c = cat.toLowerCase().trim();
+    return ['solo', 'single', 'platformer', 'skill', 'science', 'driving', 'horror', 'creative', 'ai'].some(kw => c.includes(kw));
+  };
+
+  const isMultiplayerCategory = (cat) => {
+    if (!cat) return false;
+    const c = cat.toLowerCase().trim();
+    return ['social', 'sport', 'multiplayer', 'fast', 'party', 'puzzle', 'shooter'].some(kw => c.includes(kw)) || c.includes('or');
+  };
+
+  // Filter games based on category sidebar, matching search query
+  const filteredGames = gamesData.filter(game => {
+    if (filter === 'single' && !isSinglePlayerCategory(game.category)) return false;
+    if (filter === 'multiplayer' && !isMultiplayerCategory(game.category)) return false;
+    if (filter === 'favorites' && !favorites.includes(game.id)) return false;
+
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase();
+      const matchTitle = (game.title || '').toLowerCase().includes(q);
+      const matchDesc = (game.description || '').toLowerCase().includes(q);
+      const matchCat = (game.category || '').toLowerCase().includes(q);
+      return matchTitle || matchDesc || matchCat;
+    }
+
+    return true;
+  });
+
+
+
+  if (!isPasscodeUnlocked) {
+    const filteredArticles = articles.filter(art => {
+      const matchesCategory = selectedArticleCategory === 'All' || art.category === selectedArticleCategory;
+      if (!matchesCategory) return false;
+
+      const q = articleSearch.toLowerCase().trim();
+      if (!q) return true;
+      return art.title.toLowerCase().includes(q) || 
+             art.content.toLowerCase().includes(q) || 
+             art.category.toLowerCase().includes(q);
+    });
+
+    const selectedArticle = filteredArticles.find(art => art.id === selectedArticleId) || filteredArticles[0] || articles[0];
+
+    const renderFormattedText = (text) => {
+      return text.split('\n').map((line, idx) => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('###')) {
+          const headerText = trimmed.replace(/^###\s*/, '');
+          return (
+            <h4 key={idx} className="text-xs font-bold text-[var(--text-primary)] mt-3 mb-1.5">
+              {headerText}
+            </h4>
+          );
+        }
+        if (trimmed.startsWith('*')) {
+          const itemText = trimmed.replace(/^\*\s*/, '');
+          return (
+            <li key={idx} className="text-[11px] text-[var(--text-muted)] ml-4 list-disc mb-1 leading-relaxed">
+              {itemText}
+            </li>
+          );
+        }
+        if (trimmed.match(/^\d+\./)) {
+          const itemText = trimmed.replace(/^\d+\.\s*/, '');
+          return (
+            <li key={idx} className="text-[11px] text-[var(--text-muted)] ml-4 list-decimal mb-1 leading-relaxed">
+              {itemText}
+            </li>
+          );
+        }
+        if (trimmed === '') {
+          return <div key={idx} className="h-1.5" />;
+        }
+        return (
+          <p key={idx} className="text-[11px] text-[var(--text-muted)] leading-relaxed mb-2">
+            {trimmed}
+          </p>
+        );
+      });
+    };
+
+    if (viewMode === 'articles') {
+      return (
+        <div className="min-h-screen bg-[var(--bg-color)] text-[var(--text-primary)] flex flex-col p-4 md:p-6 transition-colors duration-300 relative select-text">
+          
+          {/* Decoy Legitimate Educational Header */}
+          <header className="w-full max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center pb-4 mb-4 border-b border-[var(--card-border)] gap-4 select-none">
+            <div 
+              onClick={() => { setActiveEduTab('articles'); setArticleSearch(''); }}
+              className="flex items-center gap-3 cursor-pointer active:scale-98 transition-transform self-stretch sm:self-auto"
+              title="StudyTools Home"
+            >
+              <div className="p-2 bg-[var(--accent-color)] text-[var(--bg-color)] rounded-xl shadow-[0_2px_8.5px_var(--accent-shadow)] border border-[var(--card-border)]">
+                <BookOpen className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <h1 className="text-sm font-bold tracking-tight text-[var(--text-primary)] sm:text-base">
+                  StudyTools <span className="text-[9px] font-mono border border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)] px-2 py-0.5 rounded-full uppercase tracking-widest font-bold">Academic Base</span>
+                </h1>
+              </div>
+            </div>
+
+            {/* HIGHLY ACCESSIBLE PRIMARY TAB SWITCHER */}
+            <div className="flex items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-full p-1 shadow-sm select-none max-w-full overflow-x-auto scrollbar-none">
+              {[
+                { id: 'articles', label: 'Syllabus Articles', icon: BookOpen },
+                { id: 'flashcards', label: 'Study Flashcards', icon: Layers },
+                { id: 'quiz', label: 'Practice Quizzes', icon: Gamepad2 },
+                { id: 'grammar', label: 'Grammar Scanner', icon: FileText }
+              ].map((tab) => {
+                const TabIcon = tab.icon;
+                const isSelected = activeEduTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveEduTab(tab.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+                      isSelected
+                        ? 'bg-[var(--accent-color)] text-[var(--bg-color)] font-bold shadow-sm'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    <TabIcon className="w-3.5 h-3.5" />
+                    <span className="leading-none">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-start">
+              {/* Sign out link */}
+              <button
+                onClick={() => {
+                  setViewModeAndSave('articles');
+                  setPasscode('');
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-mono font-bold bg-[var(--bg-secondary)] border border-[var(--card-border)] hover:border-red-500/50 hover:bg-red-500/10 text-[var(--text-primary)] hover:text-red-500 transition-all duration-200 cursor-pointer shadow-sm group"
+                title="Sign Out to Lock Screen"
+              >
+                <LogOut className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+                <span>Sign Out</span>
+              </button>
+
+              {/* Light/Dark Toggle */}
+              <div className="flex items-center gap-2 border border-[var(--card-border)] bg-[var(--bg-secondary)] py-1.5 px-2.5 rounded-full shadow-sm">
+                <div 
+                  onClick={() => setMode(prev => prev === 'light' ? 'dark' : 'light')}
+                  className="relative w-[50px] h-6 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 transition-all duration-300"
+                >
+                  <div 
+                    className={`w-5 h-5 rounded-full bg-[var(--accent-color)] transition-all flex items-center justify-center text-[10px] transform ${
+                      mode === 'dark' ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  >
+                    {mode === 'dark' ? '🌙' : '☀️'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Actual Articles Hub Grid (Occupies full-screen width) */}
+          <div className="w-full max-w-7xl mx-auto bg-[var(--card-bg)] border border-[var(--card-border)] rounded-3xl p-5 md:p-6 shadow-2xl transition-all flex flex-col gap-4 flex-1 md:h-[650px] overflow-hidden">
+            
+            {activeEduTab === 'articles' && (
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1 min-h-0 overflow-hidden">
+                {/* Left Column - Articles selection */}
+                <div className="md:col-span-2 flex flex-col gap-3 overflow-hidden h-full">
+                  
+                  {/* Subject Specific Sections */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 flex-shrink-0 scrollbar-none select-none">
+                    {['All', 'Science', 'Mathematics', 'ELA', 'Social Studies', 'Italian'].map((cat) => {
+                      const isSelected = selectedArticleCategory === cat;
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => {
+                            setSelectedArticleCategory(cat);
+                            const firstInCat = articles.find(art => cat === 'All' || art.category === cat);
+                            if (firstInCat) {
+                              setSelectedArticleId(firstInCat.id);
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-[10px] font-mono border font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-98 ${
+                            isSelected
+                              ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                              : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border-[var(--card-border)] hover:border-[var(--text-muted)]/50 hover:text-[var(--text-primary)]'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="relative flex-shrink-0">
+                    <input
+                      type="text"
+                      placeholder="Search curriculum papers..."
+                      value={articleSearch}
+                      onChange={(e) => setArticleSearch(e.target.value)}
+                      className="w-full text-xs rounded-xl py-1.5 pl-8 pr-3 border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] placeholder:opacity-50 transition-all font-mono"
+                    />
+                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[var(--text-muted)]" />
+                  </div>
+
+                  {/* Feed list */}
+                  <div className="flex-1 flex flex-col gap-2 overflow-y-auto py-0.5 scrollbar-thin">
+                    {filteredArticles.length === 0 ? (
+                      <div className="text-center py-4 text-xs text-[var(--text-muted)] font-mono select-none">
+                        No matching resource files available
+                      </div>
+                    ) : (
+                      filteredArticles.map((art) => {
+                        const isSelected = art.id === selectedArticleId;
+                        return (
+                          <div
+                            key={art.id}
+                            onClick={() => setSelectedArticleId(art.id)}
+                            className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                              isSelected
+                                ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)] shadow-sm scale-[1.01]'
+                                : 'bg-[var(--bg-secondary)] border-[var(--card-border)] hover:border-[var(--text-muted)]/40'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-1 mb-0.5 flex-wrap">
+                              <span className="text-[8px] font-bold font-mono tracking-wider px-1.5 py-0.5 rounded bg-[var(--input-fill)] text-[var(--accent-color)] uppercase">
+                                {art.category}
+                              </span>
+                              <span className="text-[8px] text-[var(--text-muted)] font-mono">
+                                {art.readTime}
+                              </span>
+                            </div>
+                            <h4 className="text-[11px] font-bold leading-snug text-[var(--text-primary)] line-clamp-1">
+                              {art.title}
+                            </h4>
+                            <p className="text-[9px] text-[var(--text-muted)] mt-0.5 font-mono">
+                              {art.date}
+                            </p>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* CUSTOMIZABLE PROMPT GENERATOR CONTAINER WRAP */}
+                  <div className="bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-2xl p-3 flex-shrink-0 flex flex-col gap-2 text-left">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                        <span className="text-xs font-bold text-[var(--text-primary)] font-mono">Interactive AI Writer</span>
+                      </div>
+                      
+                      {isPromptUserModified && (
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setCustomPromptText(`Write an educational, informational article focusing on ${newArticleGame} concepts suited for school reading.`);
+                            setIsPromptUserModified(false);
+                          }}
+                          className="text-[9px] font-mono text-[var(--accent-color)] hover:underline flex items-center gap-0.5 cursor-pointer bg-transparent border-none p-0"
+                        >
+                          Reset preset
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-left">
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-wider">Subject</label>
+                        <select
+                          value={newArticleGame}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNewArticleGame(val);
+                            if (!isPromptUserModified) {
+                              setCustomPromptText(`Write an educational, informational article focusing on ${val} concepts suited for school reading.`);
+                            }
+                          }}
+                          className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1.5 text-[var(--text-primary)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-mono"
+                        >
+                          {gameOptions.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-wider">Tone</label>
+                        <select
+                          value={newArticleTone}
+                          onChange={(e) => setNewArticleTone(e.target.value)}
+                          className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1.5 text-[var(--text-primary)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-mono"
+                        >
+                          {toneOptions.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.value}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-0.5 mt-0.5 text-left">
+                      <label className="text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-wider">Custom prompt instructions</label>
+                      <textarea
+                        value={customPromptText}
+                        onChange={(e) => {
+                          setCustomPromptText(e.target.value);
+                          setIsPromptUserModified(true);
+                        }}
+                        placeholder="Type standard prompt rules..."
+                        rows={2}
+                        className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-2 text-[var(--text-primary)] w-full focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-sans resize-none scrollbar-thin"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleGenerateArticle}
+                      disabled={isGeneratingArticle}
+                      className="w-full text-xs font-semibold bg-[var(--accent-color)] text-[var(--bg-color)] py-1.5 rounded-xl hover:opacity-95 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1.5 font-mono shadow-sm mt-0.5"
+                    >
+                      {isGeneratingArticle ? (
+                        <>
+                          <Sparkles className="w-3 h-3 animate-spin text-yellow-300" />
+                          <span>DEEP WRITER ({generationProgress}%)...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3 h-3 text-yellow-300" />
+                          <span>GENERATE ARTICLE WITH AI</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                </div>
+
+                {/* Right Column - Deep Active Article view */}
+                <div className="md:col-span-3 flex flex-col bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-2xl overflow-hidden h-full">
+                  {selectedArticle ? (
+                    <div className="flex flex-col h-full overflow-hidden text-left justify-between">
+                      
+                      {/* Title Bar details */}
+                      <div className="p-4 border-b border-[var(--card-border)] bg-[var(--card-bg)] flex-shrink-0 flex justify-between items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded bg-[var(--bg-secondary)] text-[var(--accent-color)] uppercase tracking-wider border border-[var(--card-border)]">
+                              {selectedArticle.category}
+                            </span>
+                            <span className="text-[9px] text-[var(--text-muted)] font-mono bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded border border-[var(--card-border)]">
+                              {selectedArticle.readTime}
+                            </span>
+                          </div>
+                          <h3 className="text-sm font-extrabold text-[var(--text-primary)] leading-snug line-clamp-1">
+                            {selectedArticle.title}
+                          </h3>
+                        </div>
+
+                        {/* Interactive prompt linkages */}
+                        <div className="flex items-center gap-1.5 shrink-0 select-none">
+                          <button
+                            type="button"
+                            onClick={() => setActiveEduTab('flashcards')}
+                            className="bg-[var(--accent-color)]/10 text-[var(--accent-color)] hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] font-mono text-[9px] font-bold px-2 py-1.5 rounded-xl border border-[var(--accent-color)] flex items-center gap-1 transition-all cursor-pointer"
+                            title="Interactive Flashcards deck for this syllabus article"
+                          >
+                            <Layers className="w-3.5 h-3.5" />
+                            <span>STUDY TERMS</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveEduTab('quiz')}
+                            className="bg-[var(--accent-color)]/10 text-[var(--accent-color)] hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] font-mono text-[9px] font-bold px-2 py-1.5 rounded-xl border border-[var(--accent-color)] flex items-center gap-1 transition-all cursor-pointer"
+                            title="Generate Quiz based on this syllabus"
+                          >
+                            <Gamepad2 className="w-3.5 h-3.5" />
+                            <span>TAKE TEST</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="p-4 overflow-y-auto text-left flex-1 min-h-0 scrollbar-thin">
+                        {renderFormattedText(selectedArticle.content)}
+                      </div>
+
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-xs text-[var(--text-muted)] font-mono">
+                      Select a core paper assignment to read content
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+
+            {activeEduTab === 'flashcards' && (
+              <FlashcardsWorkspace 
+                refArticle={selectedArticle} 
+                onGeneratedSuccess={(targetTab) => setActiveEduTab(targetTab)} 
+              />
+            )}
+
+            {activeEduTab === 'quiz' && (
+              <QuizWorkspace 
+                refArticle={selectedArticle} 
+                onGeneratedSuccess={(targetTab) => setActiveEduTab(targetTab)} 
+              />
+            )}
+
+            {activeEduTab === 'grammar' && (
+              <GrammarCheckerWorkspace />
+            )}
+
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-[var(--bg-color)] text-[var(--text-primary)] flex flex-col xl:flex-row items-center xl:items-center justify-center p-4 md:p-8 xl:p-12 gap-8 md:gap-10 transition-colors duration-350 relative select-none">
+        
+        {/* Floating Controls inside Lock Screen */}
+        <div className="absolute top-4 right-4 flex items-center gap-3">
+          
+          {/* Light/Dark Slider */}
+          <div className="flex items-center gap-2 border border-[var(--card-border)] bg-[var(--bg-secondary)] py-1.5 px-2.5 rounded-full shadow-sm">
+            <div 
+              onClick={() => setMode(prev => prev === 'light' ? 'dark' : 'light')}
+              className="relative w-[50px] h-6 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 select-none transition-all duration-300"
+              title="Toggle Light/Dark Theme Mode"
+            >
+              <div 
+                className={`w-5 h-5 rounded-full bg-[var(--accent-color)] shadow-md transition-all duration-350 ease-out flex items-center justify-center text-[10px] transform ${
+                  mode === 'dark' ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              >
+                {mode === 'dark' ? '🌙' : '☀️'}
+              </div>
+            </div>
+          </div>
+
+          {/* Theme custom capsule */}
+          <div className="border border-[var(--card-border)] bg-[var(--bg-secondary)] px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm">
+            <div className="flex items-center gap-1.5">
+              {[
+                { key: 'cyborg', color: 'bg-green-500 border-green-300 shadow-[0_0_5px_green]', tooltip: 'Cyborg Theme' },
+                { key: 'violet', color: 'bg-indigo-600 border-indigo-400', tooltip: 'Violet Theme' },
+                { key: 'ice', color: 'bg-sky-400 border-sky-300', tooltip: 'Glacier Theme' },
+                { key: 'rose-pine', color: 'bg-rose-300 border-rose-200', tooltip: 'Rose Pine Theme' },
+                { key: 'none', color: 'bg-gradient-to-br from-neutral-300 to-neutral-700 border-neutral-400', tooltip: 'No Theme (Monochrome)' }
+              ].map((themeOpt) => (
+                <button
+                  key={themeOpt.key}
+                  title={themeOpt.tooltip}
+                  onClick={() => setTheme(themeOpt.key)}
+                  className={`w-3.5 h-3.5 rounded-full ${themeOpt.color} border transition-all duration-200 hover:scale-130 cursor-pointer ${
+                    theme === themeOpt.key ? 'ring-2 ring-offset-2 ring-[var(--accent-color)]' : 'opacity-80'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Lock Card Content Container */}
+        <div className={`w-full max-w-sm bg-[var(--card-bg)] border border-[var(--card-border)] rounded-3xl p-6 md:p-8 shadow-2xl transition-all duration-300 flex flex-col items-center gap-6 flex-shrink-0 ${isShake ? 'animate-shake' : ''}`}>
+          
+          <div className="text-center">
+            <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Portal Secured</h2>
+            <p className="text-xs text-[var(--text-muted)] mt-1.5 leading-relaxed">This is a paid Science, Math, ELA, and Social Studies article website. Please enter a correct password to continue to the website.</p>
+          </div>
+
+          {/* Alphanumeric Text/Passcode Input Field */}
+          <div className="w-full flex flex-col gap-2.5">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Enter password..."
+                value={passcode}
+                onChange={(e) => setPasscode(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handlePasswordSubmit();
+                  }
+                }}
+                className="w-full px-4 py-2.5 border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-center text-sm font-bold font-mono tracking-widest rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] placeholder:text-[10px] placeholder:font-sans placeholder:tracking-normal outline-none transition-all placeholder:opacity-60"
+                autoFocus
+              />
+              {passcode.length > 0 && (
+                <button 
+                  type="button"
+                  onClick={() => setPasscode('')}
+                  className="absolute right-3.5 top-3 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] font-bold cursor-pointer"
+                  title="Clear input"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            
+            <button
+              type="button"
+              onClick={() => handlePasswordSubmit()}
+              className="w-full text-xs font-mono font-bold bg-[var(--accent-color)] text-[var(--bg-color)] py-2.5 rounded-xl hover:opacity-95 active:scale-98 transition-all cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+            >
+              <Unlock className="w-3.5 h-3.5" />
+              <span>SUBMIT PASSWORD</span>
+            </button>
+          </div>
+
+          {/* Indicators for passcode digits */}
+          {(!passcode || (!isNaN(passcode) && passcode.length <= 4)) && (
+            <div className="flex justify-center gap-4 py-1">
+              {[0, 1, 2, 3].map((index) => {
+                const isFilled = passcode.length > index;
+                return (
+                  <div 
+                    key={index}
+                    className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-150 transform ${
+                      isFilled 
+                        ? 'bg-[var(--accent-color)] border-[var(--accent-color)] scale-110 shadow-[0_0_8px_var(--accent-shadow)]' 
+                        : 'border-[var(--card-border)] bg-[var(--bg-secondary)]'
+                    }`}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {/* Secure Pad Grid */}
+          <div className="grid grid-cols-3 gap-3.5 w-full max-w-[245px] mt-2">
+            {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
+              <button
+                key={num}
+                onClick={() => handleDigitInput(num)}
+                className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] hover:border-[var(--accent-color)] active:scale-95 hover:scale-105 transition-all duration-150 cursor-pointer shadow-sm mx-auto"
+              >
+                {num}
+              </button>
+            ))}
+            <button
+              onClick={() => setPasscode('')}
+              className="w-14 h-14 rounded-full flex items-center justify-center text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent hover:border-[var(--card-border)] hover:bg-[var(--bg-secondary)] active:scale-90 transition-all duration-150 cursor-pointer mx-auto"
+            >
+              Clear
+            </button>
+            <button
+              onClick={() => handleDigitInput('0')}
+              className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] hover:border-[var(--accent-color)] active:scale-95 hover:scale-105 transition-all duration-150 cursor-pointer shadow-sm mx-auto"
+            >
+              0
+            </button>
+            <button
+              onClick={() => setPasscode(prev => prev.slice(0, -1))}
+              className="w-14 h-14 rounded-full flex items-center justify-center text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent hover:border-[var(--card-border)] hover:bg-[var(--bg-secondary)] active:scale-90 transition-all duration-150 cursor-pointer mx-auto"
+            >
+              Del
+            </button>
+          </div>
+
+          {errorCount > 0 && (
+            <span className="text-[10.5px] text-red-500 font-medium font-mono animate-bounce mt-1">
+              Access Denied! Attempt #{errorCount}
+            </span>
+          )}
+
+        </div>
+
+        {/* ==================== ARTICLES SECTION ==================== */}
+        <div className="w-full max-w-4xl bg-[var(--card-bg)] border border-[var(--card-border)] rounded-3xl p-5 md:p-6 shadow-2xl transition-all duration-300 flex flex-col gap-4 select-text max-h-[90vh] md:h-[600px] overflow-hidden">
+          
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--card-border)]">
+            <div>
+              <h3 className="text-lg font-extrabold tracking-tight text-[var(--text-primary)] flex items-center gap-2">
+                <BookOpen className="text-[var(--accent-color)] w-5 h-5" />
+                Examples of some articles
+              </h3>
+            </div>
+            <div className="flex items-center gap-1.5 self-start sm:self-auto uppercase tracking-wider text-[10px] font-mono bg-[var(--bg-secondary)] py-1 px-2 rounded-md border border-[var(--card-border)] text-[var(--accent-color)]">
+              <Sparkles className="w-3.5 h-3.5 animate-pulse text-yellow-400" />
+              <span>AI generated examples</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1 min-h-0 overflow-hidden">
+            {/* Left lists & creator pane (cols 2) */}
+            <div className="md:col-span-2 flex flex-col gap-3 overflow-hidden h-full">
+              
+              {/* Subject Specific Sections */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 flex-shrink-0 scrollbar-none select-none">
+                {['All', 'Science', 'Mathematics', 'ELA', 'Social Studies', 'Italian'].map((cat) => {
+                  const isSelected = selectedArticleCategory === cat;
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        setSelectedArticleCategory(cat);
+                        const firstInCat = articles.find(art => cat === 'All' || art.category === cat);
+                        if (firstInCat) {
+                          setSelectedArticleId(firstInCat.id);
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] font-mono border font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-98 ${
+                        isSelected
+                          ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                          : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border-[var(--card-border)] hover:border-[var(--text-muted)]/50 hover:text-[var(--text-primary)]'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Internal search inside articles */}
+              <div className="relative flex-shrink-0">
+                <input
+                  type="text"
+                  placeholder="Search articles..."
+                  value={articleSearch}
+                  onChange={(e) => setArticleSearch(e.target.value)}
+                  className="w-full text-xs rounded-xl py-1.5 pl-8 pr-3 border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] placeholder:opacity-50 transition-all font-mono"
+                />
+                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[var(--text-muted)]" />
+              </div>
+
+              {/* Feed items */}
+              <div className="flex-1 flex flex-col gap-2 overflow-y-auto py-0.5 scrollbar-thin">
+                {filteredArticles.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-[var(--text-muted)] font-mono">
+                    No articles found matching query
+                  </div>
+                ) : (
+                  filteredArticles.map((art) => {
+                    const isSelected = art.id === selectedArticleId;
+                    return (
+                      <div
+                        key={art.id}
+                        onClick={() => setSelectedArticleId(art.id)}
+                        className={`p-2 md:p-2.5 rounded-xl border text-left cursor-pointer transition-all duration-200 ${
+                          isSelected
+                            ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)] shadow-sm scale-[1.01]'
+                            : 'bg-[var(--bg-secondary)] border-[var(--card-border)] hover:border-[var(--text-muted)]/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1 mb-0.5 flex-wrap">
+                          <span className="text-[8px] font-bold font-mono tracking-wider px-1.5 py-0.5 rounded bg-[var(--input-fill)] text-[var(--accent-color)] uppercase">
+                            {art.category}
+                          </span>
+                          <span className="text-[8px] text-[var(--text-muted)] font-mono">
+                            {art.readTime}
+                          </span>
+                        </div>
+                        <h4 className="text-[11px] font-bold leading-snug text-[var(--text-primary)] line-clamp-1">
+                          {art.title}
+                        </h4>
+                        <p className="text-[9px] text-[var(--text-muted)] mt-0.5 font-mono">
+                          {art.date}
+                        </p>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Creator board container */}
+              <div className="bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-2xl p-3 flex-shrink-0 flex flex-col gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                  <span className="text-xs font-bold text-[var(--text-primary)] font-mono">Interactive AI Writer</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-wider">Subject</label>
+                    <select
+                      value={newArticleGame}
+                      onChange={(e) => setNewArticleGame(e.target.value)}
+                      className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1.5 text-[var(--text-primary)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-mono"
+                    >
+                      {gameOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-wider">Tone</label>
+                    <select
+                      value={newArticleTone}
+                      onChange={(e) => setNewArticleTone(e.target.value)}
+                      className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1.5 text-[var(--text-primary)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-mono"
+                    >
+                      {toneOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.value}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1 mt-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-wider">Customize Prompt</label>
+                    {isPromptUserModified && (
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setIsPromptUserModified(false);
+                        }}
+                        className="text-[9px] font-mono text-[var(--accent-color)] hover:underline flex items-center gap-0.5 cursor-pointer bg-transparent border-none p-0"
+                      >
+                        Reset to preset
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    value={customPromptText}
+                    onChange={(e) => {
+                      setCustomPromptText(e.target.value);
+                      setIsPromptUserModified(true);
+                    }}
+                    placeholder="Type a custom prompt for the AI to write about..."
+                    rows={2}
+                    className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-2 text-[var(--text-primary)] w-full focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-sans resize-none scrollbar-thin"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGenerateArticle}
+                  disabled={isGeneratingArticle}
+                  className="w-full text-xs font-semibold bg-[var(--accent-color)] text-[var(--bg-color)] py-1.5 rounded-xl hover:opacity-95 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1.5 font-mono shadow-sm mt-0.5"
+                >
+                  {isGeneratingArticle ? (
+                    <>
+                      <Sparkles className="w-3 h-3 animate-spin text-yellow-300" />
+                      <span>DEEP WRITER ({generationProgress}%)...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3 text-yellow-300" />
+                      <span>GENERATE ARTICLE WITH AI</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+            </div>
+
+            {/* Right expanded active details reader card (cols 3) */}
+            <div className="md:col-span-3 flex flex-col bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-2xl overflow-hidden h-[300px] md:h-full">
+              {selectedArticle ? (
+                <div className="flex flex-col h-full overflow-hidden">
+                  {/* Article banner */}
+                  <div className="p-4 border-b border-[var(--card-border)] bg-[var(--card-bg)] flex-shrink-0">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded bg-[var(--bg-secondary)] text-[var(--accent-color)] uppercase tracking-wider border border-[var(--card-border)]">
+                        {selectedArticle.category}
+                      </span>
+                      <span className="text-[9px] text-[var(--text-muted)] font-mono bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded border border-[var(--card-border)]">
+                        {selectedArticle.readTime}
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-extrabold text-[var(--text-primary)] leading-snug">
+                      {selectedArticle.title}
+                    </h3>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-1 font-mono">
+                      {selectedArticle.subtitle} • {selectedArticle.date}
+                    </p>
+                  </div>
+
+                  {/* Article body */}
+                  <div className="p-4 overflow-y-auto text-left flex-1 min-h-0 scrollbar-thin">
+                    {renderFormattedText(selectedArticle.content)}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full text-xs text-[var(--text-muted)] font-mono">
+                  Select an article to begin reading
+                </div>
+              )}
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    );
   }
 
-  return {
-    id: articleId,
-    title,
-    subtitle: `AI-Generated • ${tone} • ${subject}`,
-    content,
-    date: timestamp,
-    category,
-    readTime: '3 min read',
-    isCustomGenerated: true
-  };
+  return (
+    <div className="min-h-screen flex flex-col transition-colors duration-300">
+      {/* HEADER */}
+      <nav className="border-b border-[var(--card-border)] bg-[var(--header-bg)] py-3.5 px-4 md:px-6 flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors duration-300 sticky top-0 z-50 shadow-sm">
+        
+        {/* Left Side: Decoy Classroom Title */}
+        <div className="flex items-center gap-4 self-stretch sm:self-auto justify-between w-full sm:w-auto">
+          <div 
+            onClick={() => { setFilter('all'); setSelectedGame(null); setSearchQuery(''); }}
+            className="flex items-center gap-2.5 cursor-pointer select-none group"
+            title={useClassroomDecoy ? "Go to Classroom homepage" : "Go to StudyTools homepage"}
+          >
+            <div className="p-2 bg-[var(--accent-color)] text-[var(--bg-color)] rounded-lg border border-[var(--card-border)] shadow-[0_2px_8.5px_var(--accent-shadow)] group-hover:rotate-12 group-hover:scale-110 transition-all duration-300 transform">
+              {useClassroomDecoy ? <School className="w-5.5 h-5.5" /> : <BookOpen className="w-5.5 h-5.5" />}
+            </div>
+            <div>
+              <span className="text-xl font-bold tracking-tight text-[var(--text-primary)] block group-hover:text-[var(--accent-color)] transition-colors">
+                {useClassroomDecoy ? "Home - Classroom" : "StudyTools"}
+              </span>
+            </div>
+          </div>
+
+          {/* Sign Out Button right after Classroom */}
+          <button
+            onClick={() => {
+              setViewModeAndSave('articles');
+              setPasscode('');
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-semibold bg-[var(--bg-secondary)] border border-[var(--card-border)] hover:border-red-500/50 hover:bg-red-500/10 text-[var(--text-primary)] hover:text-red-500 transition-all duration-200 cursor-pointer shadow-sm group"
+            title="Sign Out to Lock Screen"
+          >
+            <LogOut className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+            <span>Sign Out</span>
+          </button>
+        </div>
+
+        {/* Middle Search Bar */}
+        <div className="relative w-full max-w-sm sm:mx-4">
+          <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[var(--text-muted)]">
+            <Search className="h-4 w-4" />
+          </span>
+          <input
+            type="text"
+            placeholder="Search school games..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full text-sm rounded-full py-2.5 pl-9 pr-4 border border-[var(--card-border)] bg-[var(--input-fill)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] placeholder:opacity-50 transition-all duration-300 shadow-inner"
+          />
+        </div>
+
+        {/* Right Side Controls */}
+        <div className="flex items-center gap-3 md:gap-4 self-stretch sm:self-auto justify-between sm:justify-end flex-wrap sm:flex-nowrap">
+          
+          <div className="text-[11px] font-mono select-none opacity-80 pl-1">
+            <span className="text-xs opacity-50 block sm:inline mr-1">made by</span>
+            <span className="font-bold text-[var(--accent-color)] tracking-wider">™ AND GRANDDIA2</span>
+          </div>
+
+          {/* Light/Dark slider */}
+          <div className="flex items-center gap-2 border border-[var(--card-border)] bg-[var(--bg-secondary)] py-1 md:py-1.5 px-2.5 rounded-full shadow-sm">
+            <div 
+              onClick={() => setMode(prev => prev === 'light' ? 'dark' : 'light')}
+              className="relative w-[50px] h-6 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 select-none transition-all duration-300"
+              title="Slide to change Mode (Light / Dark)"
+            >
+              <div 
+                className={`w-5 h-5 rounded-full bg-[var(--accent-color)] shadow-md transition-all duration-350 ease-out flex items-center justify-center text-[10px] transform ${
+                  mode === 'dark' ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              >
+                {mode === 'dark' ? '🌙' : '☀️'}
+              </div>
+            </div>
+          </div>
+
+          {/* Theme capsule */}
+          <div className="border border-[var(--card-border)] bg-[var(--bg-secondary)] px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm">
+            <div className="flex items-center gap-1.5">
+              {[
+                { key: 'cyborg', color: 'bg-green-500 border-green-300 shadow-[0_0_5px_green]', tooltip: 'Cyborg Theme' },
+                { key: 'violet', color: 'bg-indigo-600 border-indigo-400', tooltip: 'Violet Theme' },
+                { key: 'ice', color: 'bg-sky-400 border-sky-300', tooltip: 'Glacier Theme' },
+                { key: 'rose-pine', color: 'bg-rose-300 border-rose-200', tooltip: 'Rose Pine Theme' },
+                { key: 'none', color: 'bg-gradient-to-br from-neutral-300 to-neutral-700 border-neutral-400', tooltip: 'No Theme (Monochrome)' }
+              ].map((themeOpt) => (
+                <button
+                  key={themeOpt.key}
+                  title={themeOpt.tooltip}
+                  onClick={() => setTheme(themeOpt.key)}
+                  className={`w-3.5 h-3.5 rounded-full ${themeOpt.color} border transition-all duration-200 hover:scale-130 cursor-pointer ${
+                    theme === themeOpt.key ? 'ring-2 ring-offset-2 ring-[var(--accent-color)]' : 'opacity-80'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+      </nav>
+
+      {/* ALT LINKS BAR */}
+      <section className="bg-[var(--bg-secondary)] border-b border-[var(--card-border)] py-3 px-4 md:px-6 transition-colors duration-300">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+            <div className="text-[10px] font-mono tracking-widest uppercase opacity-60 self-center">
+              ALT LINKS
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {altLinks.map((link, idx) => (
+                <a
+                  key={idx}
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs bg-[var(--card-bg)] border border-[var(--card-border)] py-1.5 px-3 rounded-full hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-all duration-200 font-mono shadow-sm flex items-center gap-1 cursor-pointer"
+                >
+                  <span>{idx + 1}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 md:ml-auto w-full md:w-auto">
+            <button
+              onClick={() => {
+                const win = window.open("about:blank", "_blank");
+                if (!win) {
+                  alert("Popup blocked! Please allow popups to open the site in about:blank.");
+                  return;
+                }
+                win.document.write(`
+                  <!DOCTYPE html>
+                  <html>
+                  <head>
+                    <title>Home - Classroom</title>
+                    <link rel="icon" type="image/png" href="https://ssl.gstatic.com/classroom/favicon.png">
+                    <meta charset="utf-8">
+                    <style>
+                      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0c0a09; }
+                      iframe { width: 100vw; height: 100vh; border: none; display: block; }
+                    </style>
+                  </head>
+                  <body>
+                    <iframe src="${window.location.origin}${window.location.pathname}${window.location.search}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+                  </body>
+                  </html>
+                `);
+                win.document.close();
+              }}
+              className="text-xs bg-[var(--card-bg)] text-[var(--text-primary)] border border-[var(--card-border)] py-1.5 px-3.5 rounded-full hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] active:scale-98 transition-all duration-200 font-mono font-bold flex items-center gap-1.5 cursor-pointer"
+              title="Open entire site inside about:blank tab to cloak history"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>CLOAK IN ABOUT:BLANK</span>
+            </button>
+
+            <button
+              onClick={() => setUseClassroomDecoy(!useClassroomDecoy)}
+              className={`text-xs border py-1.5 px-4 rounded-full font-mono font-extrabold flex items-center gap-2 cursor-pointer transition-all duration-300 transform active:scale-95 ${
+                useClassroomDecoy 
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_10px_var(--accent-shadow)]' 
+                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
+              }`}
+              title="Toggle Classroom Home Cloak Mode"
+            >
+              {useClassroomDecoy ? <School className="w-3.5 h-3.5 animate-pulse" /> : <Gamepad2 className="w-3.5 h-3.5" />}
+              <span>{useClassroomDecoy ? 'DECOY ON (CLASSROOM)' : 'DECOY OFF'}</span>
+            </button>
+
+            {/* Hidden legacy frame creator to preserve large assets cleanly */}
+            <div style={{ display: 'none' }}>
+              <button
+                onClick={() => {
+                  const win = window.open("about:blank", "_blank");
+                  if (!win) {
+                    alert("Popup blocked! Accessing classroom decoys requires popup permissions.");
+                    return;
+                  }
+                win.document.write(`
+                  <!DOCTYPE html>
+                  <html>
+                  <head>
+                    <title>Classwork - Algebra II</title>
+                    <link rel="icon" type="image/png" href="https://ssl.gstatic.com/classroom/favicon.png">
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <style>
+                      * { box-sizing: border-box; margin: 0; padding: 0; }
+                      html, body {
+                        width: 100vw;
+                        height: 100vh;
+                        overflow: hidden;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                        background-color: #ffffff;
+                        display: flex;
+                        flex-direction: column;
+                      }
+                      
+                      /* CLASSROOM HEADER */
+                      .classroom-header {
+                        height: 64px;
+                        background-color: #ffffff;
+                        border-bottom: 1px solid #e0e0e0;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 0 16px;
+                        position: relative;
+                        user-select: none;
+                      }
+                      
+                      .header-left { display: flex; align-items: center; gap: 12px; }
+                      
+                      .menu-btn {
+                        width: 48px;
+                        height: 48px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        cursor: pointer;
+                        color: #5f6368;
+                      }
+                      .menu-btn:hover { background-color: rgba(95, 99, 104, 0.04); }
+                      
+                      .classroom-logo { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+                      .classroom-logo img { width: 24px; height: 24px; }
+                      .classroom-logo span {
+                        font-size: 22px;
+                        color: #5f6368;
+                        font-weight: 400;
+                        font-family: Arial, sans-serif;
+                      }
+                      
+                      .course-title-section {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        margin-left: 8px;
+                        border-left: 1px solid #dadce0;
+                        padding-left: 16px;
+                      }
+                      
+                      .course-title { font-size: 16px; color: #3c4043; font-weight: 500; }
+                      .course-section { font-size: 12px; color: #5f6368; }
+                      
+                      /* TABS */
+                      .header-middle {
+                        display: flex;
+                        align-items: center;
+                        gap: 24px;
+                        position: absolute;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        height: 100%;
+                      }
+                      
+                      .tab {
+                        height: 100%;
+                        display: flex;
+                        align-items: center;
+                        padding: 0 8px;
+                        font-size: 14px;
+                        font-weight: 500;
+                        color: #5f6368;
+                        cursor: pointer;
+                        border-bottom: 3px solid transparent;
+                      }
+                      .tab:hover { color: #137333; background-color: rgba(19, 115, 51, 0.04); }
+                      .tab.active { color: #137333; border-bottom-color: #137333; }
+                      
+                      /* RIGHT SIDE */
+                      .header-right { display: flex; align-items: center; gap: 8px; }
+                      
+                      .icon-btn {
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        cursor: pointer;
+                        color: #5f6368;
+                      }
+                      .icon-btn:hover { background-color: rgba(95, 99, 104, 0.04); }
+                      
+                      .avatar {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                        background-color: #1a73e8;
+                        color: #ffffff;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 14px;
+                        font-weight: 500;
+                        margin-left: 8px;
+                        cursor: pointer;
+                      }
+                      
+                      /* MAIN CONTENT */
+                      .main-body {
+                        flex: 1;
+                        position: relative;
+                        width: 100%;
+                        height: calc(100vh - 64px);
+                        background-color: #ffffff;
+                      }
+                      
+                      iframe { width: 100%; height: 100%; border: none; display: block; }
+                      
+                      .decoy-content {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background-color: #ffffff;
+                        display: none;
+                        padding: 32px;
+                        overflow-y: auto;
+                      }
+                      
+                      .decoy-active #game-iframe { display: none; }
+                      .decoy-active .decoy-content { display: block; }
+                    </style>
+                  </head>
+                  <body>
+                    <!-- Header -->
+                    <div class="classroom-header">
+                      <div class="header-left">
+                        <div class="menu-btn" id="menu-btn-click">
+                          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                          </svg>
+                        </div>
+                        <div class="classroom-logo" id="brand-logo-click">
+                          <img src="https://ssl.gstatic.com/classroom/favicon.png" alt="Classroom Logo">
+                          <span>Classroom</span>
+                        </div>
+                        <div class="course-title-section" id="course-banner-click" style="cursor: pointer;">
+                          <div class="course-title">Algebra II</div>
+                          <div class="course-section">&nbsp;- Honors Period 3</div>
+                        </div>
+                      </div>
+                      
+                      <div class="header-middle">
+                        <div class="tab">Stream</div>
+                        <div class="tab active">Classwork</div>
+                        <div class="tab">People</div>
+                        <div class="tab">Grades</div>
+                      </div>
+                      
+                      <div class="header-right">
+                        <div class="icon-btn">
+                          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                            <path d="M20 18H4v-7h16v7zm1-9h-3V6c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v3H3c-1.1 0-2 .9-2 2v9c0 1.1.9 2 2 2h18c1.1 0-2-.9-2-2v-9c0-1.1-.9-2-2-2zm-3-3v3H8V6h10z"/>
+                          </svg>
+                        </div>
+                        <div class="icon-btn">
+                          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
+                          </svg>
+                        </div>
+                        <div class="icon-btn" style="margin-right: 4px;">
+                          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                          </svg>
+                        </div>
+                        <div class="avatar">S</div>
+                      </div>
+                    </div>
+                    
+                    <!-- Main Body Area -->
+                    <div class="main-body" id="main-body">
+                      <iframe id="game-iframe" src="${window.location.origin}${window.location.pathname}${window.location.search}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+                      
+                      <!-- Decoy Homework Board -->
+                      <div class="decoy-content">
+                        <div style="background-color: #137333; color: white; padding: 24px 32px; border-radius: 8px; margin-bottom: 24px; text-align: left;">
+                          <h1 style="font-size: 26px; font-weight: 400; margin-bottom: 6px; font-family: Roboto, Arial, sans-serif;">Algebra II - Period 3 Homework & Resource Portal</h1>
+                          <p style="font-size: 14px; opacity: 0.9; font-family: Roboto, Arial, sans-serif;">Honors Mathematics Course Resources</p>
+                        </div>
+
+                        <div style="display: flex; gap: 24px; text-align: left; font-family: Roboto, Arial, sans-serif; flex-wrap: wrap;">
+                          <div style="flex: 2; min-width: 300px;">
+                            <div style="background: white; border: 1px solid #dadce0; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+                              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #dadce0; padding-bottom: 16px; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                                <div>
+                                  <h2 style="font-size: 20px; font-weight: 500; color: #1967d2; margin-bottom: 4px;">Interactive Graphing Lab & Exercises</h2>
+                                  <p style="font-size: 12px; color: #5f6368;">Teacher: Mrs. Katherine Vance &bull; Assigned: Jun 4</p>
+                                </div>
+                                <div style="text-align: right; min-width: 120px;">
+                                  <p style="font-size: 14px; font-weight: 500; color: #3c4043;">100 points</p>
+                                  <p style="font-size: 12px; color: #c5221f; font-weight: 500;">Due Tomorrow, 11:59 PM</p>
+                                </div>
+                              </div>
+
+                              <p style="font-size: 14px; color: #3c4043; line-height: 1.6; margin-bottom: 16px;">
+                                Use the web interactive math sandbox or scientific plotter loaded below to map standard polynomial structures and quadratic graphs. Note the curves, intersections, and coordinates. Fill in the homework matrix PDF when complete.
+                              </p>
+                              
+                              <div style="border: 1px solid #dadce0; border-radius: 8px; overflow: hidden; height: 400px; margin-top: 16px; background-color: #f1f3f4;">
+                                <iframe src="https://www.desmos.com/calculator" style="width:100%; height:100%; border:0;" referrerpolicy="no-referrer"></iframe>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style="flex: 1; min-width: 240px; max-width: 300px;">
+                            <div style="background: white; border: 1px solid #dadce0; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                              <h3 style="font-size: 16px; font-weight: 500; color: #3c4043; margin-bottom: 16px;">Your work</h3>
+                              <div style="border: 1px dashed #dadce0; border-radius: 4px; padding: 24px; text-align: center; margin-bottom: 16px; font-size: 12px; color: #5f6368;">
+                                No files attached
+                              </div>
+                              <button style="width: 100%; background: #1a73e8; color: white; border: none; border-radius: 4px; padding: 10px 16px; font-size: 14px; font-weight: 500; cursor: pointer; margin-bottom: 8px;">
+                                + Add or create
+                              </button>
+                              <button style="width: 100%; background: transparent; border: 1px solid #dadce0; color: #1a73e8; border-radius: 4px; padding: 10px 16px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                                Mark as done
+                              </button>
+                            </div>
+
+                            <div style="background: white; border: 1px solid #dadce0; border-radius: 8px; padding: 16px;">
+                              <h3 style="font-size: 14px; font-weight: 500; color: #3c4043; margin-bottom: 8px;">Private comments</h3>
+                              <p style="font-size: 12px; color: #5f6368; margin-bottom: 8px;">Send a private comment to Mrs. Vance</p>
+                              <input placeholder="Add private comment..." style="width:100%; border: 1px solid #dadce0; padding: 8px 12px; font-size: 12px; border-radius: 4px; outline: none; box-sizing: border-box;" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <script>
+                      var isDecoy = false;
+                      function togglePanic() {
+                        isDecoy = !isDecoy;
+                        if (isDecoy) {
+                          document.getElementById('main-body').classList.add('decoy-active');
+                        } else {
+                          document.getElementById('main-body').classList.remove('decoy-active');
+                        }
+                      }
+                      
+                      // Esc key triggers emergency switch to real study material
+                      window.addEventListener('keydown', function(e) {
+                        if (e.key === 'Escape' || e.key === '\\x60') {
+                          togglePanic();
+                        }
+                      });
+                      
+                      // Clicking on banner/logo acts as interactive quick toggle
+                      document.getElementById('course-banner-click').addEventListener('click', togglePanic);
+                      document.getElementById('brand-logo-click').addEventListener('click', togglePanic);
+                      document.getElementById('menu-btn-click').addEventListener('click', togglePanic);
+                    </script>
+                  </body>
+                  </html>
+                `);
+                win.document.close();
+              }}
+              className="hidden"
+            >
+              <span>HIDDEN LEGACY BUTTON</span>
+            </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* MAIN CONTAINER: SIDEBAR + GAMES */}
+      <div className="flex-1 flex flex-col md:flex-row max-w-8xl w-full mx-auto p-4 md:p-6 gap-6 self-center">
+        
+        {/* LEFT NAV PANEL - CAT SIDEBAR */}
+        <aside className={`transition-all duration-300 ease-in-out shrink-0 flex flex-col gap-2 overflow-hidden ${
+          sidebarOpen ? 'w-full md:w-64' : 'w-full md:w-14'
+        }`}>
+          
+          <div className="flex items-center justify-between px-2 py-1 min-h-[36px]">
+            {sidebarOpen ? (
+              <span className="text-[10px] font-mono tracking-wider opacity-50 uppercase whitespace-nowrap">
+                Browse Portals
+              </span>
+            ) : (
+              <span className="hidden md:inline text-[9px] font-mono tracking-wider opacity-50 uppercase text-center mx-auto font-bold text-[var(--accent-color)]">
+                NAV
+              </span>
+            )}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-1.5 rounded-lg hover:bg-[var(--card-bg)] text-[var(--accent-color)] transition-all duration-250 cursor-pointer flex items-center justify-center ml-auto"
+              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4 animate-bounce" />}
+            </button>
+          </div>
+
+          <button
+            onClick={() => { setFilter('all'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'all' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <Layers className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>All Classrooms</span>
+          </button>
+
+          <button
+            onClick={() => { setFilter('single'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'single' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <Gamepad2 className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Single Player</span>
+          </button>
+
+          <button
+            onClick={() => { setFilter('multiplayer'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'multiplayer' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <Users className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Multiplayer</span>
+          </button>
+
+        </aside>
+
+        {/* MAIN BODY DISPLAY */}
+        <main className="flex-1 min-w-0">
+          
+          {!selectedGame ? (
+            /* LIBRARY LIST VIEW */
+            <div className="flex flex-col gap-6">
+              
+              <div className="flex justify-between items-center border-l-4 border-[var(--accent-color)] pl-3">
+                <div>
+                  <h2 className="text-lg font-black uppercase tracking-wider text-[var(--text-primary)]">
+                    {filter === 'all' && 'Games Library'}
+                    {filter === 'single' && 'Singleplayer Arcades'}
+                    {filter === 'multiplayer' && 'Multiplayer Hub'}
+                    {filter === 'favorites' && 'Bookmarked Games'}
+                  </h2>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    Showing {filteredGames.length} unblocked resources
+                  </p>
+                </div>
+              </div>
+
+              {filteredGames.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 border border-dashed border-[var(--card-border)] rounded-2xl bg-[var(--bg-secondary)]">
+                  <Gamepad2 className="w-16 h-16 text-[var(--text-muted)] stroke-1 opacity-40 animate-pulse" />
+                  <p className="text-sm font-semibold mt-4 text-[var(--text-primary)]">No games found matches filter</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Try searching a different keyword or resetting filters.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {filteredGames.map(game => {
+                    const isFav = favorites.includes(game.id);
+                    return (
+                      <div 
+                        key={game.id}
+                        onClick={() => { setSelectedGame(game); setZoom(1); }}
+                        className="custom-card flex flex-col rounded-xl overflow-hidden cursor-pointer h-[360px]"
+                        style={{ contentVisibility: 'auto' }}
+                      >
+                        {/* Artwork container */}
+                        <div className="relative h-48 bg-neutral-950 flex-shrink-0 flex items-center justify-center border-b border-[var(--card-border)] overflow-hidden">
+                          {game.thumbnail ? (
+                            <img 
+                              src={game.thumbnail} 
+                              alt={game.title} 
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover transition-transform duration-500 hover:scale-110" 
+                            />
+                          ) : (
+                            renderGameArt(game)
+                          )}
+
+                          <span className="absolute top-2.5 right-2.5 text-[8px] font-bold uppercase tracking-widest bg-black/75 backdrop-blur-sm text-white border border-white/10 px-2.5 py-0.5 rounded-full inline-block z-10">
+                            {game.category}
+                          </span>
+
+                          <button
+                            onClick={(e) => toggleFavorite(e, game.id)}
+                            className="absolute top-2.5 left-2.5 p-1.5 rounded-full bg-black/40 hover:bg-black/80 text-white/90 border border-white/10 hover:text-rose-500 hover:scale-110 active:scale-95 transition-all duration-200"
+                            title={isFav ? "Remove Bookmark" : "Add Bookmark"}
+                          >
+                            <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
+                          </button>
+                        </div>
+
+                        {/* Title and descriptions */}
+                        <div className="p-4 flex-1 flex flex-col justify-between">
+                          <div className="space-y-1.5">
+                            <h3 className="text-sm font-black text-[var(--text-primary)] line-clamp-1 group-hover:text-[var(--accent-color)] leading-snug">
+                              {game.title}
+                            </h3>
+                            <p className="text-xs text-[var(--text-muted)] line-clamp-3 leading-relaxed">
+                              {game.description}
+                            </p>
+                          </div>
+
+                          <button
+                            onClick={() => { setSelectedGame(game); setZoom(1); }}
+                            className="w-full mt-3 border border-[var(--accent-color)] hover:bg-[var(--accent-color)] hover:text-black hover:font-bold hover:shadow-[0_0_12px_calc(var(--accent-color))] text-[11px] font-semibold tracking-wider text-[var(--accent-color)] py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all duration-200 self-end"
+                          >
+                            <Play className="w-3 h-3 fill-current" />
+                            <span>Open Article</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+            </div>
+          ) : (
+            /* ACTIVE GAME SCREEN */
+            <div className="flex flex-col gap-4 animate-fade-in">
+              
+              {/* Controls bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border border-[var(--card-border)] bg-[var(--bg-secondary)] rounded-xl py-3 px-4 gap-3 shadow-inner">
+                
+                <button
+                  onClick={() => setSelectedGame(null)}
+                  className="flex items-center gap-2 border border-[var(--card-border)] hover:border-[var(--accent-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)] transition-all font-mono py-1.5 px-3.5 rounded-lg text-xs font-bold leading-normal cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Go back</span>
+                </button>
+
+                <div className="flex items-center gap-2.5">
+                  <span className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-2">
+                    {selectedGame.title}
+                    <span className="text-[9px] uppercase tracking-wider font-mono px-2 py-0.5 rounded border border-[var(--card-border)] bg-[var(--bg-color)] text-[var(--accent-color)]">
+                      {selectedGame.category}
+                    </span>
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  
+                  {/* Zoom controls */}
+                  <div className="flex items-center bg-[var(--bg-color)] border border-[var(--card-border)] rounded-lg overflow-hidden p-0.5">
+                    <button
+                      onClick={() => setZoom(z => Math.max(0.4, z - 0.1))}
+                      className="p-1 px-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)] rounded transition-colors"
+                      title="Zoom Out"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-[10px] px-2 font-mono text-[var(--text-primary)] font-bold select-none">
+                      {Math.round(zoom * 100)}%
+                    </span>
+                    <button
+                      onClick={() => setZoom(z => Math.min(1.8, z + 0.1))}
+                      className="p-1 px-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)] rounded transition-colors"
+                      title="Zoom In"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setZoom(1)}
+                      className="p-1 px-1.5 text-xs text-[var(--accent-color)] font-mono hover:bg-[var(--card-bg)] rounded transition-colors"
+                      title="Reset Zoom"
+                    >
+                      Res
+                    </button>
+                  </div>
+
+                  {/* Reload button */}
+                  <button
+                    onClick={() => {
+                      const iframe = document.getElementById('game-frame');
+                      if (iframe) iframe.src = iframe.src;
+                    }}
+                    className="p-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] rounded-lg text-[var(--text-primary)] transition-all cursor-pointer"
+                    title="Reload game frame session"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Fullscreen button */}
+                  <button
+                    onClick={() => {
+                      const container = document.getElementById('frame-viewport');
+                      if (container) {
+                        if (document.fullscreenElement) {
+                          document.exitFullscreen();
+                        } else {
+                          container.requestFullscreen();
+                        }
+                      }
+                    }}
+                    className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-3 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
+                    title="Toggle Fullscreen Arena"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline text-[10px] font-bold">FULLSCREEN</span>
+                  </button>
+
+                  {/* Open in New Tab button */}
+                  <button
+                    onClick={() => {
+                      const win = window.open("about:blank", "_blank");
+                      if (!win) {
+                        alert("Popup blocked. Allow popups for this site.");
+                        return;
+                      }
+                      win.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                          <title>Home - Classroom</title>
+                          <link rel="icon" type="image/png" href="https://ssl.gstatic.com/classroom/favicon.png">
+                          <meta charset="utf-8">
+                          <style>
+                            html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #ffffff; }
+                            iframe { width: 100vw; height: 100vh; border: none; display: block; }
+                          </style>
+                        </head>
+                        <body>
+                          <iframe src="${selectedGame.url}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+                        </body>
+                        </html>
+                      `);
+                      win.document.close();
+                    }}
+                    className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-3 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
+                    title="Open Game in New Tab"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline text-[10px] font-bold">OPEN IN NEW TAB</span>
+                  </button>
+
+                  {/* Panic Key / Escape to Academic Articles */}
+                  <button
+                    onClick={() => {
+                      setViewModeAndSave('articles');
+                      setSelectedGame(null);
+                    }}
+                    className="flex items-center gap-1.5 border border-red-500/30 hover:border-red-500 hover:bg-red-500/10 py-1.5 px-3 rounded-lg text-xs font-mono text-red-500 font-medium transition-all cursor-pointer whitespace-nowrap"
+                    title="Panic escape key (or press [ or ] at any time)"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+                    <span className="hidden sm:inline text-[10px] font-bold">PANIC ESCAPE ([ or ])</span>
+                  </button>
+
+                </div>
+
+              </div>
+
+              {/* Game Viewport Container */}
+              <div 
+                id="frame-viewport"
+                className="w-full h-[65vh] min-h-[420px] rounded-2xl border border-[var(--card-border)] bg-black overflow-hidden relative shadow-lg"
+              >
+                <div 
+                  className="w-full h-full duration-150 transition-transform origin-top-left"
+                  style={{ 
+                    transform: `scale(${zoom})`,
+                    width: `${100 / zoom}%`,
+                    height: `${100 / zoom}%`
+                  }}
+                >
+                  <iframe 
+                    id="game-frame"
+                    src={selectedGame.url} 
+                    className="w-full h-full border-none"
+                    title={selectedGame.title}
+                    allowFullScreen
+                    referrerPolicy="no-referrer"
+                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                  />
+                </div>
+              </div>
+
+            </div>
+          )}
+
+        </main>
+      </div>
+
+    </div>
+  );
 }
