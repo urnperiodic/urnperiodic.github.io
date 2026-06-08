@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { games as gamesData } from './data/games';
 import { initialArticles, gameOptions, toneOptions, generateMockAIArticle } from './data/articles';
+import FlashcardsWorkspace from './components/FlashcardsWorkspace';
+import QuizWorkspace from './components/QuizWorkspace';
+import GrammarCheckerWorkspace from './components/GrammarCheckerWorkspace';
 import { 
   School, 
   Search, 
@@ -31,7 +34,13 @@ import {
   ChevronRight,
   Lock,
   Unlock,
-  LogOut
+  LogOut,
+  Copy,
+  Code,
+  Share2,
+  Download,
+  Check,
+  X
 } from 'lucide-react';
 
 // Safe storage helper to prevent SecurityError crash in sandboxed iframes
@@ -76,9 +85,8 @@ export default function App() {
 
   const [viewMode, setViewMode] = useState(() => {
     const saved = safeStorage.getItem('classroom-view-mode');
-    if (saved && ['locked', 'articles', 'games'].includes(saved)) return saved;
-    const legacy = safeStorage.getItem('classroom-passcode-unlocked');
-    return legacy === 'true' ? 'games' : 'locked';
+    if (saved === 'games') return 'games';
+    return 'articles'; // Innocent educational syllabus base is shown on first startup
   });
 
   const isPasscodeUnlocked = viewMode === 'games';
@@ -94,14 +102,36 @@ export default function App() {
   const [errorCount, setErrorCount] = useState(0);
 
   // Articles and Custom AI article generator states
+  const [activeEduTab, setActiveEduTab] = useState('articles'); // 'articles' | 'flashcards' | 'grammar' | 'quiz'
   const [articles, setArticles] = useState(initialArticles);
   const [selectedArticleId, setSelectedArticleId] = useState(initialArticles[0].id);
   const [articleSearch, setArticleSearch] = useState('');
   const [selectedArticleCategory, setSelectedArticleCategory] = useState('All');
   const [newArticleGame, setNewArticleGame] = useState(gameOptions[0].value);
   const [newArticleTone, setNewArticleTone] = useState(toneOptions[0].value);
+  const [customPromptText, setCustomPromptText] = useState(`Write an educational, informational article focusing on ${gameOptions[0].value} concepts suited for school reading.`);
+  const [isPromptUserModified, setIsPromptUserModified] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
+
+  // Classroom/Games Cloak/Decoy State
+  const [useClassroomDecoy, setUseClassroomDecoy] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('decoy') === 'true') return true;
+      if (params.get('decoy') === 'false') return false;
+      const cached = localStorage.getItem('study-tools-classroom-decoy');
+      return cached === 'true';
+    }
+    return false;
+  });
+
+  const [aboutBlankSuffix, setAboutBlankSuffix] = useState('');
+
+  // Persist decoy state to localStorage
+  useEffect(() => {
+    localStorage.setItem('study-tools-classroom-decoy', String(useClassroomDecoy));
+  }, [useClassroomDecoy]);
 
   const handleGenerateArticle = () => {
     if (isGeneratingArticle) return;
@@ -113,7 +143,7 @@ export default function App() {
         if (prev >= 100) {
           clearInterval(interval);
           setTimeout(() => {
-            const article = generateMockAIArticle(newArticleGame, newArticleTone);
+            const article = generateMockAIArticle(newArticleGame, newArticleTone, customPromptText);
             setArticles((prevArticles) => [article, ...prevArticles]);
             setSelectedArticleCategory(article.category);
             setSelectedArticleId(article.id);
@@ -126,22 +156,58 @@ export default function App() {
     }, 45);
   };
 
-  const handleDigitInput = (digit) => {
-    if (viewMode === 'games' || passcode.length >= 4) return;
-    const nextPasscode = passcode + digit;
-    setPasscode(nextPasscode);
+  const handlePasswordSubmit = (customPass) => {
+    const inputPass = (customPass !== undefined ? customPass : passcode).trim().toLowerCase();
+    if (!inputPass) return;
 
-    if (nextPasscode === '0609') {
+    if (inputPass === 'ttt0609' || inputPass === '2026' || inputPass === 'games') {
       setTimeout(() => {
         setViewModeAndSave('games');
         setPasscode('');
       }, 150);
-    } else if (nextPasscode === '1212' || nextPasscode === '2026' || nextPasscode === '1111') {
+    } else if (inputPass === '0609') {
       setTimeout(() => {
         setViewModeAndSave('articles');
         setPasscode('');
       }, 150);
-    } else if (nextPasscode.length === 4) {
+    } else if (
+      inputPass === '1212' || 
+      inputPass === '1111' || 
+      ['school', 'classroom', 'study', 'science', 'math', 'education', 'admin', 'password', 'open', 'class'].includes(inputPass)
+    ) {
+      setTimeout(() => {
+        setViewModeAndSave('articles');
+        setPasscode('');
+      }, 150);
+    } else {
+      setTimeout(() => {
+        setIsShake(true);
+        setErrorCount(prev => prev + 1);
+        setTimeout(() => {
+          setIsShake(false);
+          setPasscode('');
+        }, 500);
+      }, 100);
+    }
+  };
+
+  const handleDigitInput = (digit) => {
+    if (viewMode === 'games') return;
+    const nextPasscode = passcode + digit;
+    setPasscode(nextPasscode);
+
+    // Instant matching for rapid-pins (2026, 0609, 1212, 1111)
+    if (nextPasscode === '2026') {
+      setTimeout(() => {
+        setViewModeAndSave('games');
+        setPasscode('');
+      }, 150);
+    } else if (nextPasscode === '0609' || nextPasscode === '1212' || nextPasscode === '1111') {
+      setTimeout(() => {
+        setViewModeAndSave('articles');
+        setPasscode('');
+      }, 150);
+    } else if (nextPasscode.length >= 4 && !isNaN(nextPasscode)) {
       setTimeout(() => {
         setIsShake(true);
         setErrorCount(prev => prev + 1);
@@ -157,18 +223,70 @@ export default function App() {
     if (viewMode !== 'locked') return;
     
     const handleKeyDown = (e) => {
+      // If focused inside the text input, let native browser behavior take over. Only intercept Enter/Escape.
+      if (document.activeElement?.tagName === 'INPUT') {
+        if (e.key === 'Escape') {
+          setPasscode('');
+        }
+        return;
+      }
+
       if (e.key >= '0' && e.key <= '9') {
         handleDigitInput(e.key);
       } else if (e.key === 'Backspace') {
         setPasscode(prev => prev.slice(0, -1));
       } else if (e.key === 'Escape') {
         setPasscode('');
+      } else if (e.key === 'Enter') {
+        handlePasswordSubmit();
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [passcode, viewMode]);
+
+  // Automated trigger checks for "0609" and "2026" within the article system's search tab
+  useEffect(() => {
+    if (articleSearch === '2026' || articleSearch.toLowerCase() === 'ttt0609') {
+      setViewModeAndSave('games');
+      setArticleSearch('');
+    } else if (articleSearch === '0609') {
+      setViewModeAndSave('locked');
+      setArticleSearch('');
+    }
+  }, [articleSearch]);
+
+  // Global keydown listeners for quick keystroke combinations
+  useEffect(() => {
+    let sequenceBuffer = '';
+    const handleGlobalSequence = (e) => {
+      // Avoid intercepting if targeted on search input to let them type fully
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+        return;
+      }
+      if (e.key >= '0' && e.key <= '9') {
+        sequenceBuffer += e.key;
+        if (sequenceBuffer.length > 4) {
+          sequenceBuffer = sequenceBuffer.slice(-4);
+        }
+        
+        if (sequenceBuffer === '0609') {
+          setViewModeAndSave('locked');
+          setPasscode('');
+          sequenceBuffer = '';
+        } else if (sequenceBuffer === '2026') {
+          setViewModeAndSave('games');
+          setPasscode('');
+          sequenceBuffer = '';
+        }
+      } else if (e.key === 'Escape') {
+        sequenceBuffer = '';
+      }
+    };
+    window.addEventListener('keydown', handleGlobalSequence);
+    return () => window.removeEventListener('keydown', handleGlobalSequence);
+  }, [viewMode]);
 
   // Global Panic Key Handler
   useEffect(() => {
@@ -183,10 +301,77 @@ export default function App() {
     return () => window.removeEventListener('keydown', handlePanic);
   }, []);
 
-  // Set browser tab title to Home - Classroom
+  // Set dynamic browser tab title & favicon based on current section & decoy toggle
   useEffect(() => {
-    document.title = "Home - Classroom";
-  }, []);
+    const setBothTitles = (title) => {
+      document.title = title;
+      try {
+        if (window.parent && window.parent !== window && window.parent.document) {
+          window.parent.document.title = title;
+        }
+      } catch (err) {
+        // ignore cross-origin sandbox restrictions
+      }
+    };
+
+    const updateFavicon = (href) => {
+      // Current document
+      let link = document.querySelector("link[rel*='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = href;
+
+      // Parent document
+      try {
+        if (window.parent && window.parent !== window && window.parent.document) {
+          let pLink = window.parent.document.querySelector("link[rel*='icon']");
+          if (!pLink) {
+            pLink = window.parent.document.createElement('link');
+            pLink.rel = 'icon';
+            window.parent.document.head.appendChild(pLink);
+          }
+          pLink.href = href;
+        }
+      } catch (err) {
+        // ignore cross-origin sandbox restrictions
+      }
+    };
+
+    const bookSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
+    )}`;
+
+    const gamepadSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="3"/><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01"/></svg>`
+    )}`;
+
+    if (viewMode === 'articles') {
+      setBothTitles("StudyTools");
+      updateFavicon(bookSvgDataUri);
+    } else if (viewMode === 'games') {
+      if (useClassroomDecoy) {
+        setBothTitles("Home - Classroom");
+        updateFavicon("https://ssl.gstatic.com/classroom/favicon.png");
+      } else {
+        setBothTitles("StudyTools");
+        updateFavicon(bookSvgDataUri);
+      }
+    } else {
+      // Default to StudyTools for locked/welcome screens
+      setBothTitles("StudyTools");
+      updateFavicon(bookSvgDataUri);
+    }
+  }, [viewMode, useClassroomDecoy]);
+
+  // Sync custom prompt text with dropdown selections if not manually customized
+  useEffect(() => {
+    if (!isPromptUserModified) {
+      setCustomPromptText(`Write an educational, ${newArticleTone.toLowerCase()} article focusing on ${newArticleGame} concepts suited for school reading.`);
+    }
+  }, [newArticleGame, newArticleTone, isPromptUserModified]);
 
   // Set LocalStorage theme and mode on change
   useEffect(() => {
@@ -212,7 +397,7 @@ export default function App() {
     { name: 'Alt Link 2', url: 'https://classroonn.github.io' },
     { name: 'Alt Link 3', url: 'https://IIMS-sucksasaschool.github.io/' },
     { name: 'Alt Link 4', url: 'https://ciassroonn.github.io' },
-    { name: 'Alt Link 5', url: 'https://acutusinvictus.github.io' }
+    { name: 'Alt Link 5', url: 'about:blank' }
   ];
 
   // Handle addition/removal of favorites
@@ -459,41 +644,287 @@ export default function App() {
     const selectedArticle = filteredArticles.find(art => art.id === selectedArticleId) || filteredArticles[0] || articles[0];
 
     const renderFormattedText = (text) => {
-      return text.split('\n').map((line, idx) => {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('###')) {
-          const headerText = trimmed.replace(/^###\s*/, '');
+      if (!text) return null;
+      
+      const lines = text.split('\n');
+      const elements = [];
+      let i = 0;
+      
+      // Inline formatting helper
+      const parseInlineFormatting = (str) => {
+        if (!str) return '';
+        let cleaned = str
+          // Chemical formulas subscripts
+          .replace(/CO_2/g, 'CO₂')
+          .replace(/H_2O/g, 'H₂O')
+          .replace(/\\\text\{([^}]+)\}/g, '$1') // '\text{CO}' -> 'CO'
+          .replace(/(\s*)\^(\w+)/g, '<sup>$2</sup>') // superscript like ^+ or ^-
+          .replace(/(\s*)\_(\w+)/g, '<sub>$2</sub>') // subscript like _2
+          .replace(/\\longrightarrow/g, ' ⟶ ')
+          .replace(/\\rightarrow/g, ' → ')
+          .replace(/\$\+\/\+\$/g, '➕/➕ (Mutualism)')
+          .replace(/\$\+\/0\$/g, '➕/🫙 (Commensalism)')
+          .replace(/\$\+\/\-\$/g, '➕/➖ (Parasitism)')
+          .replace(/\$/g, ''); // strip any raw dollar signs
+          
+        // Let's parse bold **bold** and italic *italic* using react elements
+        const parts = [];
+        let index = 0;
+        const regex = /(\*\*|__)(.*?)\1|(\*|_)(.*?)\3/g;
+        let match;
+        
+        while ((match = regex.exec(cleaned)) !== null) {
+          if (match.index > index) {
+            parts.push(cleaned.substring(index, match.index));
+          }
+          if (match[1]) {
+            parts.push(<strong key={match.index} className="font-extrabold text-[var(--accent-color)]">{match[2]}</strong>);
+          } else if (match[3]) {
+            parts.push(<em key={match.index} className="italic text-[var(--text-primary)]">{match[4]}</em>);
+          }
+          index = regex.lastIndex;
+        }
+        
+        if (index < cleaned.length) {
+          parts.push(cleaned.substring(index));
+        }
+        
+        return parts.length > 0 ? parts : cleaned;
+      };
+
+      const formatEquationToHtml = (eq) => {
+        let formatted = eq.trim();
+        
+        if (formatted.includes('Atom')) {
           return (
-            <h4 key={idx} className="text-xs font-bold text-[var(--text-primary)] mt-3 mb-1.5">
-              {headerText}
+            <div className="flex flex-wrap items-center justify-center gap-1.5 md:gap-2.5 text-xs text-[var(--text-primary)] font-mono tracking-tight py-2 w-full">
+              <span className="font-semibold px-2 py-1 bg-[var(--card-bg)] rounded-lg border border-[var(--card-border)] hover:border-[var(--accent-color)] transition-colors">Atom</span> 
+              <span className="text-[var(--accent-color)] text-sm">⟶</span>
+              <span className="font-semibold px-2 py-1 bg-[var(--card-bg)] rounded-lg border border-[var(--card-border)] hover:border-[var(--accent-color)] transition-colors">Molecule</span> 
+              <span className="text-[var(--accent-color)] text-sm">⟶</span>
+              <span className="font-semibold px-2 py-1 bg-[var(--card-bg)] rounded-lg border border-[var(--card-border)] hover:border-[var(--accent-color)] transition-colors">Organelle</span> 
+              <span className="text-[var(--accent-color)] text-sm">⟶</span>
+              <span className="font-semibold px-2 py-1 bg-[var(--card-bg)] rounded-lg border border-[var(--card-border)] hover:border-[var(--accent-color)] transition-colors">Cell</span> 
+              <span className="text-[var(--accent-color)] text-sm">⟶</span>
+              <span className="font-semibold px-2 py-1 bg-[var(--card-bg)] rounded-lg border border-[var(--card-border)] hover:border-[var(--accent-color)] transition-colors">Tissue</span> 
+              <span className="text-[var(--accent-color)] text-sm">⟶</span>
+              <span className="font-semibold px-2 py-1 bg-[var(--card-bg)] rounded-lg border border-[var(--card-border)] hover:border-[var(--accent-color)] transition-colors">Organ</span> 
+              <span className="text-[var(--accent-color)] text-sm">⟶</span>
+              <span className="font-semibold px-2 py-1 bg-[var(--card-bg)] rounded-lg border border-[var(--card-border)] hover:border-[var(--accent-color)] transition-colors">Organ System</span> 
+              <span className="text-[var(--accent-color)] text-sm">⟶</span>
+              <span className="font-extrabold text-[var(--accent-color)] bg-[var(--accent-color)]/15 px-3 py-1 rounded-xl border border-[var(--accent-color)] shadow-sm animate-pulse">Organism</span>
+            </div>
+          );
+        }
+        
+        if (formatted.includes('Photosynthesis') || (formatted.includes('6CO') && formatted.includes('Solar'))) {
+          return (
+            <div className="text-center font-bold text-xs flex flex-wrap items-center justify-center gap-1.5 leading-relaxed py-2 select-text w-full">
+              <span className="text-[var(--text-primary)] font-semibold">Carbon Dioxide</span>
+              <span className="text-[var(--text-muted)] font-mono text-[10px] bg-black/10 px-1 rounded">(6CO₂)</span>
+              <span className="text-[var(--accent-color)] mx-0.5 font-mono">+</span>
+              <span className="text-[var(--text-primary)] font-semibold">Water</span>
+              <span className="text-[var(--text-muted)] font-mono text-[10px] bg-black/10 px-1 rounded">(6H₂O)</span>
+              <span className="text-[var(--accent-color)] mx-0.5 font-mono">+</span>
+              <span className="text-yellow-500 font-semibold flex items-center gap-0.5 bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20 text-[10px]"><span className="animate-pulse">☀️</span> Solar Light</span>
+              <span className="text-[var(--accent-color)] text-sm mx-1">⟶</span>
+              <span className="text-[var(--text-primary)] font-semibold">Glucose</span>
+              <span className="text-[var(--text-muted)] font-mono text-[10px] bg-black/10 px-1 rounded">(C₆H₁₂O₆)</span>
+              <span className="text-[var(--accent-color)] mx-0.5 font-mono">+</span>
+              <span className="text-[var(--text-primary)] font-semibold">Oxygen</span>
+              <span className="text-[var(--text-muted)] font-mono text-[10px] bg-black/10 px-1 rounded">(6O₂)</span>
+            </div>
+          );
+        }
+        
+        if (formatted.includes('Respiration') || formatted.includes('ATP') || (formatted.includes('6CO') && formatted.includes('Oxygen'))) {
+          return (
+            <div className="text-center font-bold text-xs flex flex-wrap items-center justify-center gap-1.5 leading-relaxed py-2 select-text w-full">
+              <span className="text-[var(--text-primary)] font-semibold">Glucose</span>
+              <span className="text-[var(--text-muted)] font-mono text-[10px] bg-black/10 px-1 rounded">(C₆H₁₂O₆)</span>
+              <span className="text-[var(--accent-color)] mx-0.5 font-mono">+</span>
+              <span className="text-[var(--text-primary)] font-semibold">Oxygen</span>
+              <span className="text-[var(--text-muted)] font-mono text-[10px] bg-black/10 px-1 rounded">(6O₂)</span>
+              <span className="text-[var(--accent-color)] text-sm mx-1">⟶</span>
+              <span className="text-[var(--text-primary)] font-semibold">Carbon Dioxide</span>
+              <span className="text-[var(--text-muted)] font-mono text-[10px] bg-black/10 px-1 rounded">(6CO₂)</span>
+              <span className="text-[var(--accent-color)] mx-0.5 font-mono">+</span>
+              <span className="text-[var(--text-primary)] font-semibold">Water</span>
+              <span className="text-[var(--text-muted)] font-mono text-[10px] bg-black/10 px-1 rounded">(6H₂O)</span>
+              <span className="text-[var(--accent-color)] mx-0.5 font-mono">+</span>
+              <span className="text-emerald-500 font-bold flex items-center gap-0.5 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 text-[10px] animate-pulse">⚡ ATP Energy</span>
+            </div>
+          );
+        }
+
+        return <span>{formatted}</span>;
+      };
+
+      while (i < lines.length) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        
+        // 1. Equations (Centered math block)
+        if (trimmed.startsWith('$$') && trimmed.endsWith('$$')) {
+          const content = trimmed.substring(2, trimmed.length - 2);
+          elements.push(
+            <div key={i} className="bg-[var(--bg-primary)] border border-[var(--accent-color)]/20 p-4 rounded-xl text-center my-4 shadow-sm text-[var(--accent-color)] flex items-center justify-center overflow-x-auto select-all">
+              {formatEquationToHtml(content)}
+            </div>
+          );
+          i++;
+          continue;
+        }
+        
+        // 2. Custom block code (e.g., Birthday card layout block)
+        if (trimmed.startsWith('```') || trimmed.startsWith('`\\`\\`')) {
+          let codeBlockLines = [];
+          i++; // skip initial tag
+          while (i < lines.length && !lines[i].trim().startsWith('```') && !lines[i].trim().startsWith('`\\`\\`')) {
+            codeBlockLines.push(lines[i]);
+            i++;
+          }
+          elements.push(
+            <pre key={i} className="bg-black/40 border border-[var(--card-border)] p-4.5 rounded-xl text-[10.5px] font-mono text-[var(--text-primary)] whitespace-pre-wrap leading-normal shadow-inner my-3 select-all">
+              {codeBlockLines.join('\n')}
+            </pre>
+          );
+          i++; // skip final tag
+          continue;
+        }
+
+        // 3. Simple blockquotes / horizontal separators
+        if (trimmed.startsWith('---')) {
+          elements.push(<hr key={i} className="border-t border-[var(--card-border)] my-5" />);
+          i++;
+          continue;
+        }
+
+        // 4. Tables parsing
+        if (trimmed.startsWith('|')) {
+          const headerRow = trimmed;
+          let tableLines = [headerRow];
+          i++;
+          
+          // Gather consecutive table rows
+          while (i < lines.length && lines[i].trim().startsWith('|')) {
+            tableLines.push(lines[i]);
+            i++;
+          }
+          
+          // Process Table Rows
+          const filteredRows = tableLines.filter(r => !r.includes('| :---') && !r.includes('|---|') && !r.includes('| :--- |'));
+          
+          const parseColumns = (rowText) => {
+            return rowText.split('|').slice(1, -1).map(col => col.trim());
+          };
+
+          if (filteredRows.length > 0) {
+            const headers = parseColumns(filteredRows[0]);
+            const bodyRows = filteredRows.slice(1).map(r => parseColumns(r));
+            
+            elements.push(
+              <div key={i} className="my-4.5 overflow-x-auto rounded-xl border border-[var(--card-border)] bg-[var(--bg-primary)]/40 shadow-sm">
+                <table className="w-full text-left border-collapse text-[11px]">
+                  <thead>
+                    <tr className="bg-[var(--bg-secondary)] border-b border-[var(--card-border)]">
+                      {headers.map((h, hIdx) => (
+                        <th key={hIdx} className="p-3.5 font-bold text-[var(--text-primary)] font-mono uppercase tracking-wider text-[9px] border-r border-[var(--card-border)] last:border-r-0">
+                          {parseInlineFormatting(h)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bodyRows.map((row, rIdx) => (
+                      <tr key={rIdx} className="border-b last:border-b-0 border-[var(--card-border)] hover:bg-[var(--accent-color)]/5 transition-colors duration-150 odd:bg-black/[0.02] even:bg-transparent">
+                        {row.map((cell, cIdx) => (
+                          <td key={cIdx} className="p-3 text-[var(--text-muted)] border-r border-[var(--card-border)] last:border-r-0 leading-relaxed font-sans font-medium">
+                            {parseInlineFormatting(cell)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          }
+          continue;
+        }
+
+        // 5. Headings (### H3)
+        if (trimmed.startsWith('###')) {
+          const hText = trimmed.replace(/^###\s*/, '');
+          elements.push(
+            <h4 key={i} className="text-xs font-bold font-mono tracking-tight text-[var(--text-primary)] border-l-2 border-[var(--accent-color)] pl-2.5 mt-5 mb-2 flex items-center gap-1.5 uppercase">
+              {parseInlineFormatting(hText)}
             </h4>
           );
+          i++;
+          continue;
         }
-        if (trimmed.startsWith('*')) {
-          const itemText = trimmed.replace(/^\*\s*/, '');
-          return (
-            <li key={idx} className="text-[11px] text-[var(--text-muted)] ml-4 list-disc mb-1 leading-relaxed">
-              {itemText}
-            </li>
+
+        // 6. Bold Headers inside content e.g. "#### Header" or "**Header:**" or "Header:" followed by line bullet tags
+        if (trimmed.startsWith('####')) {
+          const hText = trimmed.replace(/^####\s*/, '');
+          elements.push(
+            <h5 key={i} className="text-[11px] font-extrabold font-mono tracking-tight text-[var(--text-primary)] mt-3 mb-1 text-[var(--accent-color)]">
+              {parseInlineFormatting(hText)}
+            </h5>
           );
+          i++;
+          continue;
         }
+
+        // 7. Standard Lists starting with '*' or '-' or '●'
+        if (trimmed.startsWith('*') || trimmed.startsWith('-') || trimmed.startsWith('●') || trimmed.startsWith('○')) {
+          let cleanItem = trimmed.replace(/^(\*|-|●|○)\s*/, '');
+          // Identify if it's high indentation (sub-list)
+          const isNested = line.startsWith('  ') || line.startsWith('\t') || trimmed.startsWith('○');
+          elements.push(
+            <div key={i} className={`flex items-start gap-2 text-[11px] text-[var(--text-muted)] leading-relaxed mb-1.5 ${isNested ? 'ml-6' : 'ml-2'}`}>
+              <span className={`flex-shrink-0 text-[10px] mt-0.5 select-none ${isNested ? 'text-[var(--text-muted)]/50 font-mono' : 'text-[var(--accent-color)]'}`}>
+                {isNested ? '○' : '◼'}
+              </span>
+              <span className="font-medium font-sans">{parseInlineFormatting(cleanItem)}</span>
+            </div>
+          );
+          i++;
+          continue;
+        }
+
+        // 8. Ordered Lists (e.g., 1. Item)
         if (trimmed.match(/^\d+\./)) {
-          const itemText = trimmed.replace(/^\d+\.\s*/, '');
-          return (
-            <li key={idx} className="text-[11px] text-[var(--text-muted)] ml-4 list-decimal mb-1 leading-relaxed">
-              {itemText}
-            </li>
+          const itemNum = trimmed.match(/^(\d+)\./)[1];
+          const cleanItem = trimmed.replace(/^\d+\.\s*/, '');
+          elements.push(
+            <div key={i} className="flex items-start gap-2.5 text-[11px] text-[var(--text-muted)] leading-relaxed ml-2 mb-1.5">
+              <span className="font-mono text-[9px] font-bold text-[var(--accent-color)] bg-[var(--accent-color)]/10 px-1.5 py-0.5 rounded border border-[var(--accent-color)]/20 flex-shrink-0 mt-0.5 min-w-[20px] text-center">
+                {itemNum}
+              </span>
+              <span className="font-medium font-sans">{parseInlineFormatting(cleanItem)}</span>
+            </div>
+          );
+          i++;
+          continue;
+        }
+
+        // 9. Standard paragraphs
+        if (trimmed === '') {
+          elements.push(<div key={i} className="h-2" />);
+        } else {
+          elements.push(
+            <p key={i} className="text-[11px] text-[var(--text-muted)] leading-relaxed mb-3 font-medium font-sans">
+              {parseInlineFormatting(trimmed)}
+            </p>
           );
         }
-        if (trimmed === '') {
-          return <div key={idx} className="h-1.5" />;
-        }
-        return (
-          <p key={idx} className="text-[11px] text-[var(--text-muted)] leading-relaxed mb-2">
-            {trimmed}
-          </p>
-        );
-      });
+        
+        i++;
+      }
+      
+      return <div className="space-y-1.5">{elements}</div>;
     };
 
     if (viewMode === 'articles') {
@@ -501,23 +932,63 @@ export default function App() {
         <div className="min-h-screen bg-[var(--bg-color)] text-[var(--text-primary)] flex flex-col p-4 md:p-6 transition-colors duration-300 relative select-text">
           
           {/* Decoy Legitimate Educational Header */}
-          <header className="w-full max-w-7xl mx-auto flex justify-between items-center pb-4 mb-4 border-b border-[var(--card-border)] gap-4 select-none">
+          <header className="w-full max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center pb-4 mb-4 border-b border-[var(--card-border)] gap-4 select-none">
             <div 
-              onClick={() => setViewModeAndSave('locked')}
-              className="flex items-center gap-3 cursor-pointer active:scale-98 transition-transform"
-              title="Return to secure screen"
+              onClick={() => { setActiveEduTab('articles'); setArticleSearch(''); }}
+              className="flex items-center gap-3 cursor-pointer active:scale-98 transition-transform self-stretch sm:self-auto"
+              title="StudyTools Home"
             >
               <div className="p-2 bg-[var(--accent-color)] text-[var(--bg-color)] rounded-xl shadow-[0_2px_8.5px_var(--accent-shadow)] border border-[var(--card-border)]">
                 <BookOpen className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)] flex items-center gap-2">
-                  Classroom <span className="text-[10px] font-mono border border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)] px-2 py-0.5 rounded-full uppercase tracking-widest font-bold">Academic Base</span>
+                <h1 className="text-sm font-bold tracking-tight text-[var(--text-primary)] sm:text-base">
+                  StudyTools <span className="text-[9px] font-mono border border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)] px-2 py-0.5 rounded-full uppercase tracking-widest font-bold">Academic Base</span>
                 </h1>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* HIGHLY ACCESSIBLE PRIMARY TAB SWITCHER */}
+            <div className="flex items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-full p-1 shadow-sm select-none max-w-full overflow-x-auto scrollbar-none">
+              {[
+                { id: 'articles', label: 'Syllabus Articles', icon: BookOpen },
+                { id: 'flashcards', label: 'Study Flashcards', icon: Layers },
+                { id: 'quiz', label: 'Practice Quizzes', icon: Gamepad2 },
+                { id: 'grammar', label: 'Grammar Scanner', icon: FileText }
+              ].map((tab) => {
+                const TabIcon = tab.icon;
+                const isSelected = activeEduTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveEduTab(tab.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+                      isSelected
+                        ? 'bg-[var(--accent-color)] text-[var(--bg-color)] font-bold shadow-sm'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    <TabIcon className="w-3.5 h-3.5" />
+                    <span className="leading-none">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-start">
+              {/* Sign out link */}
+              <button
+                onClick={() => {
+                  setViewModeAndSave('articles');
+                  setPasscode('');
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-mono font-bold bg-[var(--bg-secondary)] border border-[var(--card-border)] hover:border-red-500/50 hover:bg-red-500/10 text-[var(--text-primary)] hover:text-red-500 transition-all duration-200 cursor-pointer shadow-sm group"
+                title="Sign Out to Lock Screen"
+              >
+                <LogOut className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+                <span>Sign Out</span>
+              </button>
+
               {/* Light/Dark Toggle */}
               <div className="flex items-center gap-2 border border-[var(--card-border)] bg-[var(--bg-secondary)] py-1.5 px-2.5 rounded-full shadow-sm">
                 <div 
@@ -539,121 +1010,255 @@ export default function App() {
           {/* Actual Articles Hub Grid (Occupies full-screen width) */}
           <div className="w-full max-w-7xl mx-auto bg-[var(--card-bg)] border border-[var(--card-border)] rounded-3xl p-5 md:p-6 shadow-2xl transition-all flex flex-col gap-4 flex-1 md:h-[650px] overflow-hidden">
             
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1 min-h-0 overflow-hidden">
-              {/* Left Column - Articles selection */}
-              <div className="md:col-span-2 flex flex-col gap-3 overflow-hidden h-full">
-                
-                {/* Subject Specific Sections */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 flex-shrink-0 scrollbar-none select-none">
-                  {['All', 'Science', 'Mathematics', 'ELA', 'Social Studies'].map((cat) => {
-                    const isSelected = selectedArticleCategory === cat;
-                    return (
-                      <button
-                        key={cat}
-                        onClick={() => {
-                          setSelectedArticleCategory(cat);
-                          const firstInCat = articles.find(art => cat === 'All' || art.category === cat);
-                          if (firstInCat) {
-                            setSelectedArticleId(firstInCat.id);
-                          }
-                        }}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] font-mono border font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-98 ${
-                          isSelected
-                            ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
-                            : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border-[var(--card-border)] hover:border-[var(--text-muted)]/50 hover:text-[var(--text-primary)]'
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="relative flex-shrink-0">
-                  <input
-                    type="text"
-                    placeholder="Search curriculum papers..."
-                    value={articleSearch}
-                    onChange={(e) => setArticleSearch(e.target.value)}
-                    className="w-full text-xs rounded-xl py-1.5 pl-8 pr-3 border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] placeholder:opacity-50 transition-all font-mono"
-                  />
-                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[var(--text-muted)]" />
-                </div>
-
-                {/* Feed list */}
-                <div className="flex-1 flex flex-col gap-2 overflow-y-auto py-0.5 scrollbar-thin">
-                  {filteredArticles.length === 0 ? (
-                    <div className="text-center py-4 text-xs text-[var(--text-muted)] font-mono select-none">
-                      No matching resource files available
-                    </div>
-                  ) : (
-                    filteredArticles.map((art) => {
-                      const isSelected = art.id === selectedArticleId;
+            {activeEduTab === 'articles' && (
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1 min-h-0 overflow-hidden">
+                {/* Left Column - Articles selection */}
+                <div className="md:col-span-2 flex flex-col gap-3 overflow-hidden h-full">
+                  
+                  {/* Subject Specific Sections */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 flex-shrink-0 scrollbar-none select-none">
+                    {['All', 'Science', 'Mathematics', 'ELA', 'Social Studies', 'Italian'].map((cat) => {
+                      const isSelected = selectedArticleCategory === cat;
                       return (
-                        <div
-                          key={art.id}
-                          onClick={() => setSelectedArticleId(art.id)}
-                          className={`p-2 p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                        <button
+                          key={cat}
+                          onClick={() => {
+                            setSelectedArticleCategory(cat);
+                            const firstInCat = articles.find(art => cat === 'All' || art.category === cat);
+                            if (firstInCat) {
+                              setSelectedArticleId(firstInCat.id);
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-[10px] font-mono border font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-98 ${
                             isSelected
-                              ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)] shadow-sm scale-[1.01]'
-                              : 'bg-[var(--bg-secondary)] border-[var(--card-border)] hover:border-[var(--text-muted)]/40'
+                              ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                              : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border-[var(--card-border)] hover:border-[var(--text-muted)]/50 hover:text-[var(--text-primary)]'
                           }`}
                         >
-                          <div className="flex items-center justify-between gap-1 mb-0.5 flex-wrap">
-                            <span className="text-[8px] font-bold font-mono tracking-wider px-1.5 py-0.5 rounded bg-[var(--input-fill)] text-[var(--accent-color)] uppercase">
-                              {art.category}
+                          {cat}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="relative flex-shrink-0">
+                    <input
+                      type="text"
+                      placeholder="Search curriculum papers..."
+                      value={articleSearch}
+                      onChange={(e) => setArticleSearch(e.target.value)}
+                      className="w-full text-xs rounded-xl py-1.5 pl-8 pr-3 border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] placeholder:opacity-50 transition-all font-mono"
+                    />
+                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[var(--text-muted)]" />
+                  </div>
+
+                  {/* Feed list */}
+                  <div className="flex-1 flex flex-col gap-2 overflow-y-auto py-0.5 scrollbar-thin">
+                    {filteredArticles.length === 0 ? (
+                      <div className="text-center py-4 text-xs text-[var(--text-muted)] font-mono select-none">
+                        No matching resource files available
+                      </div>
+                    ) : (
+                      filteredArticles.map((art) => {
+                        const isSelected = art.id === selectedArticleId;
+                        return (
+                          <div
+                            key={art.id}
+                            onClick={() => setSelectedArticleId(art.id)}
+                            className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                              isSelected
+                                ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)] shadow-sm scale-[1.01]'
+                                : 'bg-[var(--bg-secondary)] border-[var(--card-border)] hover:border-[var(--text-muted)]/40'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-1 mb-0.5 flex-wrap">
+                              <span className="text-[8px] font-bold font-mono tracking-wider px-1.5 py-0.5 rounded bg-[var(--input-fill)] text-[var(--accent-color)] uppercase">
+                                {art.category}
+                              </span>
+                              <span className="text-[8px] text-[var(--text-muted)] font-mono">
+                                {art.readTime}
+                              </span>
+                            </div>
+                            <h4 className="text-[11px] font-bold leading-snug text-[var(--text-primary)] line-clamp-1">
+                              {art.title}
+                            </h4>
+                            <p className="text-[9px] text-[var(--text-muted)] mt-0.5 font-mono">
+                              {art.date}
+                            </p>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* CUSTOMIZABLE PROMPT GENERATOR CONTAINER WRAP */}
+                  <div className="bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-2xl p-3 flex-shrink-0 flex flex-col gap-2 text-left">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                        <span className="text-xs font-bold text-[var(--text-primary)] font-mono">Interactive AI Writer</span>
+                      </div>
+                      
+                      {isPromptUserModified && (
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setCustomPromptText(`Write an educational, informational article focusing on ${newArticleGame} concepts suited for school reading.`);
+                            setIsPromptUserModified(false);
+                          }}
+                          className="text-[9px] font-mono text-[var(--accent-color)] hover:underline flex items-center gap-0.5 cursor-pointer bg-transparent border-none p-0"
+                        >
+                          Reset preset
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-left">
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-wider">Subject</label>
+                        <select
+                          value={newArticleGame}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNewArticleGame(val);
+                            if (!isPromptUserModified) {
+                              setCustomPromptText(`Write an educational, informational article focusing on ${val} concepts suited for school reading.`);
+                            }
+                          }}
+                          className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1.5 text-[var(--text-primary)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-mono"
+                        >
+                          {gameOptions.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-wider">Tone</label>
+                        <select
+                          value={newArticleTone}
+                          onChange={(e) => setNewArticleTone(e.target.value)}
+                          className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1.5 text-[var(--text-primary)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-mono"
+                        >
+                          {toneOptions.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.value}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-0.5 mt-0.5 text-left">
+                      <label className="text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-wider">Custom prompt instructions</label>
+                      <textarea
+                        value={customPromptText}
+                        onChange={(e) => {
+                          setCustomPromptText(e.target.value);
+                          setIsPromptUserModified(true);
+                        }}
+                        placeholder="Type standard prompt rules..."
+                        rows={2}
+                        className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-2 text-[var(--text-primary)] w-full focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-sans resize-none scrollbar-thin"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleGenerateArticle}
+                      disabled={isGeneratingArticle}
+                      className="w-full text-xs font-semibold bg-[var(--accent-color)] text-[var(--bg-color)] py-1.5 rounded-xl hover:opacity-95 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1.5 font-mono shadow-sm mt-0.5"
+                    >
+                      {isGeneratingArticle ? (
+                        <>
+                          <Sparkles className="w-3 h-3 animate-spin text-yellow-300" />
+                          <span>DEEP WRITER ({generationProgress}%)...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3 h-3 text-yellow-300" />
+                          <span>GENERATE ARTICLE WITH AI</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                </div>
+
+                {/* Right Column - Deep Active Article view */}
+                <div className="md:col-span-3 flex flex-col bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-2xl overflow-hidden h-full">
+                  {selectedArticle ? (
+                    <div className="flex flex-col h-full overflow-hidden text-left justify-between">
+                      
+                      {/* Title Bar details */}
+                      <div className="p-4 border-b border-[var(--card-border)] bg-[var(--card-bg)] flex-shrink-0 flex justify-between items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded bg-[var(--bg-secondary)] text-[var(--accent-color)] uppercase tracking-wider border border-[var(--card-border)]">
+                              {selectedArticle.category}
                             </span>
-                            <span className="text-[8px] text-[var(--text-muted)] font-mono">
-                              {art.readTime}
+                            <span className="text-[9px] text-[var(--text-muted)] font-mono bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded border border-[var(--card-border)]">
+                              {selectedArticle.readTime}
                             </span>
                           </div>
-                          <h4 className="text-[11px] font-bold leading-snug text-[var(--text-primary)] line-clamp-1">
-                            {art.title}
-                          </h4>
-                          <p className="text-[9px] text-[var(--text-muted)] mt-0.5 font-mono">
-                            {art.date}
-                          </p>
+                          <h3 className="text-sm font-extrabold text-[var(--text-primary)] leading-snug line-clamp-1">
+                            {selectedArticle.title}
+                          </h3>
                         </div>
-                      );
-                    })
+
+                        {/* Interactive prompt linkages */}
+                        <div className="flex items-center gap-1.5 shrink-0 select-none">
+                          <button
+                            type="button"
+                            onClick={() => setActiveEduTab('flashcards')}
+                            className="bg-[var(--accent-color)]/10 text-[var(--accent-color)] hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] font-mono text-[9px] font-bold px-2 py-1.5 rounded-xl border border-[var(--accent-color)] flex items-center gap-1 transition-all cursor-pointer"
+                            title="Interactive Flashcards deck for this syllabus article"
+                          >
+                            <Layers className="w-3.5 h-3.5" />
+                            <span>STUDY TERMS</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveEduTab('quiz')}
+                            className="bg-[var(--accent-color)]/10 text-[var(--accent-color)] hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] font-mono text-[9px] font-bold px-2 py-1.5 rounded-xl border border-[var(--accent-color)] flex items-center gap-1 transition-all cursor-pointer"
+                            title="Generate Quiz based on this syllabus"
+                          >
+                            <Gamepad2 className="w-3.5 h-3.5" />
+                            <span>TAKE TEST</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="p-4 overflow-y-auto text-left flex-1 min-h-0 scrollbar-thin">
+                        {renderFormattedText(selectedArticle.content)}
+                      </div>
+
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-xs text-[var(--text-muted)] font-mono">
+                      Select a core paper assignment to read content
+                    </div>
                   )}
                 </div>
 
               </div>
+            )}
 
-              {/* Right Column - Deep Active Article view */}
-              <div className="md:col-span-3 flex flex-col bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-2xl overflow-hidden h-full">
-                {selectedArticle ? (
-                  <div className="flex flex-col h-full overflow-hidden">
-                    <div className="p-4 border-b border-[var(--card-border)] bg-[var(--card-bg)] flex-shrink-0">
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded bg-[var(--bg-secondary)] text-[var(--accent-color)] uppercase tracking-wider border border-[var(--card-border)]">
-                          {selectedArticle.category}
-                        </span>
-                        <span className="text-[9px] text-[var(--text-muted)] font-mono bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded border border-[var(--card-border)]">
-                          {selectedArticle.readTime}
-                        </span>
-                      </div>
-                      <h3 className="text-sm font-extrabold text-[var(--text-primary)] leading-snug">
-                        {selectedArticle.title}
-                      </h3>
-                      <p className="text-[10px] text-[var(--text-muted)] mt-1 font-mono">
-                        {selectedArticle.subtitle} • {selectedArticle.date}
-                      </p>
-                    </div>
+            {activeEduTab === 'flashcards' && (
+              <FlashcardsWorkspace 
+                refArticle={selectedArticle} 
+                onGeneratedSuccess={(targetTab) => setActiveEduTab(targetTab)} 
+              />
+            )}
 
-                    <div className="p-4 overflow-y-auto text-left flex-1 min-h-0 scrollbar-thin">
-                      {renderFormattedText(selectedArticle.content)}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-xs text-[var(--text-muted)] font-mono">
-                    Select a core paper assignment to read content
-                  </div>
-                )}
-              </div>
+            {activeEduTab === 'quiz' && (
+              <QuizWorkspace 
+                refArticle={selectedArticle} 
+                onGeneratedSuccess={(targetTab) => setActiveEduTab(targetTab)} 
+              />
+            )}
 
-            </div>
+            {activeEduTab === 'grammar' && (
+              <GrammarCheckerWorkspace />
+            )}
+
           </div>
         </div>
       );
@@ -711,25 +1316,65 @@ export default function App() {
           
           <div className="text-center">
             <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Portal Secured</h2>
-            <p className="text-xs text-[var(--text-muted)] mt-1.5 leading-relaxed">This is a paid Science, Math, ELA, and Social Studies article website. Please enter a correct password to continue to the website. Hint: Year 26.</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1.5 leading-relaxed">This is a paid Science, Math, ELA, and Social Studies article website. Please enter a correct password to continue to the website.</p>
+          </div>
+
+          {/* Alphanumeric Text/Passcode Input Field */}
+          <div className="w-full flex flex-col gap-2.5">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Enter password..."
+                value={passcode}
+                onChange={(e) => setPasscode(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handlePasswordSubmit();
+                  }
+                }}
+                className="w-full px-4 py-2.5 border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-center text-sm font-bold font-mono tracking-widest rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] placeholder:text-[10px] placeholder:font-sans placeholder:tracking-normal outline-none transition-all placeholder:opacity-60"
+                autoFocus
+              />
+              {passcode.length > 0 && (
+                <button 
+                  type="button"
+                  onClick={() => setPasscode('')}
+                  className="absolute right-3.5 top-3 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] font-bold cursor-pointer"
+                  title="Clear input"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            
+            <button
+              type="button"
+              onClick={() => handlePasswordSubmit()}
+              className="w-full text-xs font-mono font-bold bg-[var(--accent-color)] text-[var(--bg-color)] py-2.5 rounded-xl hover:opacity-95 active:scale-98 transition-all cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+            >
+              <Unlock className="w-3.5 h-3.5" />
+              <span>SUBMIT PASSWORD</span>
+            </button>
           </div>
 
           {/* Indicators for passcode digits */}
-          <div className="flex justify-center gap-4 py-2">
-            {[0, 1, 2, 3].map((index) => {
-              const isFilled = passcode.length > index;
-              return (
-                <div 
-                  key={index}
-                  className={`w-4 h-4 rounded-full border-2 transition-all duration-150 transform ${
-                    isFilled 
-                      ? 'bg-[var(--accent-color)] border-[var(--accent-color)] scale-110 shadow-[0_0_8px_var(--accent-shadow)]' 
-                      : 'border-[var(--card-border)] bg-[var(--bg-secondary)]'
-                  }`}
-                />
-              );
-            })}
-          </div>
+          {(!passcode || (!isNaN(passcode) && passcode.length <= 4)) && (
+            <div className="flex justify-center gap-4 py-1">
+              {[0, 1, 2, 3].map((index) => {
+                const isFilled = passcode.length > index;
+                return (
+                  <div 
+                    key={index}
+                    className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-150 transform ${
+                      isFilled 
+                        ? 'bg-[var(--accent-color)] border-[var(--accent-color)] scale-110 shadow-[0_0_8px_var(--accent-shadow)]' 
+                        : 'border-[var(--card-border)] bg-[var(--bg-secondary)]'
+                    }`}
+                  />
+                );
+              })}
+            </div>
+          )}
 
           {/* Secure Pad Grid */}
           <div className="grid grid-cols-3 gap-3.5 w-full max-w-[245px] mt-2">
@@ -792,7 +1437,7 @@ export default function App() {
               
               {/* Subject Specific Sections */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 flex-shrink-0 scrollbar-none select-none">
-                {['All', 'Science', 'Mathematics', 'ELA', 'Social Studies'].map((cat) => {
+                {['All', 'Science', 'Mathematics', 'ELA', 'Social Studies', 'Italian'].map((cat) => {
                   const isSelected = selectedArticleCategory === cat;
                   return (
                     <button
@@ -901,6 +1546,33 @@ export default function App() {
                   </div>
                 </div>
 
+                <div className="flex flex-col gap-1 mt-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-wider">Customize Prompt</label>
+                    {isPromptUserModified && (
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setIsPromptUserModified(false);
+                        }}
+                        className="text-[9px] font-mono text-[var(--accent-color)] hover:underline flex items-center gap-0.5 cursor-pointer bg-transparent border-none p-0"
+                      >
+                        Reset to preset
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    value={customPromptText}
+                    onChange={(e) => {
+                      setCustomPromptText(e.target.value);
+                      setIsPromptUserModified(true);
+                    }}
+                    placeholder="Type a custom prompt for the AI to write about..."
+                    rows={2}
+                    className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-2 text-[var(--text-primary)] w-full focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-sans resize-none scrollbar-thin"
+                  />
+                </div>
+
                 <button
                   type="button"
                   onClick={handleGenerateArticle}
@@ -975,20 +1647,22 @@ export default function App() {
           <div 
             onClick={() => { setFilter('all'); setSelectedGame(null); setSearchQuery(''); }}
             className="flex items-center gap-2.5 cursor-pointer select-none group"
-            title="Go to Classroom homepage"
+            title={useClassroomDecoy ? "Go to Classroom homepage" : "Go to StudyTools homepage"}
           >
             <div className="p-2 bg-[var(--accent-color)] text-[var(--bg-color)] rounded-lg border border-[var(--card-border)] shadow-[0_2px_8.5px_var(--accent-shadow)] group-hover:rotate-12 group-hover:scale-110 transition-all duration-300 transform">
-              <School className="w-5.5 h-5.5" />
+              {useClassroomDecoy ? <School className="w-5.5 h-5.5" /> : <BookOpen className="w-5.5 h-5.5" />}
             </div>
             <div>
-              <span className="text-xl font-bold tracking-tight text-[var(--text-primary)] block group-hover:text-[var(--accent-color)] transition-colors">Classroom</span>
+              <span className="text-xl font-bold tracking-tight text-[var(--text-primary)] block group-hover:text-[var(--accent-color)] transition-colors">
+                {useClassroomDecoy ? "Home - Classroom" : "StudyTools"}
+              </span>
             </div>
           </div>
 
           {/* Sign Out Button right after Classroom */}
           <button
             onClick={() => {
-              setViewModeAndSave('locked');
+              setViewModeAndSave('articles');
               setPasscode('');
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-semibold bg-[var(--bg-secondary)] border border-[var(--card-border)] hover:border-red-500/50 hover:bg-red-500/10 text-[var(--text-primary)] hover:text-red-500 transition-all duration-200 cursor-pointer shadow-sm group"
@@ -1085,38 +1759,380 @@ export default function App() {
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              const win = window.open("about:blank", "_blank");
-              if (!win) {
-                alert("Popup blocked! Please allow popups to open the site in about:blank.");
-                return;
-              }
-              win.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                  <title>Home - Classroom</title>
-                  <link rel="icon" type="image/png" href="https://ssl.gstatic.com/classroom/favicon.png">
-                  <meta charset="utf-8">
-                  <style>
-                    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0c0a09; }
-                    iframe { width: 100vw; height: 100vh; border: none; display: block; }
-                  </style>
-                </head>
-                <body>
-                  <iframe src="${window.location.origin}${window.location.pathname}${window.location.search}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
-                </body>
-                </html>
-              `);
-              win.document.close();
-            }}
-            className="text-xs bg-[var(--accent-color)] text-[var(--bg-color)] border border-[var(--accent-color)] py-1.5 px-3.5 rounded-full hover:opacity-90 active:scale-98 transition-all duration-200 font-mono font-bold shadow-[0_2px_8px_var(--accent-shadow)] flex items-center gap-1.5 cursor-pointer md:ml-auto"
-            title="Open entire site inside about:blank tab to cloak history"
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span>CLOAK IN ABOUT:BLANK</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2 md:ml-auto w-full md:w-auto">
+            {/* Suffix Select */}
+            <div className="flex items-center bg-[var(--card-bg)] border border-[var(--card-border)] rounded-full px-2.5 py-1.5 text-xs text-[var(--text-muted)] font-mono shadow-sm">
+              <span className="text-[10px] uppercase font-extrabold mr-1.5 text-[var(--accent-color)]">Tab Target:</span>
+              <select 
+                value={aboutBlankSuffix}
+                onChange={(e) => setAboutBlankSuffix(e.target.value)}
+                className="bg-transparent border-none outline-none font-bold text-[var(--text-primary)] cursor-pointer py-0.5"
+                style={{ colorScheme: 'dark' }}
+              >
+                <option value="">about:blank (Default)</option>
+                <option value="#1">about:blank#1</option>
+                <option value="#2">about:blank#2</option>
+                <option value="#3">about:blank#3</option>
+                <option value="#math">about:blank#math</option>
+                <option value="#science">about:blank#science</option>
+              </select>
+            </div>
+
+            <button
+              onClick={() => {
+                const targetUrl = "about:blank" + aboutBlankSuffix;
+                const win = window.open(targetUrl, "_blank");
+                if (!win) {
+                  alert(`Popup blocked! Please allow popups to open the site in ${targetUrl}.`);
+                  return;
+                }
+                
+                // Construct query parameters to propagate the decoy state to the new document
+                const searchParams = new URLSearchParams(window.location.search);
+                searchParams.set('decoy', String(useClassroomDecoy));
+                const iframeSrc = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${window.location.hash}`;
+
+                const bookSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
+                  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
+                )}`;
+
+                win.document.write(`
+                  <!DOCTYPE html>
+                  <html>
+                  <head>
+                    <title>${useClassroomDecoy ? 'Home - Classroom' : 'StudyTools'}</title>
+                    <link rel="icon" type="image/png" href="${useClassroomDecoy ? 'https://ssl.gstatic.com/classroom/favicon.png' : bookSvgDataUri}">
+                    <meta charset="utf-8">
+                    <style>
+                      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0c0a09; }
+                      iframe { width: 100vw; height: 100vh; border: none; display: block; }
+                    </style>
+                  </head>
+                  <body>
+                    <iframe src="${iframeSrc}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+                  </body>
+                  </html>
+                `);
+                win.document.close();
+              }}
+              className="text-xs bg-[var(--card-bg)] text-[var(--text-primary)] border border-[var(--card-border)] py-1.5 px-3.5 rounded-full hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] active:scale-98 transition-all duration-200 font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+              title="Open entire site inside about:blank tab with selected suffix to cloak history"
+            >
+              <Globe className="w-3.5 h-3.5 text-[var(--accent-color)] animate-spin-slow" />
+              <span>CLOAK IN {aboutBlankSuffix ? `ABOUT:BLANK ${aboutBlankSuffix}` : 'ABOUT:BLANK'}</span>
+            </button>
+
+            <button
+              onClick={() => setUseClassroomDecoy(!useClassroomDecoy)}
+              className={`text-xs border py-1.5 px-4 rounded-full font-mono font-extrabold flex items-center gap-2 cursor-pointer transition-all duration-300 transform active:scale-95 ${
+                useClassroomDecoy 
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_10px_var(--accent-shadow)]' 
+                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
+              }`}
+              title="Toggle Classroom Home Cloak Mode"
+            >
+              {useClassroomDecoy ? <School className="w-3.5 h-3.5 animate-pulse" /> : <Gamepad2 className="w-3.5 h-3.5" />}
+              <span>{useClassroomDecoy ? 'DECOY ON (CLASSROOM)' : 'DECOY OFF'}</span>
+            </button>
+
+            {/* Hidden legacy frame creator to preserve large assets cleanly */}
+            <div style={{ display: 'none' }}>
+              <button
+                onClick={() => {
+                  const win = window.open("about:blank", "_blank");
+                  if (!win) {
+                    alert("Popup blocked! Accessing classroom decoys requires popup permissions.");
+                    return;
+                  }
+                win.document.write(`
+                  <!DOCTYPE html>
+                  <html>
+                  <head>
+                    <title>Classwork - Algebra II</title>
+                    <link rel="icon" type="image/png" href="https://ssl.gstatic.com/classroom/favicon.png">
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <style>
+                      * { box-sizing: border-box; margin: 0; padding: 0; }
+                      html, body {
+                        width: 100vw;
+                        height: 100vh;
+                        overflow: hidden;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                        background-color: #ffffff;
+                        display: flex;
+                        flex-direction: column;
+                      }
+                      
+                      /* CLASSROOM HEADER */
+                      .classroom-header {
+                        height: 64px;
+                        background-color: #ffffff;
+                        border-bottom: 1px solid #e0e0e0;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 0 16px;
+                        position: relative;
+                        user-select: none;
+                      }
+                      
+                      .header-left { display: flex; align-items: center; gap: 12px; }
+                      
+                      .menu-btn {
+                        width: 48px;
+                        height: 48px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        cursor: pointer;
+                        color: #5f6368;
+                      }
+                      .menu-btn:hover { background-color: rgba(95, 99, 104, 0.04); }
+                      
+                      .classroom-logo { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+                      .classroom-logo img { width: 24px; height: 24px; }
+                      .classroom-logo span {
+                        font-size: 22px;
+                        color: #5f6368;
+                        font-weight: 400;
+                        font-family: Arial, sans-serif;
+                      }
+                      
+                      .course-title-section {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        margin-left: 8px;
+                        border-left: 1px solid #dadce0;
+                        padding-left: 16px;
+                      }
+                      
+                      .course-title { font-size: 16px; color: #3c4043; font-weight: 500; }
+                      .course-section { font-size: 12px; color: #5f6368; }
+                      
+                      /* TABS */
+                      .header-middle {
+                        display: flex;
+                        align-items: center;
+                        gap: 24px;
+                        position: absolute;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        height: 100%;
+                      }
+                      
+                      .tab {
+                        height: 100%;
+                        display: flex;
+                        align-items: center;
+                        padding: 0 8px;
+                        font-size: 14px;
+                        font-weight: 500;
+                        color: #5f6368;
+                        cursor: pointer;
+                        border-bottom: 3px solid transparent;
+                      }
+                      .tab:hover { color: #137333; background-color: rgba(19, 115, 51, 0.04); }
+                      .tab.active { color: #137333; border-bottom-color: #137333; }
+                      
+                      /* RIGHT SIDE */
+                      .header-right { display: flex; align-items: center; gap: 8px; }
+                      
+                      .icon-btn {
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        cursor: pointer;
+                        color: #5f6368;
+                      }
+                      .icon-btn:hover { background-color: rgba(95, 99, 104, 0.04); }
+                      
+                      .avatar {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                        background-color: #1a73e8;
+                        color: #ffffff;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 14px;
+                        font-weight: 500;
+                        margin-left: 8px;
+                        cursor: pointer;
+                      }
+                      
+                      /* MAIN CONTENT */
+                      .main-body {
+                        flex: 1;
+                        position: relative;
+                        width: 100%;
+                        height: calc(100vh - 64px);
+                        background-color: #ffffff;
+                      }
+                      
+                      iframe { width: 100%; height: 100%; border: none; display: block; }
+                      
+                      .decoy-content {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background-color: #ffffff;
+                        display: none;
+                        padding: 32px;
+                        overflow-y: auto;
+                      }
+                      
+                      .decoy-active #game-iframe { display: none; }
+                      .decoy-active .decoy-content { display: block; }
+                    </style>
+                  </head>
+                  <body>
+                    <!-- Header -->
+                    <div class="classroom-header">
+                      <div class="header-left">
+                        <div class="menu-btn" id="menu-btn-click">
+                          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                          </svg>
+                        </div>
+                        <div class="classroom-logo" id="brand-logo-click">
+                          <img src="https://ssl.gstatic.com/classroom/favicon.png" alt="Classroom Logo">
+                          <span>Classroom</span>
+                        </div>
+                        <div class="course-title-section" id="course-banner-click" style="cursor: pointer;">
+                          <div class="course-title">Algebra II</div>
+                          <div class="course-section">&nbsp;- Honors Period 3</div>
+                        </div>
+                      </div>
+                      
+                      <div class="header-middle">
+                        <div class="tab">Stream</div>
+                        <div class="tab active">Classwork</div>
+                        <div class="tab">People</div>
+                        <div class="tab">Grades</div>
+                      </div>
+                      
+                      <div class="header-right">
+                        <div class="icon-btn">
+                          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                            <path d="M20 18H4v-7h16v7zm1-9h-3V6c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v3H3c-1.1 0-2 .9-2 2v9c0 1.1.9 2 2 2h18c1.1 0-2-.9-2-2v-9c0-1.1-.9-2-2-2zm-3-3v3H8V6h10z"/>
+                          </svg>
+                        </div>
+                        <div class="icon-btn">
+                          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
+                          </svg>
+                        </div>
+                        <div class="icon-btn" style="margin-right: 4px;">
+                          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                          </svg>
+                        </div>
+                        <div class="avatar">S</div>
+                      </div>
+                    </div>
+                    
+                    <!-- Main Body Area -->
+                    <div class="main-body" id="main-body">
+                      <iframe id="game-iframe" src="${window.location.origin}${window.location.pathname}${window.location.search}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+                      
+                      <!-- Decoy Homework Board -->
+                      <div class="decoy-content">
+                        <div style="background-color: #137333; color: white; padding: 24px 32px; border-radius: 8px; margin-bottom: 24px; text-align: left;">
+                          <h1 style="font-size: 26px; font-weight: 400; margin-bottom: 6px; font-family: Roboto, Arial, sans-serif;">Algebra II - Period 3 Homework & Resource Portal</h1>
+                          <p style="font-size: 14px; opacity: 0.9; font-family: Roboto, Arial, sans-serif;">Honors Mathematics Course Resources</p>
+                        </div>
+
+                        <div style="display: flex; gap: 24px; text-align: left; font-family: Roboto, Arial, sans-serif; flex-wrap: wrap;">
+                          <div style="flex: 2; min-width: 300px;">
+                            <div style="background: white; border: 1px solid #dadce0; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+                              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #dadce0; padding-bottom: 16px; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                                <div>
+                                  <h2 style="font-size: 20px; font-weight: 500; color: #1967d2; margin-bottom: 4px;">Interactive Graphing Lab & Exercises</h2>
+                                  <p style="font-size: 12px; color: #5f6368;">Teacher: Mrs. Katherine Vance &bull; Assigned: Jun 4</p>
+                                </div>
+                                <div style="text-align: right; min-width: 120px;">
+                                  <p style="font-size: 14px; font-weight: 500; color: #3c4043;">100 points</p>
+                                  <p style="font-size: 12px; color: #c5221f; font-weight: 500;">Due Tomorrow, 11:59 PM</p>
+                                </div>
+                              </div>
+
+                              <p style="font-size: 14px; color: #3c4043; line-height: 1.6; margin-bottom: 16px;">
+                                Use the web interactive math sandbox or scientific plotter loaded below to map standard polynomial structures and quadratic graphs. Note the curves, intersections, and coordinates. Fill in the homework matrix PDF when complete.
+                              </p>
+                              
+                              <div style="border: 1px solid #dadce0; border-radius: 8px; overflow: hidden; height: 400px; margin-top: 16px; background-color: #f1f3f4;">
+                                <iframe src="https://www.desmos.com/calculator" style="width:100%; height:100%; border:0;" referrerpolicy="no-referrer"></iframe>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style="flex: 1; min-width: 240px; max-width: 300px;">
+                            <div style="background: white; border: 1px solid #dadce0; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                              <h3 style="font-size: 16px; font-weight: 500; color: #3c4043; margin-bottom: 16px;">Your work</h3>
+                              <div style="border: 1px dashed #dadce0; border-radius: 4px; padding: 24px; text-align: center; margin-bottom: 16px; font-size: 12px; color: #5f6368;">
+                                No files attached
+                              </div>
+                              <button style="width: 100%; background: #1a73e8; color: white; border: none; border-radius: 4px; padding: 10px 16px; font-size: 14px; font-weight: 500; cursor: pointer; margin-bottom: 8px;">
+                                + Add or create
+                              </button>
+                              <button style="width: 100%; background: transparent; border: 1px solid #dadce0; color: #1a73e8; border-radius: 4px; padding: 10px 16px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                                Mark as done
+                              </button>
+                            </div>
+
+                            <div style="background: white; border: 1px solid #dadce0; border-radius: 8px; padding: 16px;">
+                              <h3 style="font-size: 14px; font-weight: 500; color: #3c4043; margin-bottom: 8px;">Private comments</h3>
+                              <p style="font-size: 12px; color: #5f6368; margin-bottom: 8px;">Send a private comment to Mrs. Vance</p>
+                              <input placeholder="Add private comment..." style="width:100%; border: 1px solid #dadce0; padding: 8px 12px; font-size: 12px; border-radius: 4px; outline: none; box-sizing: border-box;" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <script>
+                      var isDecoy = false;
+                      function togglePanic() {
+                        isDecoy = !isDecoy;
+                        if (isDecoy) {
+                          document.getElementById('main-body').classList.add('decoy-active');
+                        } else {
+                          document.getElementById('main-body').classList.remove('decoy-active');
+                        }
+                      }
+                      
+                      // Esc key triggers emergency switch to real study material
+                      window.addEventListener('keydown', function(e) {
+                        if (e.key === 'Escape' || e.key === '\\x60') {
+                          togglePanic();
+                        }
+                      });
+                      
+                      // Clicking on banner/logo acts as interactive quick toggle
+                      document.getElementById('course-banner-click').addEventListener('click', togglePanic);
+                      document.getElementById('brand-logo-click').addEventListener('click', togglePanic);
+                      document.getElementById('menu-btn-click').addEventListener('click', togglePanic);
+                    </script>
+                  </body>
+                  </html>
+                `);
+                win.document.close();
+              }}
+              className="hidden"
+            >
+              <span>HIDDEN LEGACY BUTTON</span>
+            </button>
+            </div>
+          </div>
         </div>
       </section>
 

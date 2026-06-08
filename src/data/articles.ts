@@ -907,6 +907,548 @@ In 1932, Franklin D. Roosevelt was elected president, promising a "New Deal" for
     date: 'May 20, 2026',
     category: 'Social Studies',
     readTime: '5 min read'
+  },
+  {
+    id: 'sci-final-guide',
+    title: 'Final Study Guide for Science',
+    subtitle: 'Grade 8 • Science • Comprehensive Review',
+    content: `### 1. Classification of Living and Non-Living Entities
+Understanding the differences between bacteria, viruses, protists, fungi, plants, and animals is fundamental to biology.
+
+| Feature / Group | Cell Type | Cellularity | Cell Wall | Nutrition | Examples | Other Key Details |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Bacteria** | Prokaryotic | Unicellular | Yes (peptidoglycan) | Autotrophic / Heterotrophic | *E. coli*, Streptococcus | Lack a nucleus or membrane-bound organelles. Contain single circular DNA. |
+| **Viruses** | *Non-living* | Acellular | No cell wall | None | Influenza, COVID-19, Bacteriophage | Cannot replicate independently; require host machinery. Consist of a genome (DNA/RNA) in a protein capsid. |
+| **Protists** | Eukaryotic | Mostly Unicellular | Varies | Photosynthetic / Heterotrophic | Amoeba, Paramecium, Euglena | "Grab-bag" kingdom for organisms that do not fit into plants, animals, or fungi. |
+| **Fungi** | Eukaryotic | Mostly Multicellular | Yes (chitin) | Heterotrophic (by absorption) | Mushrooms, Yeast (unicellular), Mold | Act as key decomposers in systems. Store energy as glycogen. |
+| **Plants** | Eukaryotic | Multicellular | Yes (cellulose) | Autotrophic (photosynthetic) | Mosses, Ferns, Maple trees | Contain chloroplasts and large central vacuoles. Perform photosynthesis. |
+| **Animals** | Eukaryotic | Multicellular | No | Heterotrophic (by ingestion) | Insects, Fish, Humans | Exhibit mobility at some life stage. Have specialized sensory systems. |
+
+---
+
+### 2. The Characteristics of Life
+To be considered alive, an organism must possess all of the following core qualities:
+1. **Cellular Organization:** Made of one or more specialized cells.
+2. **Reproduction:** Possesses the capacity to produce offspring (sexually or asexually).
+3. **Metabolism:** Obtains and utilizes raw chemical energy and materials to maintain processes.
+4. **Homeostasis:** Actively maintains a stable internally regulated environment (e.g., body temperature).
+5. **Heredity:** Contains a genetic blueprint (DNA) inherited from parents.
+6. **Response to Stimuli:** Detects and reacts to changes in outer surroundings.
+7. **Growth and Development:** Increases in physical size and matures structurally over time.
+8. **Adaptation through Evolution:** Populations adapt over generations via natural selection.
+
+---
+
+### 3. The Statements of Cell Theory
+Developed by Schleiden, Schwann, and Virchow, the cell theory states:
+1. **All living things are composed of one or more cells.**
+2. **The cell is the basic structural and functional unit of life.**
+3. **All cells arise solely from pre-existing, living cells.**
+
+---
+
+### 4. Cell Organelles and Their Functions
+Organelles act as specialized "organs" within eukaryotic cells.
+
+* **Cell Membrane:** A semi-permeable phospholipid bilayer that selectively controls which substances enter or exit the cell.
+* **Ribosomes:** Sites of protein synthesis, assembling amino acid chains based on mRNA directions.
+* **Nucleus:** Stores safe genetic blueprints (DNA) and directs cellular activity (the "Control Center").
+* **Mitochondria:** Generates chemical energy (ATP) through cellular respiration (the cellular "Powerhouse").
+* **Vacuole:** Storage spaces for water, cellular wastes, and nutrients.
+  * Plant cells have a **Large Central Vacuole** that maintains turgor pressure; animal cells have multiple small vacuoles.
+* **Vesicles:** Tiny membrane sacs that isolate and transport molecules within the cell or expel them outward.
+* **Chloroplast:** Green organelles containing chlorophyll; the site where light is converted into glucose via photosynthesis.
+* **Cell Wall:** A rigid outer layer composed of cellulose (in plants) that provides structured support, shape, and physical protection.
+* **Rough Endoplasmic Reticulum (RER):** Covered in ribosomes; synthesizes and processes proteins meant for membranes or export.
+* **Smooth Endoplasmic Reticulum (SER):** Lacks ribosomes; synthesizes lipids, metabolizes carbohydrates, and detoxifies chemicals or poisons.
+
+---
+
+### 5. Plant vs. Animal Cells
+While both are eukaryotic, they contain key differences:
+
+* **Plant Cells only (or rarely in animals):** Cell wall, Chloroplasts, and a single Large Central Vacuole. They typically have a rigid, rectangular shape.
+* **Animal Cells only (or rarely in plants):** Centrioles/Centrosomes (used for cell division) and Lysosomes (containing digestive enzymes for waste breakdown). They are typically rounder and have irregular shapes.
+
+---
+
+### 6. The Reaction of Photosynthesis
+Photosynthesis is how autotrophs transform solar radiation into chemical carbohydrates (glucose):
+
+$$\\text{Carbon Dioxide (6CO}_2) + \\text{Water (6H}_2\\text{O)} + \\text{Solar Light} \\longrightarrow \\text{Glucose (C}_6\\text{H}_{12}\\text{O}_6) + \\text{Oxygen (6O}_2)$$
+
+* **Reactants:** Carbon Dioxide, Water, Sunlight.
+* **Products:** Glucose (stored sugar), Oxygen (byproduct).
+* **Location:** Chloroplast.
+
+---
+
+### 7. The Reaction of Cellular Respiration
+Respiration is how living cells combust sugars to generate usable biological batteries (ATP):
+
+$$\\text{Glucose (C}_6\\text{H}_{12}\\text{O}_6) + \\text{Oxygen (6O}_2) \\longrightarrow \\text{Carbon Dioxide (6CO}_2) + \\text{Water (6H}_2\\text{O)} + \\text{ATP Chemical Energy}$$
+
+* **Reactants:** Glucose, Oxygen.
+* **Products:** Carbon Dioxide, Water, ATP (approx. 36-38 ATP under aerobic conditions).
+* **Location:** Cytoplasm (glycolysis) and Mitochondria (Krebs cycle & Electron Transport Chain).
+
+---
+
+### 8. Levels of Biological Organization
+The complexity of multicellular organisms is organized hierarchically:
+
+$$\\text{Atom} \\longrightarrow \\text{Molecule} \\longrightarrow \\text{Organelle} \\longrightarrow \\text{Cell} \\longrightarrow \\text{Tissue} \\longrightarrow \\text{Organ} \\longrightarrow \\text{Organ System} \\longrightarrow \\text{Organism}$$
+
+* **Cell:** Basic unit of life (e.g., cardiac muscle cell).
+* **Tissue:** Group of similar cells working together (e.g., cardiac muscle tissue).
+* **Organ:** Structures composed of multiple tissue types working for a unified goal (e.g., Heart).
+* **Organ System:** Group of cooperating organs (e.g., Cardiovascular System).
+* **Organism:** The complete individual (e.g., Human block).
+
+---
+
+### 9. Main Human Body Systems
+Our body coordinates functions through several organ systems:
+
+* **Nervous: Controls and coordinates body movements and responses.** Composed of the brain, spinal cord, and sensory nerves. It transmits rapid electrochemical signals.
+* **Integumentary: Acts as a physical barrier against invaders and prevents fluid loss.** Composed of skin, hair, and nails. Helps regulate body temperature.
+* **Endocrine: Regulates long-term processes via blood chemical messengers (hormones).** Made of glands (thyroid, pituitary, adrenal, pancreas) that govern growth, metabolism, and reproduction.
+* **Muscular: Enables voluntary and involuntary physical movement.** Composed of skeletal, smooth, and cardiac muscles. Generates body heat as a byproduct.
+* **Excretory: Filters and removes metabolic waste materials from blood.** Composed of kidneys, ureters, urinary bladder, and skin/lungs. Regulates water and pH levels.
+* **Skeletal: Provides structure and protects critical inner organs.** Composed of 206 bones, cartilage, joints, and ligaments. Acts as a site of blood cell production (bone marrow) and calcium storage.
+
+---
+
+### 10. Energy Pyramids and the 10% Rule
+An energy pyramid tracks how chemical calories travel through trophic layers in an ecosystem:
+
+1. **Producers (Base):** Capture solar energy directly (e.g., plants, kelp).
+2. **Primary Consumers:** Herbivores eating plants (e.g., grasshoppers, deer).
+3. **Secondary Consumers:** Carnivores eating herbivores (e.g., frogs, snakes).
+4. **Tertiary Consumers:** Apex predators (e.g., eagles, wolves).
+
+**The 10% Rule:**
+Only about **10%** of the energy stored at one trophic level is passed onto the next level.
+* The other **90%** of the energy is lost to the environment as metabolic heat, biological efforts of finding food, or exits the system as indigestible waste.
+* For example, if producers store 10,000 kJ of energy, primary consumers acquire 1,000 kJ, secondary consumers get 100 kJ, and tertiary consumers gain only 10 kJ.
+
+---
+
+### 11. Steps of the Water Cycle
+The hydrological cycle recirculates water:
+
+1. **Evaporation:** The sun heats surface water (oceans, lakes), vaporizing it into atmospheric gas.
+2. **Transpiration:** Water evaporates off green plant leaves through stomata pores.
+3. **Condensation:** Hot rise-vapor cools down, clumping into visible cloud droplets.
+4. **Precipitation:** Condensed droplets fall back to land as rain, snow, hail, or sleet.
+5. **Runoff / Collection:** Precipitation flows over ground into local streams, rivers, and oceans.
+6. **Infiltration / Percolation:** Water seeps down into layers of soil, refilling deep groundwater aquifers.
+
+---
+
+### 12. Types of Symbiosis and Examples
+Symbiosis describes long-term close interactions between different species:
+
+* **Mutualism ($+/+$):** Both organisms benefit.
+  * *Example:* Bees gather sweet food from flowers while pollinating them; Clownfish finding anemone shelter while fending off predators.
+* **Commensalism ($+/0$):** One benefits, other is unaffected.
+  * *Example:* Barnacles attaching to whale skin to get a free ride through nutrient-rich waters; Cattle egrets eating flushed insects near grazing cattle.
+* **Parasitism ($+/-$):** One benefits (parasite), other is harmed (host).
+  * *Example:* Ticks sucking blood from a dog; Tapeworms feeding off host nutrients inside mammalian intestines.
+
+---
+
+### 13. Predation vs. Symbiosis
+* **Why Predation is Different:** Symbiosis is defined as a sustained, long-term living arrangement where two species reside close together over an extended period. Predation ($+/-$) is a rapid, immediate encounter where a predator hunts, kills, and consumes its prey. It is not an ongoing, cooperative or close life structural symbiotic relationship.
+
+---
+
+### 14. Keystone Species
+A **keystone species** is an organism that has an exceptionally large, critical impact on its ecosystem relative to its abundance.
+* If a keystone species is removed, the entire ecosystem undergoes a catastrophic shift or collapse, drastically lowering local biodiversity.
+* *Classic Example:* **Sea Otters** eat abundant sea urchins. If sea otters are removed, urchins overpopulate and clear entire kelp forests, destroying are-shelter for hundreds of local marine species.
+
+---
+
+### 15. The Carbon Cycle
+Carbon cycles through biological and geological reservoirs:
+
+1. **Photosynthesis:** Plants pull $\\text{CO}_2$ out of the air to build glucose.
+2. **Respiration:** Animals/plants burn sugar and exhale $\\text{CO}_2$ into the atmosphere.
+3. **Decomposition:** Fungi and bacteria break down dead tissue, returning carbon to soil or releasing gaseous $\\text{CO}_2$.
+4. **Combustion:** Burning old fossil fuels or forests releases stored carbon as atmospheric gases.
+5. **Geological Storage:** Dead organic matter buried under heat/pressure becomes coal/oil over millions of years.
+
+---
+
+### 16. Natural Selection and Its Conditions
+Natural selection is the driver of evolution. It states that individuals with advantageous traits suited for an environment are more likely to survive and reproduce.
+
+Four absolute conditions must exist for Natural Selection to occur:
+1. **Variation:** Different individuals in a population must have varying traits (e.g., some beetles are green, others brown).
+2. **Inheritance:** The traits must be genetic and transferable via DNA from parents to offspring.
+3. **Overproduction:** Species must generate more offspring than local resources can support, creating competition.
+4. **Differential Survival and Reproduction:** Individuals with advantageous traits survive competition (Selection) and pass their favorable alleles to the next generation.
+
+---
+
+### 17. Reading Genetics: Punnett Squares and Pedigrees
+
+#### Reading Punnett Squares:
+A Punnett square predicts offspring genotypes using parental alleles (Capital = Dominant, Lowercase = Recessive).
+* **Homozygous:** Having two of the same allele (e.g., *TT* or *tt*).
+* **Heterozygous:** Having mixed alleles (e.g., *Tt*).
+* For parents *Tt* and *Tt*:
+  * 25% homozygous dominant (*TT*), 50% heterozygous (*Tt*), 25% homozygous recessive (*tt*).
+  * 3:1 phenotype distribution ratio (75% dominant, 25% recessive trait expressed).
+
+#### Reading Pedigrees:
+A pedigree chart tracks a genetic trait across multiple family generations:
+* **Squares:** Represent males.
+* **Circles:** Represent females.
+* **Shaded Shape:** Indicates the individual displays the traced trait (affected).
+* **Unshaded Shape:** Represents a normal individual without the trait.
+* **Horizontal Lines:** Connect biological parents.
+* **Vertical Lines:** Lead to offspring listed from left to right in birth order.
+* **Autosomal Recessive Indicator:** If the trait skips generations (unaffected parents have an affected child), the trait is recessive.`,
+    date: 'Jun 08, 2026',
+    category: 'Science',
+    readTime: '10 min read'
+  },
+  {
+    id: 'it-final-guide',
+    title: 'Italian Final Study Guide',
+    subtitle: 'Units 1–7 • Comprehensive Italian Course Review',
+    content: `### Benvenuti! Italian Language Review
+This study guide compiles vocabularies, grammar architectures, and structured remediation files for Units 1 to 7. 
+
+---
+
+### Unit 1: Primo Giorno di Scuola (First Day of School)
+
+#### 1. Countries and Nationalities (Paesi e Nazionalità)
+In Italian, nationalities function as adjectives and adjust their endings to match the gender and number of the noun.
+
+* **Italia** $\\longrightarrow$ italiano/italiana
+* **Svizzera** $\\longrightarrow$ svizzero/svizzera
+* **Brasile** $\\longrightarrow$ brasiliano/brasiliana
+* **Spagna** $\\longrightarrow$ spagnolo/spagnola
+* **Germania** $\\longrightarrow$ tedesco/tedesca
+* **Francia** $\\longrightarrow$ francese (same for masculine/feminine)
+* **Argentina** $\\longrightarrow$ argentino/argentina
+* **Giappone** $\\longrightarrow$ giapponese
+* **Cina** $\\longrightarrow$ cinese
+* **India** $\\longrightarrow$ indiano/indiana
+* **Nigeria** $\\longrightarrow$ nigeriano/nigeriana
+* **Egitto** $\\longrightarrow$ egiziano/egiziana
+* **Marocco** $\\longrightarrow$ marocchino/marocchina
+* **Canada** $\\longrightarrow$ canadese
+* **Senegal** $\\longrightarrow$ senegalese
+* **Belgio** $\\longrightarrow$ belga (plural: belghi/belghe)
+* **Kenia** $\\longrightarrow$ keniota
+* **Vietnam** $\\longrightarrow$ vietnamita (plural: vietnamiti/vietnamite)
+
+#### 2. Greeting Phrases and Introductions
+* **Buongiorno, mi chiamo [Name]. Come ti chiami?** (Good day, I call myself... What is your name?)
+* **Ciao! Mi chiamo [Name]. Come stai?** (Hi! I call myself... How are you?)
+* **Come si chiama? / Si chiama [Name].** (What is their name? / They are called...)
+* **Questo è [Name].** (This is... [for males])
+* **Questa è [Name].** (This is... [for females])
+* **Lui è [Name] / Lei è [Name].** (He is... / She is...)
+* **Di dov'è? OR Di dove sei?** (Where are you from? - Formal/Informal)
+* **Sono di [City], di [Country]. Sono [Nationality].** (I am from...)
+
+#### 3. Present Indicative of the Verb **Essere** (To Be)
+Used to describe inherent traits, nationality, origin, state, and hours:
+
+* **Io sono** (I am)
+* **Tu sei** (You are [informal])
+* **Lui/Lei/Lei è** (He/She is, You are [formal])
+* **Noi siamo** (We are)
+* **Voi siete** (You all are)
+* **Loro sono** (They are)
+
+#### 4. Adjectives Describing People
+* **Felice** (Happy)
+* **Triste** (Sad)
+* **Alto** (Tall)
+* **Basso** (Short)
+* **Stanco** (Tired)
+* **Simpatico** (Charming/Nice)
+
+#### 5. Present Indicative of \`-are\` Verbs (conjugation)
+Using **amare** (to love) as the base paradigm:
+* **Io** amo
+* **Tu** ami
+* **Lui/Lei** ama
+* **Noi** amiamo
+* **Voi** amate
+* **Loro** amano
+
+#### 6. Spelling Words
+* **Come si scrive [parola]?** (How do you write [word]?)
+
+---
+
+### Unit 2: Tanti Auguri (Happy Birthday)
+
+#### 1. Numbers 0 - 100
+* **0–10:** zero, uno, due, tre, quattro, cinque, sei, sette, otto, nove, dieci
+* **11–20:** undici, dodici, tredici, quattordici, quindici, sedici, diciassette, diciotto, diciannove, venti
+* **21–100 rules:**
+  * When joining *uno* (one) or *otto* (eight), drop the final vowel of the tens prefix: *ventuno*, *ventotto*, *trentuno*, *trentotto*.
+  * When joining *tre* (three) to numbers above 20, add an acute accent to the final **é**: *ventitré*, *trentatré*.
+  * **Tens:** venti (20), trenta (30), quaranta (40), cinquanta (50), sessanta (60), settanta (70), ottanta (80), novanta (90), cento (100).
+
+#### 2. Months of the Year (Mesi dell'anno)
+Months are **never capitalized** in Italian unless starting a sentence. State the day before the month (e.g., *il diciannove febbraio*):
+* *gennaio, febbraio, marzo, aprile, maggio, giugno, luglio, agosto, settembre, ottobre, novembre, dicembre.*
+
+#### 3. How to Structure a Birthday Card (Un Biglietto d'Auguri)
+\`\`\`text
+(Il tuo nome e cognome)                           (Regione d'Italia), (La data)
+Via dei [Nome Via]
+[Regione scelta]
+
+Cara/Caro [Nome],
+Buon compleanno, tanti auguri! Tu hai [Età dell'interlocutore] anni, vero? 
+Io ho tredici anni! Quando festeggi il compleanno?
+Ciao, la tua amica / il tuo amico!
+Con affetto, 
+[Il tuo nome]
+\`\`\`
+
+#### 4. Body Parts (Parti del Corpo)
+* **Testa** (Head)
+* **Denti** (Teeth)
+* **Gola** (Throat)
+* **Stomaco** (Stomach)
+* **Pancia** (Belly/Pudge)
+* **Piedi** (Feet) $\\rightarrow$ *Cammina* (Walks)
+
+#### 5. Age, Birthdays, and Well-Being
+* **Age:** *Quanti anni hai? / Ho [età] anni.*
+* **Birthday:** *Quando è il tuo compleanno? / Il mio compleanno è il [giorno] [mese].*
+* **Well-being:** *Ciao, come stai? / Io sto male / ho mal di [parte]. Non sto tanto bene. Io sto molto bene.*
+
+#### 6. Present indicative of **Avere** (To Have) and **Stare** (To Be/Stay)
+* **Avere:** Io ho, Tu hai, Lui/Lei ha, Noi abbiamo, Voi avete, Loro hanno
+* **Stare:** Io sto, Tu stai, Lui/Lei sta, Noi stiamo, Voi state, Loro stanno
+
+#### 7. Plurals and Endings Rules
+* Single vowel accented nouns don't change: *una università* $\\rightarrow$ *due università*.
+* Ending changes: **-io** $\\rightarrow$ **-i** (*esercizio* $\\rightarrow$ *esercizi*) | **-ca/-ga** $\\rightarrow$ **-che/-ghe** (*stanca* $\\rightarrow$ *stanche*) | **-co/-go** $\\rightarrow$ **-chi/-ghi** (*banco* $\\rightarrow$ *banchi*). Exception: *stomaco* $\\rightarrow$ *stomaci*.
+* *Memory Rule:* "Old Italian Aunts Eat Everything Italian" (**-o** $\\rightarrow$ **-i** | **-a** $\\rightarrow$ **-e** | **-e** $\\rightarrow$ **-i**).
+
+#### 8. Definite Articles (Articoli Determinativi)
+Definite articles must align in gender and number:
+
+| Gender / Group | Singular | Plural | Usage Rule |
+| :--- | :--- | :--- | :--- |
+| **Maschile** | **il** (*il libro*) | **i** (*i libri*) | Before consonants. |
+| | **lo** (*lo studente*) | **gli** (*gli studenti*) | Before s+consonant, z, ps, gn, x, y, pn. |
+| | **l'** (*l'albero*) | **gli** (*gli alberi*) | Before vowels. |
+| **Femminile** | **la** (*la casa*) | **le** (*le case*) | Before consonants. |
+| | **l'** (*l'ora*) | **le** (*le ore*) | Before vowels. |
+
+---
+
+### Unit 3: Foto di Classe (Classroom Photo)
+
+#### 1. Numbers up to 9,999,999
+* **100–900:** cento (100), duecento (200), trecento (300), quattrocento (400), cinquecento (500), seicento (600), settecento (700), ottocento (800), novecento (900).
+* **Thousands:** mille (1,000), duemila (2,000), tremila (3,000)... diecimila (10,000), centomila (100,000).
+* **Millions:** un milione (1,000,000), due milioni (2,000,000), un miliardo (1,000,000,000).
+
+#### 2. Classroom Objects (Oggetti della Classe)
+* **Matita** (pencil), **Gomma** (eraser), **Libro** (book), **Forbici** (scissors), **Spillatrice** (stapler), **Quaderno** (notebook), **Astuccio** (pencil case), **Banco** (desk), **Cartina** (map), **Temperamatite** (pencil sharpener), **Zaino** (backpack), **Computer** (computer), **Lavagna** (board), **Righello** (ruler), **Foglio** (folder/sheet), **Finestra** (window), **Cestino** (trash can).
+
+#### 3. School Subjects
+* *Geografia, Educazione fisica, Educazione musicale, Educazione artistica, Educazione tecnica, Matematica, Scienze, Storia, Letteratura, Italiano, Biologia, Chimica.*
+* Question: *Cosa studi?* (What do you study?) $\\rightarrow$ *Studio scienze e matematica.*
+
+#### 4. Present of -ere (Group 2) and -ire (Group 3) Verbs
+* **Scrivere (-ere):** scrivo, scrivi, scrive, scriviamo, scrivete, scrivono.
+* **Dormire (-ire):** dormo, dormi, dorme, dormiamo, dormite, dormono.
+
+#### 5. There Is / There Are
+* **C'è** $\\rightarrow$ followed by a singular noun (e.g., *C'è un banco nella classe*).
+* **Ci sono** $\\rightarrow$ followed by plural nouns (e.g., *Ci sono molti libri*).
+
+#### 6. Demonstrative Adjectives (Questo and Quello)
+* **Questo/Questa/Questi/Queste** (This/These - near the speaker).
+* **Quello** (That - far away) changes forms like definite articles: *quel* (like *il*), *quello* (like *lo*), *quell'* (like *l'*), *quella* (like *la*), *quei* (plural *i*), *quegli* (plural *gli*), *quelle* (plural *le*).
+
+#### 7. Classroom Actions
+* **Parlare** (to speak), **Leggere** (to read), **Scrivere** (to write), **Ascoltare** (to listen), **Studiare** (to study), **Rispondere** (to respond), **Prendere appunti** (to take notes).
+
+---
+
+### Unit 4: Il Carattere e L'aspetto Fisico (Character and Physical Appearance)
+
+#### 1. Character Qualities and Antonyms
+* **Chiacchierone** (Chatty/Talkative)
+* **Goloso** (Gluttonous)
+* **Intelligente** (Intelligent)
+* **Studioso** (Studious)
+* **Timido** (Shy)
+* **Disordinato** (Messy) $\\leftrightarrow$ **Ordinato** (Organized)
+* **Divertente** (Fun) $\\leftrightarrow$ **Noioso** (Boring)
+* **Generoso** (Generous) $\\leftrightarrow$ **Avaro** (Stingy)
+* **Simpatico** (Nice) $\\leftrightarrow$ **Antipatico** (Unfriendly)
+* **Pigro** (Lazy) $\\leftrightarrow$ **Attivo** (Active)
+* **Attento** (Attentive) $\\leftrightarrow$ **Distratto** (Distracted)
+* **Scherzoso** (Playful) $\\leftrightarrow$ **Serio** (Serious)
+* **Allegro** (Cheerful) $\\leftrightarrow$ **Triste** (Sad)
+* **Pauroso** (Fearful) $\\leftrightarrow$ **Coraggioso** (Brave)
+* **Chiuso** (Reserved) $\\leftrightarrow$ **Aperto** (Outgoing)
+* **Cattivo** (Bad/Mean) $\\leftrightarrow$ **Buono** (Good)
+
+#### 2. Physical Characteristics (Aspecto Fisico)
+* **Capelli (Hair):** lunghi (long), corti (short), ricci (curly), lisci (straight). Colors: rossi (red), neri (black), biondi (blonde), castani (brown).
+* **Occhi (Eyes):** neri, azzurri (blue), verdi (green), marroni/castani (brown).
+* **Stature:** alto (tall), basso (short), robusto (strong/built), magro (skinny), grasso (fat).
+
+#### 3. Places in the School (La Scuola)
+* *Aula (Class), Aula Magna (Auditorium), Campo Sportivo (Field), Palestra (Gym), Sala Professori (Teacher Lounge), Segreteria (Main Office), Cortile (Courtyard), Laboratorio di Scienze (Science Lab), Corridoio (Hallway).*
+
+#### 4. Possessive Adjectives and Pronouns
+In Italian, possessive adjectives generally require definite articles:
+
+| Person | Maschile Singolo | Maschile Plurale | Femminile Singolo | Femminile Plurale |
+| :--- | :--- | :--- | :--- | :--- |
+| **My** | il mio | i miei | la mia | le mie |
+| **Your (sing.)** | il tuo | i tuoi | la tua | le tue |
+| **His/Her** | il suo | i suoi | la sua | le sue |
+| **Our** | il nostro | i nostri | la nostra | le nostre |
+| **Your (plur.)** | il vostro | i vostri | la vostra | le vostre |
+| **Their** | il loro | i loro | la loro | le loro |
+
+* **Drop the article** before singular, unmodified family relatives (e.g., *mia sorella*, *mio fratello*). BUT keep it with *loro*: *la loro madre*.
+
+#### 5. Verbs in \`-care\` and \`-gare\`
+Verbs ending in **-care** (*dimenticare*) and **-gare** (*pagare*) add an **"h"** in the 2nd person singular (*tu*) and 1st person plural (*noi*) to preserve the hard sound:
+* **Tu:** *dimentichi*, *paghi*
+* **Noi:** *dimentichiamo*, *paghiamo*
+
+#### 6. The \`-isc\` Verbs (Capire paradigm)
+* **Capire (to understand):** capisco, capisci, capisce, capiamo, capite, capiscono.
+* Other -isc verbs: *arrossire* (blush), *dimagrire* (lose weight), *finire* (finish), *preferire* (prefer), *pulire* (clean), *spedire* (send), *tossire* (cough), *ubbidire* (obey).
+
+#### 7. Present indicative of the irregular verb **Fare** (to do/make)
+* **Fare:** Io faccio, Tu fai, Lui/Lei fa, Noi facciamo, Voi fate, Loro fanno
+
+---
+
+### Unit 5: Giorni, Routine, e Orari (Days, Routine, Time)
+
+#### 1. Days of the Week (Giorni della Settimana)
+Add an accent on the **ì** for Monday-Friday:
+* *lunedì, martedì, mercoledì, giovedì, venerdì, sabato, domenica.*
+
+#### 2. Daily Routine (Routine Quotidiana)
+Main reflexive verbs & routine idioms:
+* *svegliarsi (wake up), lavarsi i denti (brush teeth), fare la doccia / lavarsi (take a shower/wash), pettinarsi (comb hair), fare colazione (have breakfast), andare a scuola (go to school), pranzare (have lunch), fare i compiti (do homework), cenare (have dinner), andare a letto (go to bed), dormire (sleep).*
+
+#### 3. Telling Time (Telling Time and Adverbs)
+* **Adverbs of Time:** *in ritardo* (late), *tardi* (at a late hour), *in anticipo* (early/ahead of schedule), *presto* (soon/early).
+* **Parts of the Day:** *di mattina* (5:00 AM - 11:59 AM), *di pomeriggio* (12:00 PM - 5:59 PM), *di sera* (6:00 PM - 9:59 PM), *di notte* (10:00 PM - 4:59 AM).
+
+#### 4. Articulated Prepositions (Preposizioni Articolate)
+When a core preposition combines with a definite article, they merge into a single word:
+
+| Prep | + il | + lo | + l' | + la | + i | + gli | + le |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **a** | al | allo | all' | alla | ai | agli | alle |
+| **da** | dal | dallo | dall' | dalla | dai | dagli | dalle |
+| **di** | del | dello | dell' | della | dei | degli | delle |
+| **in** | nel | nello | nell' | nella | nei | negli | nelle |
+| **su** | sul | sullo | sull' | sulla | sui | sugli | sulle |
+
+#### 5. Present Indicative of Reflexive Verbs (**Alzarsi**)
+Reflexive verbs require reflexive pronouns: *mi, ti, si, ci, vi, si*.
+* **Alzarsi (to get up):** Io mi alzo, Tu ti alzi, Lui/Lei si alza, Noi ci alziamo, Voi vi alzate, Loro si alzano.
+
+#### 6. Irregular verbs: **Andare**, **Bere**, **Uscire**
+* **Andare (to go):** vado, vai, va, andiamo, andate, vanno.
+* **Bere (to drink):** bevo, bevi, beve, beviamo, bevete, bevono.
+* **Uscire (to go out):** esco, esci, esce, usciamo, uscite, escono.
+
+---
+
+### Unit 6: Presente Progressivo e Preposizioni di Luogo (Progressive Present and Place)
+
+#### 1. Present Progressive Architecture
+Formed using conjugated **Stare** + Gerund (**-ando** for -are, **-endo** for -ere/-ire):
+* **Io sto** studiando / scrivendo / finendo
+* **Tu stai** studiando / scrivendo
+* **Lui/Lei sta** studiando / scrivendo
+* **Noi stiamo** studiando / scrivendo
+* **Voi state** studiando / scrivendo
+* **Loro stanno** studiando / scrivendo
+* **Irregulars:** *fare* $\\rightarrow$ facendo | *bere* $\\rightarrow$ bevendo.
+* **Reflexives in Progressive:** Pronoun precedes *stare* or attaches to gerund: *Mi sto alzando* (I am getting up).
+
+#### 2. Verb **Venire** (to come)
+* **Venire:** Io vengo, Tu vieni, Lui/Lei viene, Noi veniamo, Voi venite, Loro vengono. Origin: *Viene dalla Spagna* (He comes from Spain).
+
+#### 3. Prepositions of Place
+* **Su** (on), **Sopra (a)** (above), **Sotto (a)** (under), **In / dentro (a)** (in/inside), **Fra / tra** (between), **Davanti (a)** (in front of), **Dietro (a)** (behind), **(in) vicino (a)** (near/next to).
+* *Rule:* *Sopra*, *sotto*, *davanti*, *dietro*, *vicino* are followed by **a + article** (*il gatto è dietro alla poltrona*).
+
+---
+
+### Unit 7: I Mestieri (Jobs and Professions)
+
+#### 1. Job Vocabularies
+*Nouns ending in **ista** can be masculine or feminine: **il barista** or **la barista**.*
+* **Il chirurgo** (surgeon), **il/la barista** (barista/bartender), **la cameriera** (waitress/server), **il meccanico** (mechanic), **il/la farmacista** (pharmacist), **il/la giornalista** (journalist), **il parrucchiere** (hairdresser), **il vigile urbano** (traffic warden), **il poliziotto** (police officer), **il pompiere** (firefighter), **il postino** (mail carrier), **il veterinario** (veterinarian), **l'architetto** (architect), **l'avvocato** (lawyer), **il medico/dottore** (doctor), **l'infermiere/a** (nurse), **il/la musicista** (musician), **il ballerino** (dancer), **il disegnatore** (designer).
+
+#### 2. Irregular Modal Verbs: **Dovere**, **Potere**, **Volere**
+Followed directly by an infinitive:
+* **Dovere (must/have to):** devo, devi, deve, dobbiamo, dovete, devono.
+* **Potere (can/be able to):** posso, puoi, può, possiamo, potete, possono.
+* **Volere (to want):** voglio, vuoi, vuole, vogliamo, volete, vogliono.
+
+#### 3. Sapere, Dire, Dare
+* **Sapere (to know an ability/fact):** so, sai, sa, sappiamo, sapete, sanno.
+* **Dire (to tell/say):** dico, dici, dice, diciamo, dite, dicono.
+* **Dare (to give):** do, dai, dà, diamo, date, danno.
+
+#### 4. Verbs block: -gnere, -gliere, -nere
+* **Spegnere (to turn off):** spengo, spegni, spegne, spegniamo, spegnete, spengono.
+* **Scegliere (to choose):** scelgo, scegli, sceglie, scegliamo, scegliete, scelgono.
+* **Tenere (to hold/keep):** tengo, tieni, tiene, teniamo, tenete, tengono.
+
+#### 5. Interrogative Pronouns
+* **What/Which:** *che / quale / quali*
+* **Who:** *chi*
+* **How much/many:** *quanto / quanta / quanti / quante*
+
+---
+
+### Remediation & Practice exercises
+
+#### Lesson 1: Match images of objects
+1. *Il letto* (the bed)
+2. *Il frigorifero* (the refrigerator)
+3. *L'armadio* (the closet)
+4. *Il divano* (the sofa)
+5. *La scrivania* (the desk)
+6. *Lo specchio* (the mirror)
+
+#### Lesson 2: Conjugate correct present progressive verbs
+1. Io sono nello studio: **sto ripetendo** (ripetere) la lezione.
+2. Teo è in cucina, **sta facendo** (fare) la merenda.
+3. In camera i bambini **si stanno alzando** (alzarsi).
+4. La mamma è nel soggiorno, **sta leggendo** (leggere).
+5. Tu sei in giardino, **stai chiacchierando** (chiacchierare) con gli amici.
+6. Noi siamo in garage, **stiamo pulendo** (pulire) la macchina.
+7. Voi siete in cucina, **state bevendo** (bere) un succo di frutta.
+8. Le mie sorelle sono in bagno, **si stanno lavando** (lavarsi) le mani.`,
+    date: 'Jun 08, 2026',
+    category: 'Italian',
+    readTime: '15 min read'
   }
 ];
 
@@ -914,7 +1456,8 @@ export const subjectOptions = [
   { value: 'Science', label: 'Science' },
   { value: 'Mathematics', label: 'Mathematics' },
   { value: 'ELA', label: 'English Language Arts' },
-  { value: 'Social Studies', label: 'Social Studies' }
+  { value: 'Social Studies', label: 'Social Studies' },
+  { value: 'Italian', label: 'Italian Language' }
 ];
 
 export const gameOptions = subjectOptions;
@@ -926,7 +1469,7 @@ export const toneOptions = [
   { value: 'Compare & Contrast', description: 'Side-by-side analysis of two topics, ideas, or historical events' }
 ];
 
-export function generateMockAIArticle(subject: string, tone: string): Article {
+export function generateMockAIArticle(subject: string, tone: string, customPrompt?: string): Article {
   const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
   const articleId = `art-custom-${Date.now()}`;
 
@@ -934,7 +1477,62 @@ export function generateMockAIArticle(subject: string, tone: string): Article {
   let content = '';
   let category = subject;
 
-  if (tone === 'Informational') {
+  const lowerPrompt = customPrompt ? customPrompt.toLowerCase() : '';
+  const isTrulyCustom = customPrompt && customPrompt.trim().length > 0 && !lowerPrompt.startsWith('write an educational');
+
+  if (isTrulyCustom) {
+    const stopWords = new Set([
+      'write', 'an', 'article', 'about', 'explain', 'how', 'works', 'focused', 'on', 
+      'concepts', 'concept', 'suited', 'for', 'school', 'reading', 'educational', 'a', 
+      'the', 'to', 'in', 'of', 'and', 'or', 'with', 'by', 'concerning', 'regarding',
+      'discuss', 'create', 'generate', 'tutorial', 'guide', 'lesson', 'overview'
+    ]);
+    
+    const words = customPrompt!
+      .toLowerCase()
+      .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+      .split(/\s+/)
+      .filter(w => w && !stopWords.has(w));
+      
+    if (['science', 'cell', 'physics', 'planet', 'earth', 'chemical', 'biology', 'photosynthesis', 'gravity'].some(kw => lowerPrompt.includes(kw))) {
+      category = 'Science';
+    } else if (['math', 'calculator', 'algebra', 'geometry', 'number', 'integer', 'fraction'].some(kw => lowerPrompt.includes(kw))) {
+      category = 'Mathematics';
+    } else if (['reading', 'literature', 'poetry', 'writing', 'english', 'ela', 'classic', 'book'].some(kw => lowerPrompt.includes(kw))) {
+      category = 'ELA';
+    } else if (['studies', 'history', 'civics', 'government', 'social', 'rome', 'greece', 'ancient'].some(kw => lowerPrompt.includes(kw))) {
+      category = 'Social Studies';
+    }
+
+    let coreTopic = words
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .slice(0, 5)
+      .join(' ');
+      
+    if (!coreTopic || coreTopic.trim() === '') {
+      coreTopic = `${category} Academic Focus`;
+    }
+    
+    title = `${coreTopic}: An In-Depth Exploration`;
+    
+    content = `### Overview
+This article provides an in-depth examination based on the custom user research prompt and curriculum guidelines. We explore the central ideas, academic significance, and key terminology associated with **${coreTopic}**, helping students build analytical depth in this topic.
+
+### Core Principles and Mechanisms
+Understanding the details of **${coreTopic}** is vital for modern educational development. Let us explore the primary pillars and characteristics of this field:
+* **Systemic Interdependence:** All components of this topic function as part of a larger, integrated system. Changes in one factor produce cascading effects on others.
+* **Evidence-Based Reasoning:** Modern classroom curricula emphasize that analyzing qualitative and quantitative evidence is essential to drawing correct conclusions about this domain.
+* **Practical Application:** Connecting abstract formulas or narratives to real-world scenarios makes the study of this concept highly engaging and relevant.
+
+### Detailed Analytical Breakdown
+To fully grasp the scope of **${coreTopic}**, it is useful to dive into its main functional layers:
+1. **Historical Context / Foundation:** Every conceptual framework develops from initial discoveries, critical events, or theoretical proposals.
+2. **Key Variables:** Identifying the active forces, variables, or elements that shape this topic helps us formulate accurate explanations and predictions.
+3. **Synthesis & Integration:** Combining individual facts or techniques guides students in building unified, comprehensive models of understanding.
+
+### Discussion and Long-Term Value
+As contemporary education shifts to prioritize critical analysis and rigorous standards, study resources like this serve as active guides. Exploring **${coreTopic}** promotes a deeper cognitive appreciation, enabling students to construct sound arguments and participate in constructive discussion about ${category.toLowerCase()}-related questions.`;
+  } else if (tone === 'Informational') {
     if (subject === 'Science') {
       title = `Photosynthesis: How Plants Convert Sunlight into Food`;
       content = `### What Is Photosynthesis?
