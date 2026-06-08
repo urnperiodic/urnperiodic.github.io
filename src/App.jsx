@@ -728,7 +728,7 @@ export default function App() {
                   
                   {/* Subject Specific Sections */}
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 flex-shrink-0 scrollbar-none select-none">
-                    {['All', 'Science', 'Mathematics', 'ELA', 'Social Studies'].map((cat) => {
+                    {['All', 'Science', 'Mathematics', 'ELA', 'Social Studies', 'Italian'].map((cat) => {
                       const isSelected = selectedArticleCategory === cat;
                       return (
                         <button
@@ -1148,7 +1148,7 @@ export default function App() {
               
               {/* Subject Specific Sections */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 flex-shrink-0 scrollbar-none select-none">
-                {['All', 'Science', 'Mathematics', 'ELA', 'Social Studies'].map((cat) => {
+                {['All', 'Science', 'Mathematics', 'ELA', 'Social Studies', 'Italian'].map((cat) => {
                   const isSelected = selectedArticleCategory === cat;
                   return (
                     <button
