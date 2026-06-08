@@ -1155,9 +1155,10 @@ export default function App() {
                             }
                           }}
                           className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1.5 text-[var(--text-primary)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-mono"
+                          style={{ colorScheme: mode }}
                         >
                           {gameOptions.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            <option key={opt.value} value={opt.value} style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>{opt.label}</option>
                           ))}
                         </select>
                       </div>
@@ -1167,9 +1168,10 @@ export default function App() {
                           value={newArticleTone}
                           onChange={(e) => setNewArticleTone(e.target.value)}
                           className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1.5 text-[var(--text-primary)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-mono"
+                          style={{ colorScheme: mode }}
                         >
                           {toneOptions.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.value}</option>
+                            <option key={opt.value} value={opt.value} style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>{opt.value}</option>
                           ))}
                         </select>
                       </div>
@@ -1555,9 +1557,10 @@ export default function App() {
                       value={newArticleGame}
                       onChange={(e) => setNewArticleGame(e.target.value)}
                       className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1.5 text-[var(--text-primary)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-mono"
+                      style={{ colorScheme: mode }}
                     >
                       {gameOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        <option key={opt.value} value={opt.value} style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>{opt.label}</option>
                       ))}
                     </select>
                   </div>
@@ -1567,9 +1570,10 @@ export default function App() {
                       value={newArticleTone}
                       onChange={(e) => setNewArticleTone(e.target.value)}
                       className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1.5 text-[var(--text-primary)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-mono"
+                      style={{ colorScheme: mode }}
                     >
                       {toneOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.value}</option>
+                        <option key={opt.value} value={opt.value} style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>{opt.value}</option>
                       ))}
                     </select>
                   </div>
@@ -1810,21 +1814,21 @@ export default function App() {
                 value={aboutBlankSuffix}
                 onChange={(e) => setAboutBlankSuffix(e.target.value)}
                 className="bg-transparent border-none outline-none font-bold text-[var(--text-primary)] cursor-pointer py-0.5"
-                style={{ colorScheme: 'dark' }}
+                style={{ colorScheme: mode }}
               >
-                <option value="">about:blank (Default)</option>
-                <option value="#1">about:blank#1</option>
-                <option value="#2">about:blank#2</option>
-                <option value="#3">about:blank#3</option>
-                <option value="#4">about:blank#4</option>
-                <option value="#5">about:blank#5</option>
-                <option value="#math">about:blank#math</option>
-                <option value="#science">about:blank#science</option>
-                <option value="#grades">about:blank#grades</option>
-                <option value="#classroom">about:blank#classroom</option>
-                <option value="#clever">about:blank#clever</option>
-                <option value="#campus">about:blank#campus</option>
-                <option value="#dashboard">about:blank#dashboard</option>
+                <option value="" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank (Default)</option>
+                <option value="#1" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#1</option>
+                <option value="#2" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#2</option>
+                <option value="#3" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#3</option>
+                <option value="#4" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#4</option>
+                <option value="#5" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#5</option>
+                <option value="#math" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#math</option>
+                <option value="#science" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#science</option>
+                <option value="#grades" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#grades</option>
+                <option value="#classroom" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#classroom</option>
+                <option value="#clever" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#clever</option>
+                <option value="#campus" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#campus</option>
+                <option value="#dashboard" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#dashboard</option>
               </select>
             </div>
 
@@ -1911,12 +1915,12 @@ export default function App() {
                 className={`bg-transparent border-none outline-none font-bold cursor-pointer py-0.5 ${
                   decoyType !== 'none' ? 'text-[var(--accent-color)]' : 'text-[var(--text-primary)]'
                 }`}
-                style={{ colorScheme: 'dark' }}
+                style={{ colorScheme: mode }}
               >
-                <option value="none">Off (StudyTools)</option>
-                <option value="classroom">Google Classroom</option>
-                <option value="clever">Clever Login</option>
-                <option value="campus">Infinite Campus</option>
+                <option value="none" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Off (StudyTools)</option>
+                <option value="classroom" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Google Classroom</option>
+                <option value="clever" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Clever Login</option>
+                <option value="campus" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Infinite Campus</option>
               </select>
             </div>
 
