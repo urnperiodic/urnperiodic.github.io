@@ -67,7 +67,10 @@ export default function App() {
     return saved && ['cyborg', 'violet', 'ice', 'rose-pine', 'none'].includes(saved) ? saved : 'none';
   });
   const [mode, setMode] = useState(() => {
-    return safeStorage.getItem('unblocked-mode') || 'dark';
+    const savedMode = safeStorage.getItem('unblocked-mode');
+    if (savedMode) return savedMode;
+    const initialViewMode = safeStorage.getItem('classroom-view-mode') || 'articles';
+    return initialViewMode === 'games' ? 'dark' : 'light';
   });
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -132,6 +135,15 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('study-tools-classroom-decoy', String(useClassroomDecoy));
   }, [useClassroomDecoy]);
+
+  // Set white as the main starting color for articles (light mode), and black for games (dark mode)
+  useEffect(() => {
+    if (viewMode === 'articles') {
+      setMode('light');
+    } else if (viewMode === 'games') {
+      setMode('dark');
+    }
+  }, [viewMode]);
 
   const handleGenerateArticle = () => {
     if (isGeneratingArticle) return;
