@@ -426,7 +426,7 @@ export default function App() {
     { name: 'Alt Link 2', url: 'https://classroonn.github.io' },
     { name: 'Alt Link 3', url: 'https://IIMS-sucksasaschool.github.io/' },
     { name: 'Alt Link 4', url: 'https://ciassroonn.github.io' },
-    { name: 'Alt Link 5', url: 'about:blank' }
+    { name: 'Alt Link 5', url: `about:blank${aboutBlankSuffix || ''}` }
   ];
 
   // Handle addition/removal of favorites
@@ -1798,6 +1798,68 @@ export default function App() {
                   href={link.url}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={(e) => {
+                    if (link.url.startsWith('about:blank')) {
+                      e.preventDefault();
+                      const targetUrl = link.url;
+                      const win = window.open(targetUrl, "_blank");
+                      if (!win) {
+                        alert(`Popup blocked! Please allow popups to open the site in ${targetUrl}.`);
+                        return;
+                      }
+                      
+                      // Construct query parameters to propagate the decoy state to the new document
+                      const searchParams = new URLSearchParams(window.location.search);
+                      searchParams.set('decoyType', decoyType);
+                      const iframeSrc = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${window.location.hash}`;
+
+                      const bookSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
+                        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
+                      )}`;
+
+                      let parentTitle = "StudyTools";
+                      let parentFavicon = bookSvgDataUri;
+                      
+                      if (decoyType === 'classroom') {
+                        parentTitle = "Home - Classroom";
+                        parentFavicon = "https://ssl.gstatic.com/classroom/favicon.png";
+                      } else if (decoyType === 'clever') {
+                        parentTitle = "Clever | Log in with Clever";
+                        parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=clever.com";
+                      } else if (decoyType === 'campus') {
+                        parentTitle = "Campus Student";
+                        parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=infinitecampus.com";
+                      }
+
+                      win.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                          <title>${parentTitle}</title>
+                          <link rel="icon" type="image/png" href="${parentFavicon}">
+                          <meta charset="utf-8">
+                          <style>
+                            html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0c0a09; }
+                            iframe { width: 100vw; height: 100vh; border: none; display: block; }
+                          </style>
+                        </head>
+                        <body>
+                          <iframe src="${iframeSrc}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+                        </body>
+                        </html>
+                      `);
+                      win.document.close();
+
+                      // Set location hash after writing to force browser to register hash parameter in address bar
+                      try {
+                        if (aboutBlankSuffix) {
+                          win.location.hash = aboutBlankSuffix;
+                        }
+                      } catch (err) {
+                        // ignore
+                      }
+                    }
+                  }}
                   className="text-xs bg-[var(--card-bg)] border border-[var(--card-border)] py-1.5 px-3 rounded-full hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-all duration-200 font-mono shadow-sm flex items-center gap-1 cursor-pointer"
                 >
                   <span>{idx + 1}</span>
@@ -1832,8 +1894,11 @@ export default function App() {
               </select>
             </div>
 
-            <button
-              onClick={() => {
+            <a
+              href={`about:blank${aboutBlankSuffix}`}
+              target="_blank"
+              onClick={(e) => {
+                e.preventDefault();
                 const targetUrl = "about:blank" + aboutBlankSuffix;
                 const win = window.open(targetUrl, "_blank");
                 if (!win) {
@@ -1888,16 +1953,16 @@ export default function App() {
                   if (aboutBlankSuffix) {
                     win.location.hash = aboutBlankSuffix;
                   }
-                } catch (e) {
+                } catch (err) {
                   // ignore
                 }
               }}
-              className="text-xs bg-[var(--card-bg)] text-[var(--text-primary)] border border-[var(--card-border)] py-1.5 px-3.5 rounded-full hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] active:scale-98 transition-all duration-200 font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+              className="text-xs bg-[var(--card-bg)] text-[var(--text-primary)] border border-[var(--card-border)] py-1.5 px-3.5 rounded-full hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] active:scale-98 transition-all duration-200 font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-sm no-underline"
               title="Open entire site inside about:blank tab with selected suffix to cloak history"
             >
               <Globe className="w-3.5 h-3.5 text-[var(--accent-color)] animate-spin-slow" />
               <span>CLOAK IN {aboutBlankSuffix ? `ABOUT:BLANK ${aboutBlankSuffix.toUpperCase()}` : 'ABOUT:BLANK'}</span>
-            </button>
+            </a>
 
             {/* Decoy Mode Selector */}
             <div className={`flex items-center border rounded-full px-3 py-1.5 text-xs font-mono shadow-sm transition-all duration-300 ${
@@ -2466,19 +2531,35 @@ export default function App() {
                   </button>
 
                   {/* Open in New Tab button */}
-                  <button
-                    onClick={() => {
-                      const win = window.open("about:blank", "_blank");
+                  <a
+                    href={`about:blank#${decoyType === 'none' ? 'classroom' : decoyType}`}
+                    target="_blank"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const targetUrl = `about:blank#${decoyType === 'none' ? 'classroom' : decoyType}`;
+                      const win = window.open(targetUrl, "_blank");
                       if (!win) {
                         alert("Popup blocked. Allow popups for this site.");
                         return;
                       }
+
+                      let gameTitle = "Home - Classroom";
+                      let gameIcon = "https://ssl.gstatic.com/classroom/favicon.png";
+                      
+                      if (decoyType === 'clever') {
+                        gameTitle = "Clever | Log in with Clever";
+                        gameIcon = "https://www.google.com/s2/favicons?sz=64&domain=clever.com";
+                      } else if (decoyType === 'campus') {
+                        gameTitle = "Campus Student";
+                        gameIcon = "https://www.google.com/s2/favicons?sz=64&domain=infinitecampus.com";
+                      }
+
                       win.document.write(`
                         <!DOCTYPE html>
                         <html>
                         <head>
-                          <title>Home - Classroom</title>
-                          <link rel="icon" type="image/png" href="https://ssl.gstatic.com/classroom/favicon.png">
+                          <title>${gameTitle}</title>
+                          <link rel="icon" type="image/png" href="${gameIcon}">
                           <meta charset="utf-8">
                           <style>
                             html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #ffffff; }
@@ -2492,12 +2573,12 @@ export default function App() {
                       `);
                       win.document.close();
                     }}
-                    className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-3 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-3 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer no-underline"
                     title="Open Game in New Tab"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline text-[10px] font-bold">OPEN IN NEW TAB</span>
-                  </button>
+                  </a>
 
                   {/* Panic Key / Escape to Academic Articles */}
                   <button
