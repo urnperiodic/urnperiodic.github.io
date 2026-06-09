@@ -458,5 +458,33 @@ export const games: Game[] = [
     url: 'https://script.google.com/macros/s/AKfycbwZ5rAmhbYeKMGab21sLjLKVpxYtSFEYesWc5v0R2Ya1zjsXMO6_9OzZGGqkFISiRZf/exec',
     thumbnail: 'https://t4.ftcdn.net/jpg/14/80/76/33/360_F_1480763300_sQsVKV59fW7BEKo60WOVVPqlFDen30WS.jpg',
     category: 'Multiplayer'
+  },
+  {
+    title: 'Minecraft 1.12',
+    description: '...',
+    url: 'Eaglercraft1.12.html',
+    thumbnail: 'https://static.wikia.nocookie.net/minecraft/images/b/b0/WorldOfColor.png/revision/latest?cb=20191229050330',
+    category: 'Minecraft'
+  },
+  {
+    title: 'Ace Attorney Investigations: Miles Edgeworth',
+    description: '...',
+    url: 'claceattorneymilesedgeworth.html',
+    thumbnail: 'https://upload.wikimedia.org/wikipedia/en/thumb/0/0d/Ace_Attorney_Investigations_Miles_Edgeworth_Game_Cover.jpg/250px-Ace_Attorney_Investigations_Miles_Edgeworth_Game_Cover.jpg',
+    category: 'Emulated'
+  },
+  {
+    title: 'Phoenix Wright: Ace Attorney',
+    description: '...',
+    url: 'clpheonixrightaceattorny.html',
+    thumbnail: 'https://upload.wikimedia.org/wikipedia/en/7/73/Phoenix_Wright_-_Ace_Attorney_Coverart.png',
+    category: 'Emulated'
+  },
+  {
+    title: 'Phoenix Wright: Ace Attorney – Trials and Tribulations',
+    description: '...',
+    url: 'clpheonixtrialsandyear.html',
+    thumbnail: 'https://static.wikia.nocookie.net/aceattorney/images/5/5f/AA3_DS_Box_Art_America.png/revision/latest?cb=20180820061541',
+    category: 'Emulated'
   }
 ];
