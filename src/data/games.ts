@@ -202,7 +202,7 @@ export const games: Game[] = [
   {
     title: 'FIFA 11',
     description: 'yeah',
-    url: '/clFIFA11.html',
+    url: 'clFIFA11.html',
     thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQpOYk7hDNvaL46ncyl7PbEdtncc_EaXvXsCw&s',
     category: 'solo'
   },
