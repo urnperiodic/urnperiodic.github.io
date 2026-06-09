@@ -33,7 +33,7 @@ export const games: Game[] = [
   {
     title: 'The Final Earth 2',
     description: 'I love this game bro. Actually best game out there, please try atleast once!',
-    url: 'clfinalearth2.html',
+    url: 'https://florianvanstrien.nl/TheFinalEarth2/play/',
     thumbnail: 'https://i.ytimg.com/vi/9lZ9dCxejp0/hqdefault.jpg',
     category: 'Solo'
   },
