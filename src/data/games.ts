@@ -296,7 +296,7 @@ export const games: Game[] = [
     description: 'Probably the most fun game, also can play with friends.',
     url: 'https://mc0825.github.io/g66/class-847/',
     thumbnail: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=1200,height=1200,fit=cover,f=png/966cec3b19cedf7dd72f93419f13268c/animals-volleyball-logo.png',
-    category: 'Sports/Fast Paced'
+    category: 'Sports'
   },
   {
     title: 'Tag',
@@ -310,7 +310,7 @@ export const games: Game[] = [
     description: '',
     url: 'https://mc0825.github.io/g26/class-436/',
     thumbnail: 'https://images.sftcdn.net/images/t_app-cover-s-16-9,f_auto/p/c980f465-a1b3-49d0-a53a-bca3d956be49/2213180539/basket-random-unblocked-screenshot',
-    category: 'Sports/Fast Paced'
+    category: 'Sports'
   },
   {
     title: 'Smash Karts',
@@ -338,7 +338,7 @@ export const games: Game[] = [
     description: 'Fun to play with your friends.',
     url: 'https://mc0825.github.io/g/class-811',
     thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSE-WsAiFSXWoWlHvWGYm4xNQysU_kK39VvcRz54bY9a1mdBapeDJne6gevddjqVG_5qhvQZIfZx3POJnNa6sJ-fBbEVW-oUY7-Rv27LwQ&s=10',
-    category: 'Sports/Fast Paced'
+    category: 'Sports'
   },
   {
     title: 'Among Us',
@@ -380,7 +380,7 @@ export const games: Game[] = [
     description: 'Fun to play with your friends.',
     url: 'https://script.google.com/macros/s/AKfycbybZkVPGyvHUOZbwrJSn5fRQIFcGpoIEhp0r-yq2GWRtE_1G7YzP4t8kPZRfp6tutUN/exec',
     thumbnail: 'https://play-lh.googleusercontent.com/VFwCWELna7i6okl299W0e1H-0moEvVfT9N2M9moaikhCTcEDjUg3hE1mkSlm3ZezfLPi4ppMcStIhjWUustesg=w526-h296-rw',
-    category: 'Fast Paced'
+    category: 'Sports'
   },
   {
     title: 'Wrassling',
@@ -394,7 +394,7 @@ export const games: Game[] = [
     description: 'Fun to play with your friends.',
     url: 'https://mc0825.github.io/g26/class-511',
     thumbnail: 'https://play-lh.googleusercontent.com/G1PIlb6HWKSaDre0XpUcmKGps9T4iamsSlwrogB3EJzYv4bz0M2am4D17MtGzndaOOU=w240-h480-rw',
-    category: 'Sports/Fast Paced'
+    category: 'Sports'
   },
   {
     title: 'Getaway Shootout',
