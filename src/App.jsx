@@ -386,7 +386,7 @@ export default function App() {
         updateFavicon("https://www.google.com/s2/favicons?sz=64&domain=clever.com");
       } else if (decoyType === 'campus') {
         setBothTitles("Campus Student");
-        updateFavicon("https://www.google.com/s2/favicons?sz=64&domain=infinitecampus.com");
+        updateFavicon("https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png");
       } else {
         setBothTitles("StudyTools");
         updateFavicon(bookSvgDataUri);
@@ -2277,6 +2277,54 @@ export default function App() {
           </button>
 
           <button
+            onClick={() => { setFilter('Fast Paced'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'Fast Paced' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <Globe className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Fast Paced</span>
+          </button>
+
+          <button
+            onClick={() => { setFilter('Shooter'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'Shooter' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <Globe className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Shooter</span>
+          </button>
+
+          <button
+            onClick={() => { setFilter('Party'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'Party' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <Globe className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Party</span>
+          </button>
+
+          <button
+            onClick={() => { setFilter('Sports'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'Sports' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <Globe className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Sports</span>
+          </button>
+          
+          <button
             onClick={() => { setFilter('Random'); setSelectedGame(null); }}
             className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
               filter === 'Random' && !selectedGame
@@ -2297,7 +2345,7 @@ export default function App() {
             }`}
           >
             <Cpu className="w-4.5 h-4.5 shrink-0" />
-            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Emulated Retro</span>
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Emulated</span>
           </button>
 
           <button
@@ -2313,9 +2361,9 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => { setFilter('other websites'); setSelectedGame(null); }}
+            onClick={() => { setFilter('Not Games'); setSelectedGame(null); }}
             className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
-              filter === 'other websites' && !selectedGame
+              filter === 'Not Games' && !selectedGame
                 ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
                 : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
             }`}
@@ -2323,6 +2371,8 @@ export default function App() {
             <Globe className="w-4.5 h-4.5 shrink-0" />
             <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Other Websites</span>
           </button>
+
+          
 
         </aside>
 
@@ -2337,13 +2387,17 @@ export default function App() {
                 <div>
                   <h2 className="text-lg font-black uppercase tracking-wider text-[var(--text-primary)]">
                     {filter === 'all' && 'Games Library'}
+                    {filter === 'favorites' && 'Bookmarked Games'}
                     {filter === 'single' && 'Singleplayer Arcades'}
                     {filter === 'multiplayer' && 'Multiplayer Hub'}
-                    {filter === 'favorites' && 'Bookmarked Games'}
+                    {filter === 'Fast Paced' && 'Fast Paced Games'}
+                    {filter === 'Shooter' && 'Shooter Games'}
+                    {filter === 'Party' && 'Party Games'}
+                    {filter === 'Sports' && 'Sports Games'}
                     {filter === 'Random' && 'Random Games'}
                     {filter === 'Emulated' && 'Emulated Archives'}
                     {filter === 'minecraft' && 'Minecraft Platform'}
-                    {filter === 'other websites' && 'Other Websites & Portals'}
+                    {filter === 'Not Games' && 'Not Games'}
                   </h2>
                   <p className="text-xs text-[var(--text-muted)] mt-0.5">
                     Showing {filteredGames.length} unblocked resources
