@@ -40,7 +40,10 @@ import {
   Share2,
   Download,
   Check,
-  X
+  X,
+  Shuffle,
+  Cpu,
+  Box
 } from 'lucide-react';
 
 // Safe storage helper to prevent SecurityError crash in sandboxed iframes
@@ -67,7 +70,10 @@ export default function App() {
     return saved && ['cyborg', 'violet', 'ice', 'rose-pine', 'none'].includes(saved) ? saved : 'none';
   });
   const [mode, setMode] = useState(() => {
-    return safeStorage.getItem('unblocked-mode') || 'dark';
+    const savedMode = safeStorage.getItem('unblocked-mode');
+    if (savedMode) return savedMode;
+    const initialViewMode = safeStorage.getItem('classroom-view-mode') || 'articles';
+    return initialViewMode === 'games' ? 'dark' : 'light';
   });
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -115,23 +121,47 @@ export default function App() {
   const [generationProgress, setGenerationProgress] = useState(0);
 
   // Classroom/Games Cloak/Decoy State
-  const [useClassroomDecoy, setUseClassroomDecoy] = useState(() => {
+  const [decoyType, setDecoyType] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('decoy') === 'true') return true;
-      if (params.get('decoy') === 'false') return false;
-      const cached = localStorage.getItem('study-tools-classroom-decoy');
-      return cached === 'true';
+      const urlDecoyType = params.get('decoyType');
+      if (urlDecoyType && ['none', 'classroom', 'clever', 'campus'].includes(urlDecoyType)) {
+        return urlDecoyType;
+      }
+      const urlDecoy = params.get('decoy');
+      if (urlDecoy === 'true') return 'classroom';
+      if (urlDecoy === 'false') return 'none';
+      if (urlDecoy && ['none', 'classroom', 'clever', 'campus'].includes(urlDecoy)) {
+        return urlDecoy;
+      }
+      const cached = localStorage.getItem('study-tools-decoy-type');
+      if (cached && ['none', 'classroom', 'clever', 'campus'].includes(cached)) {
+        return cached;
+      }
+      const cachedLegacy = localStorage.getItem('study-tools-classroom-decoy');
+      if (cachedLegacy === 'true') return 'classroom';
     }
-    return false;
+    return 'none';
   });
+
+  const useClassroomDecoy = decoyType !== 'none';
 
   const [aboutBlankSuffix, setAboutBlankSuffix] = useState('');
 
   // Persist decoy state to localStorage
   useEffect(() => {
-    localStorage.setItem('study-tools-classroom-decoy', String(useClassroomDecoy));
-  }, [useClassroomDecoy]);
+    localStorage.setItem('study-tools-decoy-type', decoyType);
+    localStorage.setItem('study-tools-classroom-decoy', String(decoyType !== 'none'));
+  }, [decoyType]);
+
+  // Set white as the main starting color for articles (light mode), and black for games (dark mode)
+  useEffect(() => {
+    if (viewMode === 'articles') {
+      setMode('light');
+    } else if (viewMode === 'games') {
+      setMode('dark');
+    }
+  }, [viewMode]);
 
   const handleGenerateArticle = () => {
     if (isGeneratingArticle) return;
@@ -160,7 +190,7 @@ export default function App() {
     const inputPass = (customPass !== undefined ? customPass : passcode).trim().toLowerCase();
     if (!inputPass) return;
 
-    if (inputPass === 'ttt0609' || inputPass === '2026' || inputPass === 'games') {
+    if (inputPass === 'ttt0609' || inputPass === '1378' || inputPass === '') {
       setTimeout(() => {
         setViewModeAndSave('games');
         setPasscode('');
@@ -315,25 +345,25 @@ export default function App() {
     };
 
     const updateFavicon = (href) => {
+      const applyIcon = (doc, iconUrl) => {
+        let existingLink = doc.querySelector("link[rel*='icon']");
+        if (existingLink) {
+          existingLink.parentNode.removeChild(existingLink);
+        }
+        const newLink = doc.createElement('link');
+        newLink.rel = 'shortcut icon';
+        newLink.type = 'image/png';
+        newLink.href = iconUrl;
+        doc.head.appendChild(newLink);
+      };
+
       // Current document
-      let link = document.querySelector("link[rel*='icon']");
-      if (!link) {
-        link = document.createElement('link');
-        link.rel = 'icon';
-        document.head.appendChild(link);
-      }
-      link.href = href;
+      applyIcon(document, href);
 
       // Parent document
       try {
         if (window.parent && window.parent !== window && window.parent.document) {
-          let pLink = window.parent.document.querySelector("link[rel*='icon']");
-          if (!pLink) {
-            pLink = window.parent.document.createElement('link');
-            pLink.rel = 'icon';
-            window.parent.document.head.appendChild(pLink);
-          }
-          pLink.href = href;
+          applyIcon(window.parent.document, href);
         }
       } catch (err) {
         // ignore cross-origin sandbox restrictions
@@ -344,17 +374,19 @@ export default function App() {
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
     )}`;
 
-    const gamepadSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="3"/><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01"/></svg>`
-    )}`;
-
     if (viewMode === 'articles') {
       setBothTitles("StudyTools");
       updateFavicon(bookSvgDataUri);
     } else if (viewMode === 'games') {
-      if (useClassroomDecoy) {
+      if (decoyType === 'classroom') {
         setBothTitles("Home - Classroom");
         updateFavicon("https://ssl.gstatic.com/classroom/favicon.png");
+      } else if (decoyType === 'clever') {
+        setBothTitles("Clever | Log in with Clever");
+        updateFavicon("https://www.google.com/s2/favicons?sz=64&domain=clever.com");
+      } else if (decoyType === 'campus') {
+        setBothTitles("Campus Student");
+        updateFavicon("https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png");
       } else {
         setBothTitles("StudyTools");
         updateFavicon(bookSvgDataUri);
@@ -364,7 +396,7 @@ export default function App() {
       setBothTitles("StudyTools");
       updateFavicon(bookSvgDataUri);
     }
-  }, [viewMode, useClassroomDecoy]);
+  }, [viewMode, decoyType]);
 
   // Sync custom prompt text with dropdown selections if not manually customized
   useEffect(() => {
@@ -391,14 +423,7 @@ export default function App() {
     document.body.setAttribute('data-locked', isPasscodeUnlocked ? 'false' : 'true');
   }, [isPasscodeUnlocked]);
 
-  // List of Alt links configuration
-  const altLinks = [
-    { name: 'Alt Link 1', url: 'https://granddia3.github.io' },
-    { name: 'Alt Link 2', url: 'https://classroonn.github.io' },
-    { name: 'Alt Link 3', url: 'https://IIMS-sucksasaschool.github.io/' },
-    { name: 'Alt Link 4', url: 'https://ciassroonn.github.io' },
-    { name: 'Alt Link 5', url: 'about:blank' }
-  ];
+
 
   // Handle addition/removal of favorites
   const toggleFavorite = (e, gameId) => {
@@ -601,20 +626,29 @@ export default function App() {
   const isSinglePlayerCategory = (cat) => {
     if (!cat) return true;
     const c = cat.toLowerCase().trim();
+    if (c === 'minecraft' || c === 'emulated' || c === 'other websites') return true;
     return ['solo', 'single', 'platformer', 'skill', 'science', 'driving', 'horror', 'creative', 'ai'].some(kw => c.includes(kw));
   };
 
   const isMultiplayerCategory = (cat) => {
     if (!cat) return false;
     const c = cat.toLowerCase().trim();
+    if (c === 'minecraft' || c === 'random' || c === 'other websites') return true;
     return ['social', 'sport', 'multiplayer', 'fast', 'party', 'puzzle', 'shooter'].some(kw => c.includes(kw)) || c.includes('or');
   };
 
   // Filter games based on category sidebar, matching search query
   const filteredGames = gamesData.filter(game => {
-    if (filter === 'single' && !isSinglePlayerCategory(game.category)) return false;
-    if (filter === 'multiplayer' && !isMultiplayerCategory(game.category)) return false;
-    if (filter === 'favorites' && !favorites.includes(game.id)) return false;
+    if (filter === 'single') {
+      if (!isSinglePlayerCategory(game.category)) return false;
+    } else if (filter === 'multiplayer') {
+      if (!isMultiplayerCategory(game.category)) return false;
+    } else if (filter === 'favorites') {
+      if (!favorites.includes(game.id)) return false;
+    } else if (filter !== 'all') {
+      // Direct category filter matching
+      if ((game.category || '').toLowerCase().trim() !== filter.toLowerCase().trim()) return false;
+    }
 
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
@@ -1126,9 +1160,10 @@ export default function App() {
                             }
                           }}
                           className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1.5 text-[var(--text-primary)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-mono"
+                          style={{ colorScheme: mode }}
                         >
                           {gameOptions.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            <option key={opt.value} value={opt.value} style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>{opt.label}</option>
                           ))}
                         </select>
                       </div>
@@ -1138,9 +1173,10 @@ export default function App() {
                           value={newArticleTone}
                           onChange={(e) => setNewArticleTone(e.target.value)}
                           className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1.5 text-[var(--text-primary)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-mono"
+                          style={{ colorScheme: mode }}
                         >
                           {toneOptions.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.value}</option>
+                            <option key={opt.value} value={opt.value} style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>{opt.value}</option>
                           ))}
                         </select>
                       </div>
@@ -1526,9 +1562,10 @@ export default function App() {
                       value={newArticleGame}
                       onChange={(e) => setNewArticleGame(e.target.value)}
                       className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1.5 text-[var(--text-primary)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-mono"
+                      style={{ colorScheme: mode }}
                     >
                       {gameOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        <option key={opt.value} value={opt.value} style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>{opt.label}</option>
                       ))}
                     </select>
                   </div>
@@ -1538,9 +1575,10 @@ export default function App() {
                       value={newArticleTone}
                       onChange={(e) => setNewArticleTone(e.target.value)}
                       className="text-[10px] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1.5 text-[var(--text-primary)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] font-mono"
+                      style={{ colorScheme: mode }}
                     >
                       {toneOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.value}</option>
+                        <option key={opt.value} value={opt.value} style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>{opt.value}</option>
                       ))}
                     </select>
                   </div>
@@ -1647,14 +1685,28 @@ export default function App() {
           <div 
             onClick={() => { setFilter('all'); setSelectedGame(null); setSearchQuery(''); }}
             className="flex items-center gap-2.5 cursor-pointer select-none group"
-            title={useClassroomDecoy ? "Go to Classroom homepage" : "Go to StudyTools homepage"}
+            title={decoyType !== 'none' ? `Go to ${decoyType === 'classroom' ? 'Classroom' : decoyType === 'clever' ? 'Clever' : 'Campus'} homepage` : "Go to StudyTools homepage"}
           >
             <div className="p-2 bg-[var(--accent-color)] text-[var(--bg-color)] rounded-lg border border-[var(--card-border)] shadow-[0_2px_8.5px_var(--accent-shadow)] group-hover:rotate-12 group-hover:scale-110 transition-all duration-300 transform">
-              {useClassroomDecoy ? <School className="w-5.5 h-5.5" /> : <BookOpen className="w-5.5 h-5.5" />}
+              {decoyType === 'classroom' ? (
+                <School className="w-5.5 h-5.5" />
+              ) : decoyType === 'clever' ? (
+                <Compass className="w-5.5 h-5.5" />
+              ) : decoyType === 'campus' ? (
+                <School className="w-5.5 h-5.5" />
+              ) : (
+                <BookOpen className="w-5.5 h-5.5" />
+              )}
             </div>
             <div>
               <span className="text-xl font-bold tracking-tight text-[var(--text-primary)] block group-hover:text-[var(--accent-color)] transition-colors">
-                {useClassroomDecoy ? "Home - Classroom" : "StudyTools"}
+                {decoyType === 'classroom' 
+                  ? "Home - Classroom" 
+                  : decoyType === 'clever' 
+                  ? "Clever | Log in with Clever" 
+                  : decoyType === 'campus' 
+                  ? "Campus Student" 
+                  : "StudyTools"}
               </span>
             </div>
           </div>
@@ -1740,24 +1792,7 @@ export default function App() {
       {/* ALT LINKS BAR */}
       <section className="bg-[var(--bg-secondary)] border-b border-[var(--card-border)] py-3 px-4 md:px-6 transition-colors duration-300">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
-            <div className="text-[10px] font-mono tracking-widest uppercase opacity-60 self-center">
-              ALT LINKS
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {altLinks.map((link, idx) => (
-                <a
-                  key={idx}
-                  href={link.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs bg-[var(--card-bg)] border border-[var(--card-border)] py-1.5 px-3 rounded-full hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-all duration-200 font-mono shadow-sm flex items-center gap-1 cursor-pointer"
-                >
-                  <span>{idx + 1}</span>
-                </a>
-              ))}
-            </div>
-          </div>
+          {/* Alt Links Removed */}
 
           <div className="flex flex-wrap items-center gap-2 md:ml-auto w-full md:w-auto">
             {/* Suffix Select */}
@@ -1767,14 +1802,21 @@ export default function App() {
                 value={aboutBlankSuffix}
                 onChange={(e) => setAboutBlankSuffix(e.target.value)}
                 className="bg-transparent border-none outline-none font-bold text-[var(--text-primary)] cursor-pointer py-0.5"
-                style={{ colorScheme: 'dark' }}
+                style={{ colorScheme: mode }}
               >
-                <option value="">about:blank (Default)</option>
-                <option value="#1">about:blank#1</option>
-                <option value="#2">about:blank#2</option>
-                <option value="#3">about:blank#3</option>
-                <option value="#math">about:blank#math</option>
-                <option value="#science">about:blank#science</option>
+                <option value="" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank (Default)</option>
+                <option value="#1" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#1</option>
+                <option value="#2" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#2</option>
+                <option value="#3" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#3</option>
+                <option value="#4" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#4</option>
+                <option value="#5" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#5</option>
+                <option value="#math" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#math</option>
+                <option value="#science" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#science</option>
+                <option value="#grades" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#grades</option>
+                <option value="#classroom" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#classroom</option>
+                <option value="#clever" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#clever</option>
+                <option value="#campus" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#campus</option>
+                <option value="#dashboard" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#dashboard</option>
               </select>
             </div>
 
@@ -1789,19 +1831,33 @@ export default function App() {
                 
                 // Construct query parameters to propagate the decoy state to the new document
                 const searchParams = new URLSearchParams(window.location.search);
-                searchParams.set('decoy', String(useClassroomDecoy));
+                searchParams.set('decoyType', decoyType);
                 const iframeSrc = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${window.location.hash}`;
 
                 const bookSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
                   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
                 )}`;
 
+                let parentTitle = "StudyTools";
+                let parentFavicon = bookSvgDataUri;
+                
+                if (decoyType === 'classroom') {
+                  parentTitle = "Home - Classroom";
+                  parentFavicon = "https://ssl.gstatic.com/classroom/favicon.png";
+                } else if (decoyType === 'clever') {
+                  parentTitle = "Clever | Log in with Clever";
+                  parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=clever.com";
+                } else if (decoyType === 'campus') {
+                  parentTitle = "Campus Student";
+                  parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=infinitecampus.com";
+                }
+
                 win.document.write(`
                   <!DOCTYPE html>
                   <html>
                   <head>
-                    <title>${useClassroomDecoy ? 'Home - Classroom' : 'StudyTools'}</title>
-                    <link rel="icon" type="image/png" href="${useClassroomDecoy ? 'https://ssl.gstatic.com/classroom/favicon.png' : bookSvgDataUri}">
+                    <title>${parentTitle}</title>
+                    <link rel="icon" type="image/png" href="${parentFavicon}">
                     <meta charset="utf-8">
                     <style>
                       html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0c0a09; }
@@ -1814,26 +1870,47 @@ export default function App() {
                   </html>
                 `);
                 win.document.close();
+
+                // Set location hash after writing to force browser to register hash parameter in address bar
+                try {
+                  if (aboutBlankSuffix) {
+                    win.location.hash = aboutBlankSuffix;
+                  }
+                } catch (e) {
+                  // ignore
+                }
               }}
               className="text-xs bg-[var(--card-bg)] text-[var(--text-primary)] border border-[var(--card-border)] py-1.5 px-3.5 rounded-full hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] active:scale-98 transition-all duration-200 font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
               title="Open entire site inside about:blank tab with selected suffix to cloak history"
             >
               <Globe className="w-3.5 h-3.5 text-[var(--accent-color)] animate-spin-slow" />
-              <span>CLOAK IN {aboutBlankSuffix ? `ABOUT:BLANK ${aboutBlankSuffix}` : 'ABOUT:BLANK'}</span>
+              <span>CLOAK IN {aboutBlankSuffix ? `ABOUT:BLANK ${aboutBlankSuffix.toUpperCase()}` : 'ABOUT:BLANK'}</span>
             </button>
 
-            <button
-              onClick={() => setUseClassroomDecoy(!useClassroomDecoy)}
-              className={`text-xs border py-1.5 px-4 rounded-full font-mono font-extrabold flex items-center gap-2 cursor-pointer transition-all duration-300 transform active:scale-95 ${
-                useClassroomDecoy 
-                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_10px_var(--accent-shadow)]' 
-                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
-              }`}
-              title="Toggle Classroom Home Cloak Mode"
-            >
-              {useClassroomDecoy ? <School className="w-3.5 h-3.5 animate-pulse" /> : <Gamepad2 className="w-3.5 h-3.5" />}
-              <span>{useClassroomDecoy ? 'DECOY ON (CLASSROOM)' : 'DECOY OFF'}</span>
-            </button>
+            {/* Decoy Mode Selector */}
+            <div className={`flex items-center border rounded-full px-3 py-1.5 text-xs font-mono shadow-sm transition-all duration-300 ${
+              decoyType !== 'none' 
+                ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)] text-[var(--accent-color)]' 
+                : 'bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--text-muted)]'
+            }`}>
+              <span className="text-[10px] uppercase font-extrabold mr-1.5 flex items-center gap-1">
+                <School className="w-3.5 h-3.5 animate-pulse" />
+                <span>Decoy:</span>
+              </span>
+              <select 
+                value={decoyType}
+                onChange={(e) => setDecoyType(e.target.value)}
+                className={`bg-transparent border-none outline-none font-bold cursor-pointer py-0.5 ${
+                  decoyType !== 'none' ? 'text-[var(--accent-color)]' : 'text-[var(--text-primary)]'
+                }`}
+                style={{ colorScheme: mode }}
+              >
+                <option value="none" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Off (StudyTools)</option>
+                <option value="classroom" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Google Classroom</option>
+                <option value="clever" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Clever Login</option>
+                <option value="campus" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Infinite Campus</option>
+              </select>
+            </div>
 
             {/* Hidden legacy frame creator to preserve large assets cleanly */}
             <div style={{ display: 'none' }}>
@@ -2199,6 +2276,92 @@ export default function App() {
             <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Multiplayer</span>
           </button>
 
+          <button
+            onClick={() => { setFilter('Shooter'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'Shooter' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <Globe className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Shooter</span>
+          </button>
+
+          <button
+            onClick={() => { setFilter('Party'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'Party' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <Globe className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Party</span>
+          </button>
+
+          <button
+            onClick={() => { setFilter('Sports'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'Sports' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <Globe className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Sports</span>
+          </button>
+          
+          <button
+            onClick={() => { setFilter('Random'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'Random' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <Shuffle className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Random Games</span>
+          </button>
+
+          <button
+            onClick={() => { setFilter('Emulated'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'Emulated' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <Cpu className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Emulated</span>
+          </button>
+
+          <button
+            onClick={() => { setFilter('minecraft'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'minecraft' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <Box className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Minecraft</span>
+          </button>
+
+          <button
+            onClick={() => { setFilter('Not Games'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'Not Games' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <Globe className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Other Websites</span>
+          </button>
+
+          
+
         </aside>
 
         {/* MAIN BODY DISPLAY */}
@@ -2212,9 +2375,16 @@ export default function App() {
                 <div>
                   <h2 className="text-lg font-black uppercase tracking-wider text-[var(--text-primary)]">
                     {filter === 'all' && 'Games Library'}
+                    {filter === 'favorites' && 'Bookmarked Games'}
                     {filter === 'single' && 'Singleplayer Arcades'}
                     {filter === 'multiplayer' && 'Multiplayer Hub'}
-                    {filter === 'favorites' && 'Bookmarked Games'}
+                    {filter === 'Shooter' && 'Shooter Games'}
+                    {filter === 'Party' && 'Party Games'}
+                    {filter === 'Sports' && 'Sports Games'}
+                    {filter === 'Random' && 'Random Games'}
+                    {filter === 'Emulated' && 'Emulated Archives'}
+                    {filter === 'minecraft' && 'Minecraft Platform'}
+                    {filter === 'Not Games' && 'Not Games'}
                   </h2>
                   <p className="text-xs text-[var(--text-muted)] mt-0.5">
                     Showing {filteredGames.length} unblocked resources
