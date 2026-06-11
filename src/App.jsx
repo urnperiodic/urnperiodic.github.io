@@ -410,10 +410,10 @@ export default function App() {
         updateFavicon("https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png");
       } else if (decoyType === 'docs') {
         setBothTitles("Google Docs");
-        updateFavicon("https://ssl.gstatic.com/docs/documents/images/kix-favicon-2023.ico");
+        updateFavicon("https://www.google.com/s2/favicons?sz=64&domain=docs.google.com");
       } else if (decoyType === 'gmail') {
         setBothTitles("Inbox - Jersey City Public Schools");
-        updateFavicon("https://ssl.gstatic.com/ui/v1/icons/mail/images/2/basic2_favicon_v2.png");
+        updateFavicon("https://www.google.com/s2/favicons?sz=64&domain=mail.google.com");
       } else {
         setBothTitles("StudyTools");
         updateFavicon(bookSvgDataUri);
@@ -1901,10 +1901,10 @@ export default function App() {
                   parentFavicon = "https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png";
                 } else if (decoyType === 'docs') {
                   parentTitle = "Google Docs";
-                  parentFavicon = "https://ssl.gstatic.com/docs/documents/images/kix-favicon-2023.ico";
+                  parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=docs.google.com";
                 } else if (decoyType === 'gmail') {
                   parentTitle = "Inbox - Jersey City Public Schools";
-                  parentFavicon = "https://ssl.gstatic.com/ui/v1/icons/mail/images/2/basic2_favicon_v2.png";
+                  parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=mail.google.com";
                 }
 
                 win.document.write(`
@@ -2628,10 +2628,10 @@ export default function App() {
                         tabFavicon = "https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png";
                       } else if (decoyType === 'docs') {
                         tabTitle = "Google Docs";
-                        tabFavicon = "https://ssl.gstatic.com/docs/documents/images/kix-favicon-2023.ico";
+                        tabFavicon = "https://www.google.com/s2/favicons?sz=64&domain=docs.google.com";
                       } else if (decoyType === 'gmail') {
                         tabTitle = "Inbox - Jersey City Public Schools";
-                        tabFavicon = "https://ssl.gstatic.com/ui/v1/icons/mail/images/2/basic2_favicon_v2.png";
+                        tabFavicon = "https://www.google.com/s2/favicons?sz=64&domain=mail.google.com";
                       }
 
                       win.document.write(`
