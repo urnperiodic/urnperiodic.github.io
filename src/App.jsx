@@ -1,5 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { games as gamesData } from './data/games';
+
+// Dynamically preprocess games to ensure they all possess a stable and unique ID for keys and bookmarking
+const games = gamesData.map((game, index) => {
+  if (!game.id) {
+    const slug = (game.title || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    return {
+      ...game,
+      id: `game-gen-${index}-${slug}`
+    };
+  }
+  return game;
+});
 import { initialArticles, gameOptions, toneOptions, generateMockAIArticle } from './data/articles';
 import FlashcardsWorkspace from './components/FlashcardsWorkspace';
 import QuizWorkspace from './components/QuizWorkspace';
@@ -81,6 +93,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
   const [zoom, setZoom] = useState(1);
+  const [failedThumbnails, setFailedThumbnails] = useState({});
   const [favorites, setFavorites] = useState(() => {
     try {
       const stored = safeStorage.getItem('unblocked-favorites');
@@ -667,7 +680,7 @@ if (iconUrl.includes('.ico')) {
   };
 
   // Filter games based on category sidebar, matching search query
-  const filteredGames = gamesData.filter(game => {
+  const filteredGames = games.filter(game => {
     if (filter === 'single') {
       if (!isSinglePlayerCategory(game.category)) return false;
     } else if (filter === 'multiplayer') {
@@ -2470,11 +2483,12 @@ if (iconUrl.includes('.ico')) {
                       >
                         {/* Artwork container */}
                         <div className="relative h-48 bg-neutral-950 flex-shrink-0 flex items-center justify-center border-b border-[var(--card-border)] overflow-hidden">
-                          {game.thumbnail ? (
+                          {game.thumbnail && !failedThumbnails[game.id] ? (
                             <img 
                               src={game.thumbnail} 
                               alt={game.title} 
                               referrerPolicy="no-referrer"
+                              onError={() => setFailedThumbnails(prev => ({ ...prev, [game.id]: true }))}
                               className="w-full h-full object-cover transition-transform duration-500 hover:scale-110" 
                             />
                           ) : (
