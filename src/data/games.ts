@@ -498,7 +498,7 @@ export const games: Game[] = [
     title: 'Phoenix Wright: Ace Attorney',
     description: '...',
     url: 'clpheonixrightaceattorny.html',
-    thumbnail: 'https://upload.wikimedia.org/wikipedia/en/7/73/Phoenix_Wright_-_Ace_Attorney_Coverart.png',
+    thumbnail: 'mia_fey.jpg',
     category: 'Emulated'
   },
   {
