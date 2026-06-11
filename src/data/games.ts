@@ -290,6 +290,20 @@ export const games: Game[] = [
     thumbnail: 'https://slowroads.io/meta-2.0.0.jpg',
     category: 'solo'
   },
+  {
+    title: 'Gran Turismo 2',
+    description: 'yeah',
+    url: 'clgranturismo2.html',
+    thumbnail: 'https://upload.wikimedia.org/wikipedia/en/thumb/6/6b/GranTurismo2.jpg/250px-GranTurismo2.jpg',
+    category: 'Emulated'
+  },
+  {
+    title: 'Mario Kart DS',
+    description: 'yeah',
+    url: 'clmariokartds.html',
+    thumbnail: 'https://upload.wikimedia.org/wikipedia/en/8/86/Mario_Kart_DS_cover.jpg',
+    category: 'Emulated'
+  },
   // ── MULTIPLAYER ──
   {
     title: 'Animals Volleyball',
