@@ -43,7 +43,8 @@ import {
   X,
   Shuffle,
   Cpu,
-  Box
+  Box,
+  Mail
 } from 'lucide-react';
 
 // Safe storage helper to prevent SecurityError crash in sandboxed iframes
@@ -125,17 +126,17 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlDecoyType = params.get('decoyType');
-      if (urlDecoyType && ['none', 'classroom', 'clever', 'campus'].includes(urlDecoyType)) {
+      if (urlDecoyType && ['none', 'classroom', 'clever', 'campus', 'docs', 'gmail'].includes(urlDecoyType)) {
         return urlDecoyType;
       }
       const urlDecoy = params.get('decoy');
       if (urlDecoy === 'true') return 'classroom';
       if (urlDecoy === 'false') return 'none';
-      if (urlDecoy && ['none', 'classroom', 'clever', 'campus'].includes(urlDecoy)) {
+      if (urlDecoy && ['none', 'classroom', 'clever', 'campus', 'docs', 'gmail'].includes(urlDecoy)) {
         return urlDecoy;
       }
       const cached = localStorage.getItem('study-tools-decoy-type');
-      if (cached && ['none', 'classroom', 'clever', 'campus'].includes(cached)) {
+      if (cached && ['none', 'classroom', 'clever', 'campus', 'docs', 'gmail'].includes(cached)) {
         return cached;
       }
       const cachedLegacy = localStorage.getItem('study-tools-classroom-decoy');
@@ -387,6 +388,12 @@ export default function App() {
       } else if (decoyType === 'campus') {
         setBothTitles("Campus Student");
         updateFavicon("https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png");
+      } else if (decoyType === 'docs') {
+        setBothTitles("Google Docs");
+        updateFavicon("https://ssl.gstatic.com/docs/documents/images/kix-favicon-2023.ico");
+      } else if (decoyType === 'gmail') {
+        setBothTitles("Inbox - Jersey City Public Schools");
+        updateFavicon("https://ssl.gstatic.com/ui/v1/icons/mail/images/2/basic2_favicon_v2.png");
       } else {
         setBothTitles("StudyTools");
         updateFavicon(bookSvgDataUri);
@@ -1685,7 +1692,21 @@ export default function App() {
           <div 
             onClick={() => { setFilter('all'); setSelectedGame(null); setSearchQuery(''); }}
             className="flex items-center gap-2.5 cursor-pointer select-none group"
-            title={decoyType !== 'none' ? `Go to ${decoyType === 'classroom' ? 'Classroom' : decoyType === 'clever' ? 'Clever' : 'Campus'} homepage` : "Go to StudyTools homepage"}
+            title={
+              decoyType !== 'none' 
+                ? `Go to ${
+                    decoyType === 'classroom' 
+                      ? 'Classroom' 
+                      : decoyType === 'clever' 
+                      ? 'Clever' 
+                      : decoyType === 'campus' 
+                      ? 'Campus' 
+                      : decoyType === 'docs' 
+                      ? 'Google Docs' 
+                      : 'Inbox'
+                  } homepage` 
+                : "Go to StudyTools homepage"
+            }
           >
             <div className="p-2 bg-[var(--accent-color)] text-[var(--bg-color)] rounded-lg border border-[var(--card-border)] shadow-[0_2px_8.5px_var(--accent-shadow)] group-hover:rotate-12 group-hover:scale-110 transition-all duration-300 transform">
               {decoyType === 'classroom' ? (
@@ -1694,6 +1715,10 @@ export default function App() {
                 <Compass className="w-5.5 h-5.5" />
               ) : decoyType === 'campus' ? (
                 <School className="w-5.5 h-5.5" />
+              ) : decoyType === 'docs' ? (
+                <FileText className="w-5.5 h-5.5" />
+              ) : decoyType === 'gmail' ? (
+                <Mail className="w-5.5 h-5.5" />
               ) : (
                 <BookOpen className="w-5.5 h-5.5" />
               )}
@@ -1706,6 +1731,10 @@ export default function App() {
                   ? "Clever | Log in with Clever" 
                   : decoyType === 'campus' 
                   ? "Campus Student" 
+                  : decoyType === 'docs' 
+                  ? "Google Docs" 
+                  : decoyType === 'gmail' 
+                  ? "Inbox - Jersey City Public Schools" 
                   : "StudyTools"}
               </span>
             </div>
@@ -1849,7 +1878,13 @@ export default function App() {
                   parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=clever.com";
                 } else if (decoyType === 'campus') {
                   parentTitle = "Campus Student";
-                  parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=infinitecampus.com";
+                  parentFavicon = "https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png";
+                } else if (decoyType === 'docs') {
+                  parentTitle = "Google Docs";
+                  parentFavicon = "https://ssl.gstatic.com/docs/documents/images/kix-favicon-2023.ico";
+                } else if (decoyType === 'gmail') {
+                  parentTitle = "Inbox - Jersey City Public Schools";
+                  parentFavicon = "https://ssl.gstatic.com/ui/v1/icons/mail/images/2/basic2_favicon_v2.png";
                 }
 
                 win.document.write(`
@@ -1909,6 +1944,8 @@ export default function App() {
                 <option value="classroom" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Google Classroom</option>
                 <option value="clever" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Clever Login</option>
                 <option value="campus" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Infinite Campus</option>
+                <option value="docs" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Google Docs</option>
+                <option value="gmail" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Inbox - Jersey City Public Schools</option>
               </select>
             </div>
 
