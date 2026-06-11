@@ -356,12 +356,14 @@ export default function App() {
         });
 
         // Determine correct mime-type
-        let typeVal = 'image/png';
-        if (iconUrl.includes('.ico')) {
-          typeVal = 'image/x-icon';
-        } else if (iconUrl.includes('image/svg+xml') || iconUrl.startsWith('data:image/svg+xml')) {
-          typeVal = 'image/svg+xml';
-        }
+let typeVal = 'image/png';
+if (iconUrl.includes('.ico')) {
+  typeVal = 'image/x-icon';
+} else if (iconUrl.includes('.webp')) {
+  typeVal = 'image/webp';
+} else if (iconUrl.includes('image/svg+xml') || iconUrl.startsWith('data:image/svg+xml')) {
+  typeVal = 'image/svg+xml';
+}
 
         // Add standard icon element
         const newLink = doc.createElement('link');
