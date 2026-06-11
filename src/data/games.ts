@@ -505,7 +505,7 @@ export const games: Game[] = [
     title: 'Phoenix Wright: Ace Attorney – Trials and Tribulations',
     description: '...',
     url: 'clpheonixtrialsandyear.html',
-    thumbnail: 'https://static.wikia.nocookie.net/aceattorney/images/5/5f/AA3_DS_Box_Art_America.png/revision/latest?cb=20180820061541',
+    thumbnail: 'mia_fey.jpg',
     category: 'Emulated'
   }
 ];
