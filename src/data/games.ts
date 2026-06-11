@@ -304,6 +304,13 @@ export const games: Game[] = [
     thumbnail: 'https://upload.wikimedia.org/wikipedia/en/8/86/Mario_Kart_DS_cover.jpg',
     category: 'Emulated'
   },
+  {
+    title: 'New Super Mario Bros',
+    description: 'yeah',
+    url: 'clnewsupermariobros.html',
+    thumbnail: 'https://upload.wikimedia.org/wikipedia/en/d/db/NewSuperMarioBrothers.jpg',
+    category: 'Emulated'
+  },
   // ── MULTIPLAYER ──
   {
     title: 'Animals Volleyball',
