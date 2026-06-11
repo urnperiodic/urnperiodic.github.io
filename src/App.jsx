@@ -347,15 +347,35 @@ export default function App() {
 
     const updateFavicon = (href) => {
       const applyIcon = (doc, iconUrl) => {
-        let existingLink = doc.querySelector("link[rel*='icon']");
-        if (existingLink) {
-          existingLink.parentNode.removeChild(existingLink);
+        // Remove ALL existing favicon links to avoid browser caching or conflict issues
+        const existingLinks = doc.querySelectorAll("link[rel*='icon']");
+        existingLinks.forEach(link => {
+          if (link.parentNode) {
+            link.parentNode.removeChild(link);
+          }
+        });
+
+        // Determine correct mime-type
+        let typeVal = 'image/png';
+        if (iconUrl.includes('.ico')) {
+          typeVal = 'image/x-icon';
+        } else if (iconUrl.includes('image/svg+xml') || iconUrl.startsWith('data:image/svg+xml')) {
+          typeVal = 'image/svg+xml';
         }
+
+        // Add standard icon element
         const newLink = doc.createElement('link');
-        newLink.rel = 'shortcut icon';
-        newLink.type = 'image/png';
+        newLink.rel = 'icon';
+        newLink.type = typeVal;
         newLink.href = iconUrl;
         doc.head.appendChild(newLink);
+
+        // Add shortcut icon element for maximum compatibility
+        const shortcutLink = doc.createElement('link');
+        shortcutLink.rel = 'shortcut icon';
+        shortcutLink.type = typeVal;
+        shortcutLink.href = iconUrl;
+        doc.head.appendChild(shortcutLink);
       };
 
       // Current document
@@ -2591,12 +2611,36 @@ export default function App() {
                         alert("Popup blocked. Allow popups for this site.");
                         return;
                       }
+
+                      const bookSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
+                        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
+                      )}`;
+                      let tabTitle = selectedGame.title;
+                      let tabFavicon = bookSvgDataUri;
+                      if (decoyType === 'classroom') {
+                        tabTitle = "Home - Classroom";
+                        tabFavicon = "https://ssl.gstatic.com/classroom/favicon.png";
+                      } else if (decoyType === 'clever') {
+                        tabTitle = "Clever | Log in with Clever";
+                        tabFavicon = "https://www.google.com/s2/favicons?sz=64&domain=clever.com";
+                      } else if (decoyType === 'campus') {
+                        tabTitle = "Campus Student";
+                        tabFavicon = "https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png";
+                      } else if (decoyType === 'docs') {
+                        tabTitle = "Google Docs";
+                        tabFavicon = "https://ssl.gstatic.com/docs/documents/images/kix-favicon-2023.ico";
+                      } else if (decoyType === 'gmail') {
+                        tabTitle = "Inbox - Jersey City Public Schools";
+                        tabFavicon = "https://ssl.gstatic.com/ui/v1/icons/mail/images/2/basic2_favicon_v2.png";
+                      }
+
                       win.document.write(`
                         <!DOCTYPE html>
                         <html>
                         <head>
-                          <title>Home - Classroom</title>
-                          <link rel="icon" type="image/png" href="https://ssl.gstatic.com/classroom/favicon.png">
+                          <title>${tabTitle}</title>
+                          <link rel="icon" href="${tabFavicon}">
+                          <link rel="shortcut icon" href="${tabFavicon}">
                           <meta charset="utf-8">
                           <style>
                             html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #ffffff; }
