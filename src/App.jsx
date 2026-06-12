@@ -16,6 +16,7 @@ import { initialArticles, gameOptions, toneOptions, generateMockAIArticle } from
 import FlashcardsWorkspace from './components/FlashcardsWorkspace';
 import QuizWorkspace from './components/QuizWorkspace';
 import GrammarCheckerWorkspace from './components/GrammarCheckerWorkspace';
+import GeminiSandbox from './components/GeminiSandbox';
 import { 
   School, 
   Search, 
@@ -161,6 +162,7 @@ export default function App() {
   const useClassroomDecoy = decoyType !== 'none';
 
   const [aboutBlankSuffix, setAboutBlankSuffix] = useState('');
+  const [showGeminiDrawer, setShowGeminiDrawer] = useState(false);
 
   // Persist decoy state to localStorage
   useEffect(() => {
@@ -1003,6 +1005,15 @@ if (iconUrl.includes('.ico')) {
       return <div className="space-y-1.5">{elements}</div>;
     };
 
+    const isGeminiOnly = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('view') === 'gemini-only';
+    if (isGeminiOnly) {
+      return (
+        <div className="h-screen w-screen overflow-hidden">
+          <GeminiSandbox isStandalone={true} />
+        </div>
+      );
+    }
+
     if (viewMode === 'articles') {
       return (
         <div className="min-h-screen bg-[var(--bg-color)] text-[var(--text-primary)] flex flex-col p-4 md:p-6 transition-colors duration-300 relative select-text">
@@ -1052,6 +1063,20 @@ if (iconUrl.includes('.ico')) {
             </div>
 
             <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-start">
+              {/* Gemini Button */}
+              <button
+                onClick={() => setShowGeminiDrawer(prev => !prev)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all duration-200 cursor-pointer shadow-sm relative overflow-hidden group ${
+                  showGeminiDrawer
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-violet-500 shadow-[0_0_12px_rgba(124,58,237,0.3)]'
+                    : 'bg-gradient-to-r from-violet-600/10 to-indigo-600/10 border border-violet-500/30 text-indigo-500 hover:border-violet-500 hover:shadow-[0_0_10px_rgba(124,58,237,0.15)] bg-[var(--bg-secondary)]'
+                }`}
+                title="Open Gemini AI Academic Sandbox"
+              >
+                <Sparkles className={`w-3.5 h-3.5 text-violet-500 group-hover:rotate-12 transition-transform duration-300 ${showGeminiDrawer ? 'text-white' : ''}`} />
+                <span>Gemini AI</span>
+              </button>
+
               {/* Sign out link */}
               <button
                 onClick={() => {
@@ -1338,6 +1363,15 @@ if (iconUrl.includes('.ico')) {
             )}
 
           </div>
+
+          {showGeminiDrawer && (
+            <div className="fixed inset-y-0 right-0 w-full md:w-[500px] z-[100] bg-[var(--bg-color)] border-l border-[var(--card-border)] shadow-2xl flex flex-col h-full animate-slide-in">
+              <GeminiSandbox 
+                isStandalone={false} 
+                onBackToApp={() => setShowGeminiDrawer(false)} 
+              />
+            </div>
+          )}
         </div>
       );
     }
@@ -1810,6 +1844,20 @@ if (iconUrl.includes('.ico')) {
             <span className="text-xs opacity-50 block sm:inline mr-1">made by</span>
             <span className="font-bold text-[var(--accent-color)] tracking-wider">™ AND GRANDDIA2</span>
           </div>
+
+          {/* Gemini Button */}
+          <button
+            onClick={() => setShowGeminiDrawer(prev => !prev)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all duration-200 cursor-pointer shadow-sm relative overflow-hidden group ${
+              showGeminiDrawer
+                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-violet-500 shadow-[0_0_12px_rgba(124,58,237,0.3)]'
+                : 'bg-gradient-to-r from-violet-600/10 to-indigo-600/10 border border-violet-500/30 text-indigo-500 hover:border-violet-500 hover:shadow-[0_0_10px_rgba(124,58,237,0.15)] bg-[var(--bg-secondary)]'
+            }`}
+            title="Open Gemini AI Academic Sandbox"
+          >
+            <Sparkles className={`w-3.5 h-3.5 text-violet-500 group-hover:rotate-12 transition-transform duration-300 ${showGeminiDrawer ? 'text-white' : ''}`} />
+            <span>Gemini AI</span>
+          </button>
 
           {/* Light/Dark slider */}
           <div className="flex items-center gap-2 border border-[var(--card-border)] bg-[var(--bg-secondary)] py-1 md:py-1.5 px-2.5 rounded-full shadow-sm">
@@ -2724,6 +2772,15 @@ if (iconUrl.includes('.ico')) {
 
         </main>
       </div>
+
+      {showGeminiDrawer && (
+        <div className="fixed inset-y-0 right-0 w-full md:w-[500px] z-[100] bg-[var(--bg-color)] border-l border-[var(--card-border)] shadow-2xl flex flex-col h-full animate-slide-in">
+          <GeminiSandbox 
+            isStandalone={false} 
+            onBackToApp={() => setShowGeminiDrawer(false)} 
+          />
+        </div>
+      )}
 
     </div>
   );
