@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "vite build",
+    "dev": "tsx server.ts",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "start": "node dist/server.cjs",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
+    "clean": "rm -rf dist server.js assets/index-*.js assets/index-*.css index.html",
     "lint": "echo 'Linter skipped for clean JS codebases'"
   },
   "dependencies": {
