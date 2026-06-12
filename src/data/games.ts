@@ -61,7 +61,7 @@ export const games: Game[] = [
   {
     title: 'Chatgpt (GROQ API)',
     description: 'Go to the doc and get a API or swap your model if it says max token limit reached. ',
-    url: 'https://tharaniidaran-t.github.io/GroqAI2/',
+    url: 'https://urnperiodic.github.io/GroqAi/',
     thumbnail: 'https://www.internetmatters.org/wp-content/uploads/2025/06/Chat-GPT-logo.webp',
     category: 'Not Games'
   },
