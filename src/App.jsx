@@ -80,6 +80,15 @@ const safeStorage = {
 };
 
 export default function App() {
+  const isGeminiOnly = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('view') === 'gemini-only';
+  if (isGeminiOnly) {
+    return (
+      <div className="h-screen w-screen overflow-hidden">
+        <GeminiSandbox isStandalone={true} />
+      </div>
+    );
+  }
+
   const [theme, setTheme] = useState(() => {
     const saved = safeStorage.getItem('unblocked-theme');
     return saved && ['cyborg', 'violet', 'ice', 'rose-pine', 'none'].includes(saved) ? saved : 'none';
@@ -1052,15 +1061,6 @@ if (iconUrl.includes('.ico')) {
       
       return <div className="space-y-1.5">{elements}</div>;
     };
-
-    const isGeminiOnly = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('view') === 'gemini-only';
-    if (isGeminiOnly) {
-      return (
-        <div className="h-screen w-screen overflow-hidden">
-          <GeminiSandbox isStandalone={true} />
-        </div>
-      );
-    }
 
     if (viewMode === 'gemini') {
       return (
