@@ -318,6 +318,27 @@ export const games: Game[] = [
     thumbnail: '',
     category: 'Solo'
   },
+   {
+    title: 'Raft',
+    description: 'yeah',
+    url: 'raft.html',
+    thumbnail: '',
+    category: 'Solo'
+  },
+   {
+    title: 'Schoolboy Runaway',
+    description: 'yeah',
+    url: 'schoolboyrunaway.html',
+    thumbnail: '',
+    category: 'Solo'
+  },
+  {
+    title: 'Buckshot Roulette',
+    description: 'yeah',
+    url: 'buckshotroulette.html',
+    thumbnail: '',
+    category: 'Solo'
+  },
   // ── MULTIPLAYER ──
   {
     title: 'Animals Volleyball',
