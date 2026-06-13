@@ -339,6 +339,13 @@ export const games: Game[] = [
     thumbnail: '',
     category: 'Solo'
   },
+  {
+    title: 'Bendy and the Ink Machine',
+    description: 'yeah',
+    url: 'bendy.html',
+    thumbnail: '',
+    category: 'Solo'
+  },
   // ── MULTIPLAYER ──
   {
     title: 'Animals Volleyball',
