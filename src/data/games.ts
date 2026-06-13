@@ -311,6 +311,13 @@ export const games: Game[] = [
     thumbnail: 'https://upload.wikimedia.org/wikipedia/en/d/db/NewSuperMarioBrothers.jpg',
     category: 'Emulated'
   },
+  {
+    title: 'Cluster Truck',
+    description: 'yeah',
+    url: 'https://jasongamesdev.github.io/cluster-rush/',
+    thumbnail: '',
+    category: 'Solo'
+  },
   // ── MULTIPLAYER ──
   {
     title: 'Animals Volleyball',
