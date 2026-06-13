@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { games as gamesData } from './data/games';
 
 // Dynamically preprocess games to ensure they all possess a stable and unique ID for keys and bookmarking
@@ -107,12 +108,27 @@ export default function App() {
   const [viewMode, setViewMode] = useState(() => {
     const saved = safeStorage.getItem('classroom-view-mode');
     if (saved === 'games') return 'games';
+    if (saved === 'gemini') return 'gemini';
     return 'articles'; // Innocent educational syllabus base is shown on first startup
   });
+
+  const [prevViewMode, setPrevViewMode] = useState(() => {
+    return safeStorage.getItem('classroom-prev-view-mode') || 'articles';
+  });
+
+  const setPrevViewModeAndSave = (mode) => {
+    setPrevViewMode(mode);
+    safeStorage.setItem('classroom-prev-view-mode', mode);
+  };
 
   const isPasscodeUnlocked = viewMode === 'games';
 
   const setViewModeAndSave = (mode) => {
+    if (mode === 'gemini') {
+      if (viewMode !== 'gemini') {
+        setPrevViewModeAndSave(viewMode);
+      }
+    }
     setViewMode(mode);
     safeStorage.setItem('classroom-view-mode', mode);
     safeStorage.setItem('classroom-passcode-unlocked', mode === 'games' ? 'true' : 'false');
@@ -162,7 +178,6 @@ export default function App() {
   const useClassroomDecoy = decoyType !== 'none';
 
   const [aboutBlankSuffix, setAboutBlankSuffix] = useState('');
-  const [showGeminiDrawer, setShowGeminiDrawer] = useState(false);
 
   // Persist decoy state to localStorage
   useEffect(() => {
@@ -427,10 +442,10 @@ if (iconUrl.includes('.ico')) {
         updateFavicon("https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png");
       } else if (decoyType === 'docs') {
         setBothTitles("Google Docs");
-        updateFavicon("https://ssl.gstatic.com/docs/documents/images/docs-favicon-2026-v2.ico");
+        updateFavicon("https://www.google.com/s2/favicons?sz=64&domain=docs.google.com");
       } else if (decoyType === 'gmail') {
         setBothTitles("Inbox - Jersey City Public Schools");
-        updateFavicon("https://ssl.gstatic.com/ui/v1/icons/mail/images/favicon_gmail_2026_v2.ico");
+        updateFavicon("https://www.google.com/s2/favicons?sz=64&domain=mail.google.com");
       } else {
         setBothTitles("StudyTools");
         updateFavicon(bookSvgDataUri);
@@ -1014,6 +1029,25 @@ if (iconUrl.includes('.ico')) {
       );
     }
 
+    if (viewMode === 'gemini') {
+      return (
+        <motion.div 
+          initial={{ opacity: 0, y: 15, scale: 0.99 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -15, scale: 0.99 }}
+          transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+          className="h-screen w-screen overflow-hidden bg-[var(--bg-color)]"
+        >
+          <GeminiSandbox 
+            isStandalone={false} 
+            onBackToApp={() => {
+              setViewModeAndSave(prevViewMode || 'articles');
+            }} 
+          />
+        </motion.div>
+      );
+    }
+
     if (viewMode === 'articles') {
       return (
         <div className="min-h-screen bg-[var(--bg-color)] text-[var(--text-primary)] flex flex-col p-4 md:p-6 transition-colors duration-300 relative select-text">
@@ -1065,15 +1099,11 @@ if (iconUrl.includes('.ico')) {
             <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-start">
               {/* Gemini Button */}
               <button
-                onClick={() => setShowGeminiDrawer(prev => !prev)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all duration-200 cursor-pointer shadow-sm relative overflow-hidden group ${
-                  showGeminiDrawer
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-violet-500 shadow-[0_0_12px_rgba(124,58,237,0.3)]'
-                    : 'bg-gradient-to-r from-violet-600/10 to-indigo-600/10 border border-violet-500/30 text-indigo-500 hover:border-violet-500 hover:shadow-[0_0_10px_rgba(124,58,237,0.15)] bg-[var(--bg-secondary)]'
-                }`}
+                onClick={() => setViewModeAndSave('gemini')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all duration-200 cursor-pointer shadow-sm relative overflow-hidden group bg-gradient-to-r from-violet-600/10 to-indigo-600/10 border border-violet-500/30 text-indigo-500 hover:border-violet-500 hover:shadow-[0_0_12px_rgba(124,58,237,0.15)] bg-[var(--bg-secondary)]"
                 title="Open Gemini AI Academic Sandbox"
               >
-                <Sparkles className={`w-3.5 h-3.5 text-violet-500 group-hover:rotate-12 transition-transform duration-300 ${showGeminiDrawer ? 'text-white' : ''}`} />
+                <Sparkles className="w-3.5 h-3.5 text-violet-500 group-hover:rotate-12 transition-transform duration-300" />
                 <span>Gemini AI</span>
               </button>
 
@@ -1363,15 +1393,6 @@ if (iconUrl.includes('.ico')) {
             )}
 
           </div>
-
-          {showGeminiDrawer && (
-            <div className="fixed inset-y-0 right-0 w-full md:w-[500px] z-[100] bg-[var(--bg-color)] border-l border-[var(--card-border)] shadow-2xl flex flex-col h-full animate-slide-in">
-              <GeminiSandbox 
-                isStandalone={false} 
-                onBackToApp={() => setShowGeminiDrawer(false)} 
-              />
-            </div>
-          )}
         </div>
       );
     }
@@ -1847,15 +1868,11 @@ if (iconUrl.includes('.ico')) {
 
           {/* Gemini Button */}
           <button
-            onClick={() => setShowGeminiDrawer(prev => !prev)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all duration-200 cursor-pointer shadow-sm relative overflow-hidden group ${
-              showGeminiDrawer
-                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-violet-500 shadow-[0_0_12px_rgba(124,58,237,0.3)]'
-                : 'bg-gradient-to-r from-violet-600/10 to-indigo-600/10 border border-violet-500/30 text-indigo-500 hover:border-violet-500 hover:shadow-[0_0_10px_rgba(124,58,237,0.15)] bg-[var(--bg-secondary)]'
-            }`}
+            onClick={() => setViewModeAndSave('gemini')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all duration-200 cursor-pointer shadow-sm relative overflow-hidden group bg-gradient-to-r from-violet-600/10 to-indigo-600/10 border border-violet-500/30 text-indigo-500 hover:border-violet-500 hover:shadow-[0_0_12px_rgba(124,58,237,0.15)] bg-[var(--bg-secondary)]"
             title="Open Gemini AI Academic Sandbox"
           >
-            <Sparkles className={`w-3.5 h-3.5 text-violet-500 group-hover:rotate-12 transition-transform duration-300 ${showGeminiDrawer ? 'text-white' : ''}`} />
+            <Sparkles className="w-3.5 h-3.5 text-violet-500 group-hover:rotate-12 transition-transform duration-300" />
             <span>Gemini AI</span>
           </button>
 
@@ -2772,15 +2789,6 @@ if (iconUrl.includes('.ico')) {
 
         </main>
       </div>
-
-      {showGeminiDrawer && (
-        <div className="fixed inset-y-0 right-0 w-full md:w-[500px] z-[100] bg-[var(--bg-color)] border-l border-[var(--card-border)] shadow-2xl flex flex-col h-full animate-slide-in">
-          <GeminiSandbox 
-            isStandalone={false} 
-            onBackToApp={() => setShowGeminiDrawer(false)} 
-          />
-        </div>
-      )}
 
     </div>
   );
