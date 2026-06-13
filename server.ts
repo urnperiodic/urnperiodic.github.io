@@ -38,13 +38,32 @@ async function startServer() {
   // Main Gemini endpoint
   app.post("/api/gemini", async (req, res) => {
     try {
-      if (!apiKey || !ai) {
+      const { model, prompt, contents, mode, voice, targetLanguage, userApiKey } = req.body;
+
+      const activeKey = userApiKey || apiKey;
+      if (!activeKey) {
         return res.status(500).json({
-          error: "GEMINI_API_KEY is not configured. Please add it in Settings > Secrets.",
+          error: "No GEMINI_API_KEY is configured. Please enter your personal custom Gemini API Key inside the sidebar configuration pane.",
         });
       }
 
-      const { model, prompt, contents, mode, voice, targetLanguage } = req.body;
+      // Initialize active client context dynamically
+      const activeAi = userApiKey
+        ? new GoogleGenAI({
+            apiKey: userApiKey,
+            httpOptions: {
+              headers: {
+                "User-Agent": "aistudio-build",
+              },
+            },
+          })
+        : ai;
+
+      if (!activeAi) {
+        return res.status(500).json({
+          error: "Failed to initialize active Gemini client with provided credentials.",
+        });
+      }
 
       if (!model) {
         return res.status(400).json({ error: "Model parameter is required" });
@@ -53,7 +72,7 @@ async function startServer() {
       // Handle raw image models (nano banana) & Imagen
       if (mode === "image" || model === "imagen-4.0-generate-001" || model.includes("image")) {
         if (model === "imagen-4.0-generate-001") {
-          const response = await ai.models.generateImages({
+          const response = await activeAi.models.generateImages({
             model: "imagen-4.0-generate-001",
             prompt: prompt || "A beautiful artwork",
             config: {
@@ -73,7 +92,7 @@ async function startServer() {
           }
         } else {
           // nano banana generateContent
-          const response = await ai.models.generateContent({
+          const response = await activeAi.models.generateContent({
             model: model,
             contents: {
               parts: [{ text: prompt || "A beautiful illustration" }],
@@ -111,7 +130,7 @@ async function startServer() {
 
       // Handle TTS (text to speech)
       if (mode === "tts" || model === "gemini-3.1-flash-tts-preview") {
-        const response = await ai.models.generateContent({
+        const response = await activeAi.models.generateContent({
           model: "gemini-3.1-flash-tts-preview",
           contents: [{ parts: [{ text: `Say cheerfully: ${prompt}` }] }],
           config: {
@@ -138,7 +157,7 @@ async function startServer() {
       // Handle Translation Mode
       if (mode === "translation") {
         const systemIns = `You are a professional, exact translator. Translate the text directly and accurately into the target language: ${targetLanguage || "Spanish"}. Do not add any conversational filler or meta-commentary, just return the translated text itself.`;
-        const response = await ai.models.generateContent({
+        const response = await activeAi.models.generateContent({
           model: "gemini-3.5-flash",
           contents: [{ parts: [{ text: prompt }] }],
           config: {
@@ -157,7 +176,7 @@ async function startServer() {
 
       // For gemini-3.1-pro-preview, optionally add thinking level
       const isPro = model === "gemini-3.1-pro-preview";
-      const response = await ai.models.generateContent({
+      const response = await activeAi.models.generateContent({
         model: model,
         contents: formattedContents,
         config: isPro ? {
