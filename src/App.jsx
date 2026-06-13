@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { games as gamesData } from './data/games';
 
 // Dynamically preprocess games to ensure they all possess a stable and unique ID for keys and bookmarking
@@ -17,7 +16,6 @@ import { initialArticles, gameOptions, toneOptions, generateMockAIArticle } from
 import FlashcardsWorkspace from './components/FlashcardsWorkspace';
 import QuizWorkspace from './components/QuizWorkspace';
 import GrammarCheckerWorkspace from './components/GrammarCheckerWorkspace';
-import GeminiSandbox from './components/GeminiSandbox';
 import { 
   School, 
   Search, 
@@ -80,15 +78,6 @@ const safeStorage = {
 };
 
 export default function App() {
-  const isGeminiOnly = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('view') === 'gemini-only';
-  if (isGeminiOnly) {
-    return (
-      <div className="h-screen w-screen overflow-hidden">
-        <GeminiSandbox isStandalone={true} />
-      </div>
-    );
-  }
-
   const [theme, setTheme] = useState(() => {
     const saved = safeStorage.getItem('unblocked-theme');
     return saved && ['cyborg', 'violet', 'ice', 'rose-pine', 'none'].includes(saved) ? saved : 'none';
@@ -117,63 +106,15 @@ export default function App() {
   const [viewMode, setViewMode] = useState(() => {
     const saved = safeStorage.getItem('classroom-view-mode');
     if (saved === 'games') return 'games';
-    if (saved === 'gemini') return 'gemini';
     return 'articles'; // Innocent educational syllabus base is shown on first startup
   });
-
-  const [prevViewMode, setPrevViewMode] = useState(() => {
-    return safeStorage.getItem('classroom-prev-view-mode') || 'articles';
-  });
-
-  const setPrevViewModeAndSave = (mode) => {
-    setPrevViewMode(mode);
-    safeStorage.setItem('classroom-prev-view-mode', mode);
-  };
 
   const isPasscodeUnlocked = viewMode === 'games';
 
   const setViewModeAndSave = (mode) => {
-    if (mode === 'gemini') {
-      if (viewMode !== 'gemini') {
-        setPrevViewModeAndSave(viewMode);
-      }
-    }
     setViewMode(mode);
     safeStorage.setItem('classroom-view-mode', mode);
     safeStorage.setItem('classroom-passcode-unlocked', mode === 'games' ? 'true' : 'false');
-  };
-
-  const handleLaunchGeminiAboutBlank = () => {
-    const targetUrl = 'about:blank';
-    const win = window.open(targetUrl, '_blank');
-    if (!win) {
-      alert('Popup blocked! Please allow popups to open the Gemini AI Sandbox cloaked.');
-      return;
-    }
-
-    // Embed current route with isStandalone query parameter to trigger pure Gemini sandbox mode
-    const iframeSrc = `${window.location.origin}${window.location.pathname}?view=gemini-only${window.location.hash}`;
-    const googleClassroomFavicon = 'https://ssl.gstatic.com/classroom/favicon.png';
-    const title = 'Home - Classroom';
-
-    win.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${title}</title>
-        <link rel="icon" type="image/png" href="${googleClassroomFavicon}">
-        <meta charset="utf-8">
-        <style>
-          html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0c0a09; }
-          iframe { width: 100vw; height: 100vh; border: none; display: block; }
-        </style>
-      </head>
-      <body>
-        <iframe src="${iframeSrc}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
-      </body>
-      </html>
-    `);
-    win.document.close();
   };
 
   const [passcode, setPasscode] = useState('');
@@ -1062,25 +1003,6 @@ if (iconUrl.includes('.ico')) {
       return <div className="space-y-1.5">{elements}</div>;
     };
 
-    if (viewMode === 'gemini') {
-      return (
-        <motion.div 
-          initial={{ opacity: 0, y: 15, scale: 0.99 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -15, scale: 0.99 }}
-          transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
-          className="h-screen w-screen overflow-hidden bg-[var(--bg-color)]"
-        >
-          <GeminiSandbox 
-            isStandalone={false} 
-            onBackToApp={() => {
-              setViewModeAndSave(prevViewMode || 'articles');
-            }} 
-          />
-        </motion.div>
-      );
-    }
-
     if (viewMode === 'articles') {
       return (
         <div className="min-h-screen bg-[var(--bg-color)] text-[var(--text-primary)] flex flex-col p-4 md:p-6 transition-colors duration-300 relative select-text">
@@ -1130,16 +1052,6 @@ if (iconUrl.includes('.ico')) {
             </div>
 
             <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-start">
-              {/* Gemini Button */}
-              <button
-                onClick={handleLaunchGeminiAboutBlank}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all duration-200 cursor-pointer shadow-sm relative overflow-hidden group bg-gradient-to-r from-violet-600/10 to-indigo-600/10 border border-violet-500/30 text-indigo-500 hover:border-violet-500 hover:shadow-[0_0_12px_rgba(124,58,237,0.15)] bg-[var(--bg-secondary)]"
-                title="Open Gemini AI Academic Sandbox (opens in about:blank for decoy security)"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-violet-500 group-hover:rotate-12 transition-transform duration-300" />
-                <span>Gemini AI</span>
-              </button>
-
               {/* Sign out link */}
               <button
                 onClick={() => {
@@ -1898,16 +1810,6 @@ if (iconUrl.includes('.ico')) {
             <span className="text-xs opacity-50 block sm:inline mr-1">made by</span>
             <span className="font-bold text-[var(--accent-color)] tracking-wider">™ AND GRANDDIA2</span>
           </div>
-
-          {/* Gemini Button */}
-          <button
-            onClick={handleLaunchGeminiAboutBlank}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all duration-200 cursor-pointer shadow-sm relative overflow-hidden group bg-gradient-to-r from-violet-600/10 to-indigo-600/10 border border-violet-500/30 text-indigo-500 hover:border-violet-500 hover:shadow-[0_0_12px_rgba(124,58,237,0.15)] bg-[var(--bg-secondary)]"
-            title="Open Gemini AI Academic Sandbox (opens in about:blank for decoy security)"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-violet-500 group-hover:rotate-12 transition-transform duration-300" />
-            <span>Gemini AI</span>
-          </button>
 
           {/* Light/Dark slider */}
           <div className="flex items-center gap-2 border border-[var(--card-border)] bg-[var(--bg-secondary)] py-1 md:py-1.5 px-2.5 rounded-full shadow-sm">
