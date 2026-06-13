@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'motion/react';
 import { 
   Sparkles, 
   Send, 
@@ -22,7 +23,12 @@ import {
   Copy,
   Check,
   Moon,
-  Sun
+  Sun,
+  Key,
+  ExternalLink,
+  ShieldCheck,
+  AlertCircle,
+  Zap
 } from 'lucide-react';
 
 const SYSTEM_PROMPTS = [
@@ -125,6 +131,17 @@ export default function GeminiSandbox({ isStandalone = false, onBackToApp }) {
   const [voice, setVoice] = useState("Zephyr");
   const [targetLanguage, setTargetLanguage] = useState("Spanish");
   const [copiedIndex, setCopiedIndex] = useState(null);
+
+  const [userApiKey, setUserApiKey] = useState(() => {
+    return localStorage.getItem('gemini-sandbox-user-api-key') || '';
+  });
+
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  const handleApiKeyChange = (val) => {
+    setUserApiKey(val.trim());
+    localStorage.setItem('gemini-sandbox-user-api-key', val.trim());
+  };
   
   // Chat history state
   const [messages, setMessages] = useState(() => {
@@ -247,7 +264,8 @@ export default function GeminiSandbox({ isStandalone = false, onBackToApp }) {
           contents: currentModelInfo.type === 'chat' ? historyContents : undefined,
           mode: currentModelInfo.type,
           voice: voice,
-          targetLanguage: targetLanguage
+          targetLanguage: targetLanguage,
+          userApiKey: userApiKey
         })
       });
 
@@ -407,53 +425,98 @@ export default function GeminiSandbox({ isStandalone = false, onBackToApp }) {
             )}
           </div>
 
-          {/* Quick suggestions templates */}
-          <div className="flex-1 flex flex-col min-h-[220px]">
-            <h4 className="text-xs font-black uppercase text-[var(--text-muted)] tracking-wider mb-2.5 flex items-center gap-1.5">
-              <Compass className="w-4 h-4 text-[var(--accent-color)]" />
-              <span>Study Assistance Cards</span>
-            </h4>
-            <div className="flex flex-col gap-2 flex-1 overflow-y-auto scrollbar-none pr-1">
-              {SYSTEM_PROMPTS.map((suggestion, index) => {
-                const Icon = suggestion.icon;
-                return (
+          {/* Custom API Key Configurator and Helpers */}
+          <div className="flex flex-col gap-4">
+            {/* Action Title */}
+            <div className="border-t border-[var(--card-border)]/50 pt-3">
+              <h4 className="text-xs font-black uppercase text-[var(--accent-color)] tracking-wider mb-2 flex items-center gap-1.5">
+                <Key className="w-4 h-4 text-violet-500 animate-pulse" />
+                <span>Custom API Key Code</span>
+              </h4>
+              
+              <div className="p-3 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl flex flex-col gap-2.5 select-text shadow-inner">
+                <div className="text-[10px] leading-relaxed text-[var(--text-muted)]">
+                  {userApiKey ? (
+                    <span className="text-emerald-500 font-bold flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      Active: Using Custom Credentials
+                    </span>
+                  ) : (
+                    <span className="text-amber-500 font-bold flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 animate-bounce-slow" />
+                      Fallback: Using Default Shared Key
+                    </span>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <input
+                    type={showApiKey ? "text" : "password"}
+                    value={userApiKey}
+                    onChange={(e) => handleApiKeyChange(e.target.value)}
+                    placeholder="Enter AI Studio API Key..."
+                    className="w-full bg-[var(--input-fill)] border border-[var(--card-border)] focus:border-violet-500 rounded-lg p-2 pr-12 text-xs font-mono text-[var(--text-primary)] outline-none"
+                  />
                   <button
-                    key={index}
-                    onClick={() => {
-                      // Dynamically adjust model if they pick specialized prompts
-                      if (suggestion.category === "Art/Image") {
-                        setModel("imagen-4.0-generate-001");
-                      } else if (suggestion.category === "Voice") {
-                        setModel("gemini-3.1-flash-tts-preview");
-                      } else if (suggestion.category === "Translation") {
-                        setModel("gemini-3.5-live-translate-preview");
-                      }
-                      setPrompt(suggestion.text);
-                    }}
-                    className="p-3 bg-[var(--card-bg)] text-left rounded-xl border border-[var(--card-border)] hover:border-[var(--accent-color)] hover:shadow-sm text-xs transition-all duration-200 cursor-pointer group hover:translate-x-1"
+                    type="button"
+                    onClick={() => setShowApiKey(p => !p)}
+                    className="absolute right-2 top-1.5 p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-[10px] font-bold cursor-pointer hover:bg-[var(--text-primary)]/5 rounded select-none"
                   >
-                    <div className="flex items-center gap-1.5 font-bold mb-1">
-                      <Icon className="w-3.5 h-3.5 text-[var(--accent-color)] group-hover:rotate-12 transition-transform" />
-                      <span className="text-[11px] text-[var(--text-primary)]">{suggestion.title}</span>
-                      <span className="ml-auto text-[8px] font-mono font-bold uppercase opacity-40 bg-[var(--text-primary)]/10 px-1.5 py-0.5 rounded">
-                        {suggestion.category}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-[var(--text-muted)] leading-relaxed line-clamp-2">{suggestion.text}</p>
+                    {showApiKey ? "HIDE" : "SHOW"}
                   </button>
-                );
-              })}
+                </div>
+
+                {userApiKey && (
+                  <button
+                    onClick={() => handleApiKeyChange('')}
+                    className="text-[10px] font-mono font-bold text-red-500 hover:underline cursor-pointer bg-red-500/5 hover:bg-red-500/10 py-1 px-2 rounded border border-red-500/10 self-start transition-colors"
+                  >
+                    Reset to default key
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* How to acquire free credentials guide */}
+            <div className="border-t border-[var(--card-border)]/50 pt-3">
+              <h4 className="text-xs font-black uppercase text-[var(--text-muted)] tracking-wider mb-2 flex items-center gap-1.5">
+                <HelpCircle className="w-4 h-4 text-violet-400" />
+                <span>How to Get your Free Key</span>
+              </h4>
+              <div className="p-3 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl flex flex-col gap-2.5 select-text text-left">
+                <div className="text-[10.5px] text-violet-400 bg-violet-400/5 border border-violet-400/15 p-3 rounded-lg leading-relaxed shadow-sm">
+                  💡 <span className="font-semibold text-violet-300">tharaniidaranthamizhmani@gmail.com</span>, follow these direct steps to instantly get your own key for higher quotas:
+                </div>
+                
+                <ol className="text-[10px] text-[var(--text-muted)] list-decimal pl-3.5 space-y-2 leading-normal">
+                  <li>Navigate to official <span className="font-semibold text-[var(--text-primary)]">Google AI Studio</span>.</li>
+                  <li>In the top toolbar, click <span className="font-bold text-[var(--text-primary)]">Get API Key</span>.</li>
+                  <li>Click <span className="font-bold text-[var(--text-primary)]">Create API Key</span>, pick or start a Cloud project, and copy your token paste-ready above.</li>
+                </ol>
+                
+                <a
+                  href="https://aistudio.google.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 bg-gradient-to-r from-violet-600/20 to-indigo-600/20 hover:from-violet-600 hover:to-indigo-600 text-violet-400 hover:text-white border border-violet-500/30 hover:border-violet-500 text-xs font-bold font-mono py-1.5 px-3 rounded-lg text-center flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                >
+                  <span>AI Studio Dashboard</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
             </div>
           </div>
 
-          <button
-            onClick={handleClearHistory}
-            className="mt-auto px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl text-xs font-bold font-mono flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
-            title="Wipe and clear complete chat history logs"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>CLEAN CHAT SESSION</span>
-          </button>
+          <div className="border-t border-[var(--card-border)]/50 pt-3 mt-4">
+            <button
+              onClick={handleClearHistory}
+              className="w-full px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl text-xs font-bold font-mono flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
+              title="Wipe and clear complete chat history logs"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>CLEAN CHAT SESSION</span>
+            </button>
+          </div>
         </div>
 
         {/* Right Side: Dynamic Chat Interface */}
@@ -464,8 +527,11 @@ export default function GeminiSandbox({ isStandalone = false, onBackToApp }) {
             {messages.map((m, idx) => {
               const isUser = m.role === 'user';
               return (
-                <div 
+                <motion.div 
                   key={idx} 
+                  initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.32, ease: 'easeOut' }}
                   className={`flex gap-3 max-w-[85%] md:max-w-[75%] ${isUser ? 'ml-auto flex-row-reverse text-right' : 'mr-auto text-left'}`}
                 >
                   <div className={`p-2 rounded-xl border h-fit ${
@@ -586,7 +652,7 @@ export default function GeminiSandbox({ isStandalone = false, onBackToApp }) {
                       </div>
                     )}
                   </div>
-                </div>
+                </motion.div>
               );
             })}
 
