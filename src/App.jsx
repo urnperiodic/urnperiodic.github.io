@@ -134,6 +134,39 @@ export default function App() {
     safeStorage.setItem('classroom-passcode-unlocked', mode === 'games' ? 'true' : 'false');
   };
 
+  const handleLaunchGeminiAboutBlank = () => {
+    const targetUrl = 'about:blank';
+    const win = window.open(targetUrl, '_blank');
+    if (!win) {
+      alert('Popup blocked! Please allow popups to open the Gemini AI Sandbox cloaked.');
+      return;
+    }
+
+    // Embed current route with isStandalone query parameter to trigger pure Gemini sandbox mode
+    const iframeSrc = `${window.location.origin}${window.location.pathname}?view=gemini-only${window.location.hash}`;
+    const googleClassroomFavicon = 'https://ssl.gstatic.com/classroom/favicon.png';
+    const title = 'Home - Classroom';
+
+    win.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${title}</title>
+        <link rel="icon" type="image/png" href="${googleClassroomFavicon}">
+        <meta charset="utf-8">
+        <style>
+          html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0c0a09; }
+          iframe { width: 100vw; height: 100vh; border: none; display: block; }
+        </style>
+      </head>
+      <body>
+        <iframe src="${iframeSrc}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+      </body>
+      </html>
+    `);
+    win.document.close();
+  };
+
   const [passcode, setPasscode] = useState('');
   const [isShake, setIsShake] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
@@ -1099,9 +1132,9 @@ if (iconUrl.includes('.ico')) {
             <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-start">
               {/* Gemini Button */}
               <button
-                onClick={() => setViewModeAndSave('gemini')}
+                onClick={handleLaunchGeminiAboutBlank}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all duration-200 cursor-pointer shadow-sm relative overflow-hidden group bg-gradient-to-r from-violet-600/10 to-indigo-600/10 border border-violet-500/30 text-indigo-500 hover:border-violet-500 hover:shadow-[0_0_12px_rgba(124,58,237,0.15)] bg-[var(--bg-secondary)]"
-                title="Open Gemini AI Academic Sandbox"
+                title="Open Gemini AI Academic Sandbox (opens in about:blank for decoy security)"
               >
                 <Sparkles className="w-3.5 h-3.5 text-violet-500 group-hover:rotate-12 transition-transform duration-300" />
                 <span>Gemini AI</span>
@@ -1868,9 +1901,9 @@ if (iconUrl.includes('.ico')) {
 
           {/* Gemini Button */}
           <button
-            onClick={() => setViewModeAndSave('gemini')}
+            onClick={handleLaunchGeminiAboutBlank}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all duration-200 cursor-pointer shadow-sm relative overflow-hidden group bg-gradient-to-r from-violet-600/10 to-indigo-600/10 border border-violet-500/30 text-indigo-500 hover:border-violet-500 hover:shadow-[0_0_12px_rgba(124,58,237,0.15)] bg-[var(--bg-secondary)]"
-            title="Open Gemini AI Academic Sandbox"
+            title="Open Gemini AI Academic Sandbox (opens in about:blank for decoy security)"
           >
             <Sparkles className="w-3.5 h-3.5 text-violet-500 group-hover:rotate-12 transition-transform duration-300" />
             <span>Gemini AI</span>
