@@ -17,6 +17,7 @@ import FlashcardsWorkspace from './components/FlashcardsWorkspace';
 import QuizWorkspace from './components/QuizWorkspace';
 import GrammarCheckerWorkspace from './components/GrammarCheckerWorkspace';
 import ChatWorkspace from './components/ChatWorkspace';
+import BloonsSandbox from './components/BloonsSandbox';
 import { 
   School, 
   Search, 
@@ -1719,6 +1720,8 @@ if (iconUrl.includes('.ico')) {
     );
   }
 
+
+
   return (
     <div className="min-h-screen flex flex-col transition-colors duration-300">
       {/* HEADER */}
@@ -1860,7 +1863,21 @@ if (iconUrl.includes('.ico')) {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
           {/* Alt Links Removed */}
 
-          <div className="flex flex-wrap items-center gap-2 md:ml-auto w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2 md:ml-auto w-full md:w-auto overflow-visible">
+            {/* Go back to games back button */}
+            {filter === 'chat' && (
+              <button
+                id="chat-back-button"
+                onClick={() => setFilter('all')}
+                className="flex items-center gap-1.5 text-xs font-mono font-bold py-1.5 px-3.5 rounded-full border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-primary)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-all cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] active:scale-98"
+                title="Go back to games list"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                <span>Go back to games</span>
+              </button>
+            )}
+
             {/* AI Socratic Tutor button */}
             <button
               onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
@@ -2560,6 +2577,19 @@ if (iconUrl.includes('.ico')) {
 
             </div>
           )
+        ) : selectedGame.title === 'Bloons TD 5 Sandbox' ? (
+          <div className="flex flex-col gap-4 animate-fade-in bg-[#0c0f16]/90 p-4 md:p-6 rounded-2xl border border-zinc-800 shadow-2xl">
+            <div className="flex justify-start">
+              <button
+                onClick={() => setSelectedGame(null)}
+                className="flex items-center gap-2 border border-[var(--card-border)] hover:border-[var(--accent-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)] transition-all font-mono py-1.5 px-3.5 rounded-lg text-xs font-bold bg-[var(--bg-secondary)] leading-normal cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Go back to game grid</span>
+              </button>
+            </div>
+            <BloonsSandbox onClose={() => setSelectedGame(null)} />
+          </div>
         ) : (
             /* ACTIVE GAME SCREEN */
             <div className="flex flex-col gap-4 animate-fade-in">
