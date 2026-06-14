@@ -32,10 +32,10 @@ export default function ChatWorkspace({ onClose }) {
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [revealKey, setRevealKey] = useState(false);
 
-  const [customModel, setCustomModel] = useState(() => localStorage.getItem('user_gemini_model') || 'gemini-3.5-flash');
+  const [customModel, setCustomModel] = useState(() => localStorage.getItem('user_gemini_model') || 'gemini-2.5-flash');
   const [selectedPresetModel, setSelectedPresetModel] = useState(() => {
-    const saved = localStorage.getItem('user_gemini_model') || 'gemini-3.5-flash';
-    const presets = ['gemini-3.5-flash', 'gemini-3.5-pro', 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash-exp'];
+    const saved = localStorage.getItem('user_gemini_model') || 'gemini-2.5-flash';
+    const presets = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro', 'gemini-3-flash', 'gemini-3.1-pro-preview'];
     return presets.includes(saved) ? saved : 'custom';
   });
 
@@ -184,11 +184,7 @@ export default function ChatWorkspace({ onClose }) {
 
     // Local helper for direct client-side calling when running in a static environment (e.g. GitHub Pages)
     const callGeminiDirect = async (text, history, apiKey, modelId, currentImage) => {
-      let apiModel = modelId || "gemini-1.5-flash";
-      if (apiModel === 'gemini-3.5-flash') apiModel = "gemini-1.5-flash";
-      if (apiModel === 'gemini-3.5-pro') apiModel = "gemini-1.5-pro";
-      if (apiModel === 'gemini-2.5-flash') apiModel = "gemini-1.5-flash";
-      if (apiModel === 'gemini-2.5-pro') apiModel = "gemini-1.5-pro";
+      const apiModel = modelId || "gemini-2.5-flash";
 
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${apiKey}`;
 
@@ -496,7 +492,7 @@ app.post("/api/chat", async (req, res) => {
     contents.push({ role: 'user', parts: [{ text: message }] });
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: contents,
       config: {
         systemInstruction: "You are a helpful, expert companion educator tutor."
@@ -578,11 +574,11 @@ app.post("/api/chat", async (req, res) => {
                 className="bg-transparent border-none outline-none font-bold text-[var(--accent-color)] cursor-pointer text-[10px]"
                 style={{ colorScheme: 'dark' }}
               >
-                <option value="gemini-3.5-flash" style={{ backgroundColor: 'var(--card-bg, #120e2e)', color: 'var(--text-primary, #ddd6fe)' }}>gemini-3.5-flash (Fast)</option>
-                <option value="gemini-3.5-pro" style={{ backgroundColor: 'var(--card-bg, #120e2e)', color: 'var(--text-primary, #ddd6fe)' }}>gemini-3.5-pro (Smart)</option>
-                <option value="gemini-2.5-flash" style={{ backgroundColor: 'var(--card-bg, #120e2e)', color: 'var(--text-primary, #ddd6fe)' }}>gemini-2.5-flash (Standard)</option>
-                <option value="gemini-2.5-pro" style={{ backgroundColor: 'var(--card-bg, #120e2e)', color: 'var(--text-primary, #ddd6fe)' }}>gemini-2.5-pro (Logic)</option>
-                <option value="gemini-2.0-flash-exp" style={{ backgroundColor: 'var(--card-bg, #120e2e)', color: 'var(--text-primary, #ddd6fe)' }}>gemini-2.0-flash-exp (Expo)</option>
+                <option value="gemini-2.5-flash" style={{ backgroundColor: 'var(--card-bg, #120e2e)', color: 'var(--text-primary, #ddd6fe)' }}>Gemini 2.5 Flash</option>
+                <option value="gemini-2.5-flash-lite" style={{ backgroundColor: 'var(--card-bg, #120e2e)', color: 'var(--text-primary, #ddd6fe)' }}>Gemini 2.5 Flash-lite</option>
+                <option value="gemini-2.5-pro" style={{ backgroundColor: 'var(--card-bg, #120e2e)', color: 'var(--text-primary, #ddd6fe)' }}>Gemini 2.5 Pro</option>
+                <option value="gemini-3-flash" style={{ backgroundColor: 'var(--card-bg, #120e2e)', color: 'var(--text-primary, #ddd6fe)' }}>Gemini 3 Flash</option>
+                <option value="gemini-3.1-pro-preview" style={{ backgroundColor: 'var(--card-bg, #120e2e)', color: 'var(--text-primary, #ddd6fe)' }}>Gemini 3.1 Pro Preview</option>
                 <option value="custom" style={{ backgroundColor: 'var(--card-bg, #120e2e)', color: 'var(--text-primary, #ddd6fe)' }}>Custom ID...</option>
               </select>
             </div>
