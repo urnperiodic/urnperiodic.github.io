@@ -172,17 +172,123 @@ export default function ChatWorkspace({ onClose }) {
     setInputText('');
     setIsLoading(true);
 
-    try {
-      // Build conversation history to send (excluding the initial greeting)
-      const chatHistory = messages
-        .filter((_, idx) => idx > 0) // Skip first default welcome message
-        .map(msg => ({
-          role: msg.role,
-          content: msg.content,
-          image: msg.image || undefined,
-          imageMimeType: msg.imageMimeType || undefined
-        }));
+    // Build conversation history to send (excluding the initial greeting)
+    const chatHistory = messages
+      .filter((_, idx) => idx > 0) // Skip first default welcome message
+      .map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        image: msg.image || undefined,
+        imageMimeType: msg.imageMimeType || undefined
+      }));
 
+    // Local helper for direct client-side calling when running in a static environment (e.g. GitHub Pages)
+    const callGeminiDirect = async (text, history, apiKey, modelId, currentImage) => {
+      let apiModel = modelId || "gemini-1.5-flash";
+      if (apiModel === 'gemini-3.5-flash') apiModel = "gemini-1.5-flash";
+      if (apiModel === 'gemini-3.5-pro') apiModel = "gemini-1.5-pro";
+      if (apiModel === 'gemini-2.5-flash') apiModel = "gemini-1.5-flash";
+      if (apiModel === 'gemini-2.5-pro') apiModel = "gemini-1.5-pro";
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${apiKey}`;
+
+      const contents = [];
+      for (const msg of history) {
+        const parts = [{ text: msg.content }];
+        if (msg.image && typeof msg.image === 'string') {
+          let base64Data = msg.image;
+          if (base64Data.includes(";base64,")) {
+            base64Data = base64Data.split(";base64,").pop() || "";
+          }
+          parts.push({
+            inlineData: {
+              mimeType: msg.imageMimeType || "image/jpeg",
+              data: base64Data
+            }
+          });
+        }
+        contents.push({
+          role: msg.role === 'model' ? 'model' : 'user',
+          parts: parts
+        });
+      }
+
+      const currentParts = [{ text: text }];
+      if (currentImage && currentImage.data) {
+        let base64Data = currentImage.data;
+        if (base64Data.includes(";base64,")) {
+          base64Data = base64Data.split(";base64,").pop() || "";
+        }
+        currentParts.push({
+          inlineData: {
+            mimeType: currentImage.mimeType || "image/jpeg",
+            data: base64Data
+          }
+        });
+      }
+
+      contents.push({
+        role: 'user',
+        parts: currentParts
+      });
+
+      const responseDirect = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: contents,
+          systemInstruction: {
+            parts: [{
+              text: "You are a helpful, intelligent, and reliable AI assistant integrated into this website. Adapt to the user's level of understanding, explain clearly, format with markdown, and prioritize correctness."
+            }]
+          }
+        })
+      });
+
+      if (!responseDirect.ok) {
+        const errData = await responseDirect.json().catch(() => ({}));
+        throw new Error(errData?.error?.message || `Google API error (Status ${responseDirect.status})`);
+      }
+
+      const resJson = await responseDirect.json();
+      const outputText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!outputText) {
+        throw new Error("No responses received from the direct Google Gemini standard API.");
+      }
+      return outputText;
+    };
+
+    try {
+      // First, check if we are on a known static files deployment (like GitHub Pages or other purely client hostings)
+      const hostname = window.location.hostname;
+      const isStaticHost = hostname.endsWith('.github.io') || 
+                           hostname.endsWith('.pages.dev') || 
+                           hostname.endsWith('.vercel.app') && !hostname.includes('ais-dev');
+
+      if (isStaticHost) {
+        if (!customApiKey.trim()) {
+          throw new Error("STATIC_HOSTING_NO_KEY");
+        }
+        // Direct call bypass
+        const directReply = await callGeminiDirect(
+          textToSend,
+          chatHistory,
+          customApiKey.trim(),
+          customModel || undefined,
+          currentAttachedFile ? { mimeType: currentAttachedFile.type, data: currentAttachedFile.base64 } : undefined
+        );
+
+        setMessages(prev => [...prev, {
+          role: 'model',
+          content: directReply,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+        return;
+      }
+
+      // Default: Attempt full-stack server calling
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -196,6 +302,12 @@ export default function ChatWorkspace({ onClose }) {
           image: currentAttachedFile ? { mimeType: currentAttachedFile.type, data: currentAttachedFile.base64 } : undefined
         })
       });
+
+      // Catch content-type which is not JSON (e.g. 404 HTML fallback page)
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("text/html") || response.status === 404) {
+        throw new Error("BACKEND_ROUTING_REJECTED");
+      }
 
       const data = await response.json();
 
@@ -212,11 +324,48 @@ export default function ChatWorkspace({ onClose }) {
 
     } catch (err) {
       console.error('Chat error:', err);
-      // Restore attached state if sending failed so user doesn't lose it
+      
+      // If we failed with backend routing rejected, check if we can fall back directly to client call with loaded custom key
+      const isStaticFallbackAction = err.message === "BACKEND_ROUTING_REJECTED" || 
+                                     err.message.includes("Unexpected token") || 
+                                     err.message.includes("Failed to fetch");
+
+      if (isStaticFallbackAction) {
+        if (customApiKey.trim()) {
+          try {
+            const fallbackReply = await callGeminiDirect(
+              textToSend,
+              chatHistory,
+              customApiKey.trim(),
+              customModel || undefined,
+              currentAttachedFile ? { mimeType: currentAttachedFile.type, data: currentAttachedFile.base64 } : undefined
+            );
+
+            setMessages(prev => [...prev, {
+              role: 'model',
+              content: fallbackReply,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }]);
+            return;
+          } catch (directErr) {
+            setErrorMessage(`Direct Gemini API failed: ${directErr.message}`);
+            return;
+          }
+        } else {
+          setErrorMessage("GitHub Pages / Static Environment Detected: Since GitHub Pages is purely static, it cannot host the secure Node.js backend. To run the AI here, click the 'Set Key' button above to securely configure your custom Gemini API key directly in your browser's local storage.");
+          if (currentAttachedFile) setAttachedFile(currentAttachedFile);
+          return;
+        }
+      }
+
+      // Preserve attached file if standard sending failed
       if (currentAttachedFile) {
         setAttachedFile(currentAttachedFile);
       }
-      setErrorMessage(err.message || 'Failed to connect to the AI service. Is your secure backend running?');
+      setErrorMessage(err.message === "STATIC_HOSTING_NO_KEY" 
+        ? "GitHub Pages / Static Environment Detected: Since GitHub Pages is purely static, it cannot host the secure Node.js backend. To run the AI here, click the 'Set Key' button above to securely configure your custom Gemini API key directly in your browser's local storage."
+        : (err.message || 'Failed to connect to the AI service. Is your secure backend running?')
+      );
     } finally {
       setIsLoading(false);
     }
