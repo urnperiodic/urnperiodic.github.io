@@ -182,9 +182,20 @@ export default function ChatWorkspace({ onClose }) {
         imageMimeType: msg.imageMimeType || undefined
       }));
 
+    // Helper to map virtual model IDs from the client to real supported Gemini models in the Developer API v1beta
+    const mapVirtualModel = (m) => {
+      const lower = (m || "").toLowerCase().trim();
+      if (lower === "gemini-2.5-flash") return "gemini-2.0-flash";
+      if (lower === "gemini-2.5-flash-lite") return "gemini-2.0-flash-lite";
+      if (lower === "gemini-2.5-pro") return "gemini-1.5-pro";
+      if (lower === "gemini-3-flash") return "gemini-2.0-flash";
+      if (lower === "gemini-3.1-pro-preview") return "gemini-1.5-pro";
+      return lower || "gemini-1.5-flash";
+    };
+
     // Local helper for direct client-side calling when running in a static environment (e.g. GitHub Pages)
     const callGeminiDirect = async (text, history, apiKey, modelId, currentImage) => {
-      const apiModel = modelId || "gemini-2.5-flash";
+      const apiModel = mapVirtualModel(modelId || "gemini-2.5-flash");
 
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${apiKey}`;
 
