@@ -426,10 +426,10 @@ if (iconUrl.includes('.ico')) {
         updateFavicon("https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png");
       } else if (decoyType === 'docs') {
         setBothTitles("Google Docs");
-        updateFavicon("https://www.google.com/s2/favicons?sz=64&domain=docs.google.com");
+        updateFavicon("https://ssl.gstatic.com/docs/documents/images/docs-favicon-2026-v2.ico");
       } else if (decoyType === 'gmail') {
         setBothTitles("Inbox - Jersey City Public Schools");
-        updateFavicon("https://www.google.com/s2/favicons?sz=64&domain=mail.google.com");
+        updateFavicon("https://ssl.gstatic.com/ui/v1/icons/mail/images/favicon_gmail_2026_v2.ico");
       } else {
         setBothTitles("StudyTools");
         updateFavicon(bookSvgDataUri);
