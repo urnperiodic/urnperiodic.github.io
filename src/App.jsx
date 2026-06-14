@@ -17,7 +17,6 @@ import FlashcardsWorkspace from './components/FlashcardsWorkspace';
 import QuizWorkspace from './components/QuizWorkspace';
 import GrammarCheckerWorkspace from './components/GrammarCheckerWorkspace';
 import ChatWorkspace from './components/ChatWorkspace';
-import BloonsSandbox from './components/BloonsSandbox';
 import { 
   School, 
   Search, 
