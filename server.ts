@@ -133,7 +133,7 @@ async function startServer() {
 
       // Stream / Generate content using recommended model or client defined model
       const completion = await ai.models.generateContent({
-        model: model || "gemini-3.5-flash",
+        model: model || "gemini-2.5-flash",
         contents: contents,
         config: {
           systemInstruction: `You are a helpful, intelligent, and reliable AI assistant integrated into this website.
