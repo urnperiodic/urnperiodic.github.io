@@ -16,6 +16,7 @@ import { initialArticles, gameOptions, toneOptions, generateMockAIArticle } from
 import FlashcardsWorkspace from './components/FlashcardsWorkspace';
 import QuizWorkspace from './components/QuizWorkspace';
 import GrammarCheckerWorkspace from './components/GrammarCheckerWorkspace';
+import ChatWorkspace from './components/ChatWorkspace';
 import { 
   School, 
   Search, 
@@ -1860,6 +1861,20 @@ if (iconUrl.includes('.ico')) {
           {/* Alt Links Removed */}
 
           <div className="flex flex-wrap items-center gap-2 md:ml-auto w-full md:w-auto">
+            {/* AI Socratic Tutor button */}
+            <button
+              onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
+              className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
+                filter === 'chat'
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
+                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
+              }`}
+              title="Toggle AI Socratic Tutor - Ask Study/Academic Questions"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+              <span>AI CHAT TUTOR</span>
+            </button>
+
             {/* Suffix Select */}
             <div className="flex items-center bg-[var(--card-bg)] border border-[var(--card-border)] rounded-full px-2.5 py-1.5 text-xs text-[var(--text-muted)] font-mono shadow-sm">
               <span className="text-[10px] uppercase font-extrabold mr-1.5 text-[var(--accent-color)]">Tab Target:</span>
@@ -1984,6 +1999,9 @@ if (iconUrl.includes('.ico')) {
                 <option value="gmail" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Inbox - Jersey City Public Schools</option>
               </select>
             </div>
+          </div>
+        </div>
+      </section>
 
             {/* Hidden legacy frame creator to preserve large assets cleanly */}
             <div style={{ display: 'none' }}>
@@ -2282,39 +2300,41 @@ if (iconUrl.includes('.ico')) {
               <span>HIDDEN LEGACY BUTTON</span>
             </button>
             </div>
-          </div>
-        </div>
-      </section>
 
       {/* MAIN CONTAINER: SIDEBAR + GAMES */}
-      <div className="flex-1 flex flex-col md:flex-row max-w-8xl w-full mx-auto p-4 md:p-6 gap-6 self-center">
+      <div className={`flex-1 flex flex-col md:flex-row w-full mx-auto transition-all duration-300 ${
+        filter === 'chat' 
+          ? 'max-w-none p-0 gap-0 border-t border-[var(--card-border)]/50' 
+          : 'max-w-8xl p-4 md:p-6 gap-6 self-center'
+      }`}>
         
         {/* LEFT NAV PANEL - CAT SIDEBAR */}
-        <aside className={`transition-all duration-300 ease-in-out shrink-0 flex flex-col gap-2 overflow-hidden ${
-          sidebarOpen ? 'w-full md:w-64' : 'w-full md:w-14'
-        }`}>
-          
-          <div className="flex items-center justify-between px-2 py-1 min-h-[36px]">
-            {sidebarOpen ? (
-              <span className="text-[10px] font-mono tracking-wider opacity-50 uppercase whitespace-nowrap">
-                Browse Portals
-              </span>
-            ) : (
-              <span className="hidden md:inline text-[9px] font-mono tracking-wider opacity-50 uppercase text-center mx-auto font-bold text-[var(--accent-color)]">
-                NAV
-              </span>
-            )}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 rounded-lg hover:bg-[var(--card-bg)] text-[var(--accent-color)] transition-all duration-250 cursor-pointer flex items-center justify-center ml-auto"
-              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-            >
-              {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4 animate-bounce" />}
-            </button>
-          </div>
+        {filter !== 'chat' && (
+          <aside className={`transition-all duration-300 ease-in-out shrink-0 flex flex-col gap-2 overflow-hidden ${
+            sidebarOpen ? 'w-full md:w-64' : 'w-full md:w-14'
+          }`}>
+            
+            <div className="flex items-center justify-between px-2 py-1 min-h-[36px]">
+              {sidebarOpen ? (
+                <span className="text-[10px] font-mono tracking-wider opacity-50 uppercase whitespace-nowrap">
+                  Browse Portals
+                </span>
+              ) : (
+                <span className="hidden md:inline text-[9px] font-mono tracking-wider opacity-50 uppercase text-center mx-auto font-bold text-[var(--accent-color)]">
+                  NAV
+                </span>
+              )}
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-1.5 rounded-lg hover:bg-[var(--card-bg)] text-[var(--accent-color)] transition-all duration-250 cursor-pointer flex items-center justify-center ml-auto"
+                title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              >
+                {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4 animate-bounce" />}
+              </button>
+            </div>
 
-          <button
-            onClick={() => { setFilter('all'); setSelectedGame(null); }}
+            <button
+              onClick={() => { setFilter('all'); setSelectedGame(null); }}
             className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
               filter === 'all' && !selectedGame
                 ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
@@ -2433,16 +2453,20 @@ if (iconUrl.includes('.ico')) {
             <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Other Websites</span>
           </button>
 
-          
-
         </aside>
+        )}
 
         {/* MAIN BODY DISPLAY */}
         <main className="flex-1 min-w-0">
           
           {!selectedGame ? (
-            /* LIBRARY LIST VIEW */
-            <div className="flex flex-col gap-6">
+            filter === 'chat' ? (
+              <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)]">
+                <ChatWorkspace onClose={() => setFilter('all')} />
+              </div>
+            ) : (
+              /* LIBRARY LIST VIEW */
+              <div className="flex flex-col gap-6">
               
               <div className="flex justify-between items-center border-l-4 border-[var(--accent-color)] pl-3">
                 <div>
@@ -2535,7 +2559,8 @@ if (iconUrl.includes('.ico')) {
               )}
 
             </div>
-          ) : (
+          )
+        ) : (
             /* ACTIVE GAME SCREEN */
             <div className="flex flex-col gap-4 animate-fade-in">
               
