@@ -725,6 +725,7 @@ if (iconUrl.includes('.ico')) {
       const lines = text.split('\n');
       const elements = [];
       let i = 0;
+      let elementKey = 0;
       
       // Inline formatting helper
       const parseInlineFormatting = (str) => {
@@ -767,7 +768,7 @@ if (iconUrl.includes('.ico')) {
         
         return parts.length > 0 ? parts : cleaned;
       };
-
+      
       const formatEquationToHtml = (eq) => {
         let formatted = eq.trim();
         
@@ -844,7 +845,7 @@ if (iconUrl.includes('.ico')) {
         if (trimmed.startsWith('$$') && trimmed.endsWith('$$')) {
           const content = trimmed.substring(2, trimmed.length - 2);
           elements.push(
-            <div key={i} className="bg-[var(--bg-primary)] border border-[var(--accent-color)]/20 p-4 rounded-xl text-center my-4 shadow-sm text-[var(--accent-color)] flex items-center justify-center overflow-x-auto select-all">
+            <div key={elementKey++} className="bg-[var(--bg-primary)] border border-[var(--accent-color)]/20 p-4 rounded-xl text-center my-4 shadow-sm text-[var(--accent-color)] flex items-center justify-center overflow-x-auto select-all">
               {formatEquationToHtml(content)}
             </div>
           );
@@ -861,7 +862,7 @@ if (iconUrl.includes('.ico')) {
             i++;
           }
           elements.push(
-            <pre key={i} className="bg-black/40 border border-[var(--card-border)] p-4.5 rounded-xl text-[10.5px] font-mono text-[var(--text-primary)] whitespace-pre-wrap leading-normal shadow-inner my-3 select-all">
+            <pre key={elementKey++} className="bg-black/40 border border-[var(--card-border)] p-4.5 rounded-xl text-[10.5px] font-mono text-[var(--text-primary)] whitespace-pre-wrap leading-normal shadow-inner my-3 select-all">
               {codeBlockLines.join('\n')}
             </pre>
           );
@@ -871,7 +872,7 @@ if (iconUrl.includes('.ico')) {
 
         // 3. Simple blockquotes / horizontal separators
         if (trimmed.startsWith('---')) {
-          elements.push(<hr key={i} className="border-t border-[var(--card-border)] my-5" />);
+          elements.push(<hr key={elementKey++} className="border-t border-[var(--card-border)] my-5" />);
           i++;
           continue;
         }
@@ -900,7 +901,7 @@ if (iconUrl.includes('.ico')) {
             const bodyRows = filteredRows.slice(1).map(r => parseColumns(r));
             
             elements.push(
-              <div key={i} className="my-4.5 overflow-x-auto rounded-xl border border-[var(--card-border)] bg-[var(--bg-primary)]/40 shadow-sm">
+              <div key={elementKey++} className="my-4.5 overflow-x-auto rounded-xl border border-[var(--card-border)] bg-[var(--bg-primary)]/40 shadow-sm">
                 <table className="w-full text-left border-collapse text-[11px]">
                   <thead>
                     <tr className="bg-[var(--bg-secondary)] border-b border-[var(--card-border)]">
@@ -933,7 +934,7 @@ if (iconUrl.includes('.ico')) {
         if (trimmed.startsWith('###')) {
           const hText = trimmed.replace(/^###\s*/, '');
           elements.push(
-            <h4 key={i} className="text-xs font-bold font-mono tracking-tight text-[var(--text-primary)] border-l-2 border-[var(--accent-color)] pl-2.5 mt-5 mb-2 flex items-center gap-1.5 uppercase">
+            <h4 key={elementKey++} className="text-xs font-bold font-mono tracking-tight text-[var(--text-primary)] border-l-2 border-[var(--accent-color)] pl-2.5 mt-5 mb-2 flex items-center gap-1.5 uppercase">
               {parseInlineFormatting(hText)}
             </h4>
           );
@@ -945,7 +946,7 @@ if (iconUrl.includes('.ico')) {
         if (trimmed.startsWith('####')) {
           const hText = trimmed.replace(/^####\s*/, '');
           elements.push(
-            <h5 key={i} className="text-[11px] font-extrabold font-mono tracking-tight text-[var(--text-primary)] mt-3 mb-1 text-[var(--accent-color)]">
+            <h5 key={elementKey++} className="text-[11px] font-extrabold font-mono tracking-tight text-[var(--text-primary)] mt-3 mb-1 text-[var(--accent-color)]">
               {parseInlineFormatting(hText)}
             </h5>
           );
@@ -959,7 +960,7 @@ if (iconUrl.includes('.ico')) {
           // Identify if it's high indentation (sub-list)
           const isNested = line.startsWith('  ') || line.startsWith('\t') || trimmed.startsWith('○');
           elements.push(
-            <div key={i} className={`flex items-start gap-2 text-[11px] text-[var(--text-muted)] leading-relaxed mb-1.5 ${isNested ? 'ml-6' : 'ml-2'}`}>
+            <div key={elementKey++} className={`flex items-start gap-2 text-[11px] text-[var(--text-muted)] leading-relaxed mb-1.5 ${isNested ? 'ml-6' : 'ml-2'}`}>
               <span className={`flex-shrink-0 text-[10px] mt-0.5 select-none ${isNested ? 'text-[var(--text-muted)]/50 font-mono' : 'text-[var(--accent-color)]'}`}>
                 {isNested ? '○' : '◼'}
               </span>
@@ -975,7 +976,7 @@ if (iconUrl.includes('.ico')) {
           const itemNum = trimmed.match(/^(\d+)\./)[1];
           const cleanItem = trimmed.replace(/^\d+\.\s*/, '');
           elements.push(
-            <div key={i} className="flex items-start gap-2.5 text-[11px] text-[var(--text-muted)] leading-relaxed ml-2 mb-1.5">
+            <div key={elementKey++} className="flex items-start gap-2.5 text-[11px] text-[var(--text-muted)] leading-relaxed ml-2 mb-1.5">
               <span className="font-mono text-[9px] font-bold text-[var(--accent-color)] bg-[var(--accent-color)]/10 px-1.5 py-0.5 rounded border border-[var(--accent-color)]/20 flex-shrink-0 mt-0.5 min-w-[20px] text-center">
                 {itemNum}
               </span>
@@ -988,10 +989,10 @@ if (iconUrl.includes('.ico')) {
 
         // 9. Standard paragraphs
         if (trimmed === '') {
-          elements.push(<div key={i} className="h-2" />);
+          elements.push(<div key={elementKey++} className="h-2" />);
         } else {
           elements.push(
-            <p key={i} className="text-[11px] text-[var(--text-muted)] leading-relaxed mb-3 font-medium font-sans">
+            <p key={elementKey++} className="text-[11px] text-[var(--text-muted)] leading-relaxed mb-3 font-medium font-sans">
               {parseInlineFormatting(trimmed)}
             </p>
           );
