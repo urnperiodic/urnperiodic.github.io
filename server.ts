@@ -131,9 +131,20 @@ async function startServer() {
         parts: userParts
       });
 
+      // Map virtual model IDs from the client to real supported Gemini models in Google AI Studio Developer API
+      const mapVirtualModelInServer = (m: string | undefined): string => {
+        const lower = (m || "").toLowerCase().trim();
+        if (lower === "gemini-2.5-flash") return "gemini-2.0-flash";
+        if (lower === "gemini-2.5-flash-lite") return "gemini-2.0-flash-lite";
+        if (lower === "gemini-2.5-pro") return "gemini-1.5-pro";
+        if (lower === "gemini-3-flash") return "gemini-2.0-flash";
+        if (lower === "gemini-3.1-pro-preview") return "gemini-1.5-pro";
+        return lower || "gemini-1.5-flash";
+      };
+
       // Stream / Generate content using recommended model or client defined model
       const completion = await ai.models.generateContent({
-        model: model || "gemini-2.5-flash",
+        model: mapVirtualModelInServer(model || "gemini-2.5-flash"),
         contents: contents,
         config: {
           systemInstruction: `You are a helpful, intelligent, and reliable AI assistant integrated into this website.
