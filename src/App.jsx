@@ -1888,7 +1888,7 @@ if (iconUrl.includes('.ico')) {
               title="Toggle AI Socratic Tutor - Ask Study/Academic Questions"
             >
               <MessageSquare className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-              <span>AI CHAT TUTOR</span>
+              <span>GEMINI AI / GROQ AI</span>
             </button>
 
             {/* Suffix Select */}
