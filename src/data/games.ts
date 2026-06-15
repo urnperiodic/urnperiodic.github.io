@@ -19,7 +19,7 @@ export const games: Game[] = [
    {
     title: 'Cookie Clicker',
     description: '',
-    url: 'https://g8hh.github.io/cookieclicker/',
+    url: 'clcookieclicker.html',
     thumbnail: 'https://upload.wikimedia.org/wikipedia/en/0/06/Cookie_Clicker_logo.png',
     category: 'Solo'
   },
