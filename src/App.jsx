@@ -1,9 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { games as gamesData } from './data/games';
+
+// Dynamically preprocess games to ensure they all possess a stable and unique ID for keys and bookmarking
+const games = gamesData.map((game, index) => {
+  if (!game.id) {
+    const slug = (game.title || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    return {
+      ...game,
+      id: `game-gen-${index}-${slug}`
+    };
+  }
+  return game;
+});
 import { initialArticles, gameOptions, toneOptions, generateMockAIArticle } from './data/articles';
 import FlashcardsWorkspace from './components/FlashcardsWorkspace';
 import QuizWorkspace from './components/QuizWorkspace';
 import GrammarCheckerWorkspace from './components/GrammarCheckerWorkspace';
+import ChatWorkspace from './components/ChatWorkspace';
 import { 
   School, 
   Search, 
@@ -43,7 +56,8 @@ import {
   X,
   Shuffle,
   Cpu,
-  Box
+  Box,
+  Mail
 } from 'lucide-react';
 
 // Safe storage helper to prevent SecurityError crash in sandboxed iframes
@@ -80,6 +94,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
   const [zoom, setZoom] = useState(1);
+  const [failedThumbnails, setFailedThumbnails] = useState({});
   const [favorites, setFavorites] = useState(() => {
     try {
       const stored = safeStorage.getItem('unblocked-favorites');
@@ -125,17 +140,17 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlDecoyType = params.get('decoyType');
-      if (urlDecoyType && ['none', 'classroom', 'clever', 'campus'].includes(urlDecoyType)) {
+      if (urlDecoyType && ['none', 'classroom', 'clever', 'campus', 'docs', 'gmail'].includes(urlDecoyType)) {
         return urlDecoyType;
       }
       const urlDecoy = params.get('decoy');
       if (urlDecoy === 'true') return 'classroom';
       if (urlDecoy === 'false') return 'none';
-      if (urlDecoy && ['none', 'classroom', 'clever', 'campus'].includes(urlDecoy)) {
+      if (urlDecoy && ['none', 'classroom', 'clever', 'campus', 'docs', 'gmail'].includes(urlDecoy)) {
         return urlDecoy;
       }
       const cached = localStorage.getItem('study-tools-decoy-type');
-      if (cached && ['none', 'classroom', 'clever', 'campus'].includes(cached)) {
+      if (cached && ['none', 'classroom', 'clever', 'campus', 'docs', 'gmail'].includes(cached)) {
         return cached;
       }
       const cachedLegacy = localStorage.getItem('study-tools-classroom-decoy');
@@ -346,15 +361,37 @@ export default function App() {
 
     const updateFavicon = (href) => {
       const applyIcon = (doc, iconUrl) => {
-        let existingLink = doc.querySelector("link[rel*='icon']");
-        if (existingLink) {
-          existingLink.parentNode.removeChild(existingLink);
-        }
+        // Remove ALL existing favicon links to avoid browser caching or conflict issues
+        const existingLinks = doc.querySelectorAll("link[rel*='icon']");
+        existingLinks.forEach(link => {
+          if (link.parentNode) {
+            link.parentNode.removeChild(link);
+          }
+        });
+
+        // Determine correct mime-type
+let typeVal = 'image/png';
+if (iconUrl.includes('.ico')) {
+  typeVal = 'image/x-icon';
+} else if (iconUrl.includes('.webp')) {
+  typeVal = 'image/webp';
+} else if (iconUrl.includes('image/svg+xml') || iconUrl.startsWith('data:image/svg+xml')) {
+  typeVal = 'image/svg+xml';
+}
+
+        // Add standard icon element
         const newLink = doc.createElement('link');
-        newLink.rel = 'shortcut icon';
-        newLink.type = 'image/png';
+        newLink.rel = 'icon';
+        newLink.type = typeVal;
         newLink.href = iconUrl;
         doc.head.appendChild(newLink);
+
+        // Add shortcut icon element for maximum compatibility
+        const shortcutLink = doc.createElement('link');
+        shortcutLink.rel = 'shortcut icon';
+        shortcutLink.type = typeVal;
+        shortcutLink.href = iconUrl;
+        doc.head.appendChild(shortcutLink);
       };
 
       // Current document
@@ -387,6 +424,12 @@ export default function App() {
       } else if (decoyType === 'campus') {
         setBothTitles("Campus Student");
         updateFavicon("https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png");
+      } else if (decoyType === 'docs') {
+        setBothTitles("Google Docs");
+        updateFavicon("https://ssl.gstatic.com/docs/documents/images/docs-favicon-2026-v2.ico");
+      } else if (decoyType === 'gmail') {
+        setBothTitles("Inbox - Jersey City Public Schools");
+        updateFavicon("https://ssl.gstatic.com/ui/v1/icons/mail/images/favicon_gmail_2026_v2.ico");
       } else {
         setBothTitles("StudyTools");
         updateFavicon(bookSvgDataUri);
@@ -638,7 +681,7 @@ export default function App() {
   };
 
   // Filter games based on category sidebar, matching search query
-  const filteredGames = gamesData.filter(game => {
+  const filteredGames = games.filter(game => {
     if (filter === 'single') {
       if (!isSinglePlayerCategory(game.category)) return false;
     } else if (filter === 'multiplayer') {
@@ -683,6 +726,7 @@ export default function App() {
       const lines = text.split('\n');
       const elements = [];
       let i = 0;
+      let elementKey = 0;
       
       // Inline formatting helper
       const parseInlineFormatting = (str) => {
@@ -725,7 +769,7 @@ export default function App() {
         
         return parts.length > 0 ? parts : cleaned;
       };
-
+      
       const formatEquationToHtml = (eq) => {
         let formatted = eq.trim();
         
@@ -802,7 +846,7 @@ export default function App() {
         if (trimmed.startsWith('$$') && trimmed.endsWith('$$')) {
           const content = trimmed.substring(2, trimmed.length - 2);
           elements.push(
-            <div key={i} className="bg-[var(--bg-primary)] border border-[var(--accent-color)]/20 p-4 rounded-xl text-center my-4 shadow-sm text-[var(--accent-color)] flex items-center justify-center overflow-x-auto select-all">
+            <div key={elementKey++} className="bg-[var(--bg-primary)] border border-[var(--accent-color)]/20 p-4 rounded-xl text-center my-4 shadow-sm text-[var(--accent-color)] flex items-center justify-center overflow-x-auto select-all">
               {formatEquationToHtml(content)}
             </div>
           );
@@ -819,7 +863,7 @@ export default function App() {
             i++;
           }
           elements.push(
-            <pre key={i} className="bg-black/40 border border-[var(--card-border)] p-4.5 rounded-xl text-[10.5px] font-mono text-[var(--text-primary)] whitespace-pre-wrap leading-normal shadow-inner my-3 select-all">
+            <pre key={elementKey++} className="bg-black/40 border border-[var(--card-border)] p-4.5 rounded-xl text-[10.5px] font-mono text-[var(--text-primary)] whitespace-pre-wrap leading-normal shadow-inner my-3 select-all">
               {codeBlockLines.join('\n')}
             </pre>
           );
@@ -829,7 +873,7 @@ export default function App() {
 
         // 3. Simple blockquotes / horizontal separators
         if (trimmed.startsWith('---')) {
-          elements.push(<hr key={i} className="border-t border-[var(--card-border)] my-5" />);
+          elements.push(<hr key={elementKey++} className="border-t border-[var(--card-border)] my-5" />);
           i++;
           continue;
         }
@@ -858,7 +902,7 @@ export default function App() {
             const bodyRows = filteredRows.slice(1).map(r => parseColumns(r));
             
             elements.push(
-              <div key={i} className="my-4.5 overflow-x-auto rounded-xl border border-[var(--card-border)] bg-[var(--bg-primary)]/40 shadow-sm">
+              <div key={elementKey++} className="my-4.5 overflow-x-auto rounded-xl border border-[var(--card-border)] bg-[var(--bg-primary)]/40 shadow-sm">
                 <table className="w-full text-left border-collapse text-[11px]">
                   <thead>
                     <tr className="bg-[var(--bg-secondary)] border-b border-[var(--card-border)]">
@@ -891,7 +935,7 @@ export default function App() {
         if (trimmed.startsWith('###')) {
           const hText = trimmed.replace(/^###\s*/, '');
           elements.push(
-            <h4 key={i} className="text-xs font-bold font-mono tracking-tight text-[var(--text-primary)] border-l-2 border-[var(--accent-color)] pl-2.5 mt-5 mb-2 flex items-center gap-1.5 uppercase">
+            <h4 key={elementKey++} className="text-xs font-bold font-mono tracking-tight text-[var(--text-primary)] border-l-2 border-[var(--accent-color)] pl-2.5 mt-5 mb-2 flex items-center gap-1.5 uppercase">
               {parseInlineFormatting(hText)}
             </h4>
           );
@@ -903,7 +947,7 @@ export default function App() {
         if (trimmed.startsWith('####')) {
           const hText = trimmed.replace(/^####\s*/, '');
           elements.push(
-            <h5 key={i} className="text-[11px] font-extrabold font-mono tracking-tight text-[var(--text-primary)] mt-3 mb-1 text-[var(--accent-color)]">
+            <h5 key={elementKey++} className="text-[11px] font-extrabold font-mono tracking-tight text-[var(--text-primary)] mt-3 mb-1 text-[var(--accent-color)]">
               {parseInlineFormatting(hText)}
             </h5>
           );
@@ -917,7 +961,7 @@ export default function App() {
           // Identify if it's high indentation (sub-list)
           const isNested = line.startsWith('  ') || line.startsWith('\t') || trimmed.startsWith('○');
           elements.push(
-            <div key={i} className={`flex items-start gap-2 text-[11px] text-[var(--text-muted)] leading-relaxed mb-1.5 ${isNested ? 'ml-6' : 'ml-2'}`}>
+            <div key={elementKey++} className={`flex items-start gap-2 text-[11px] text-[var(--text-muted)] leading-relaxed mb-1.5 ${isNested ? 'ml-6' : 'ml-2'}`}>
               <span className={`flex-shrink-0 text-[10px] mt-0.5 select-none ${isNested ? 'text-[var(--text-muted)]/50 font-mono' : 'text-[var(--accent-color)]'}`}>
                 {isNested ? '○' : '◼'}
               </span>
@@ -933,7 +977,7 @@ export default function App() {
           const itemNum = trimmed.match(/^(\d+)\./)[1];
           const cleanItem = trimmed.replace(/^\d+\.\s*/, '');
           elements.push(
-            <div key={i} className="flex items-start gap-2.5 text-[11px] text-[var(--text-muted)] leading-relaxed ml-2 mb-1.5">
+            <div key={elementKey++} className="flex items-start gap-2.5 text-[11px] text-[var(--text-muted)] leading-relaxed ml-2 mb-1.5">
               <span className="font-mono text-[9px] font-bold text-[var(--accent-color)] bg-[var(--accent-color)]/10 px-1.5 py-0.5 rounded border border-[var(--accent-color)]/20 flex-shrink-0 mt-0.5 min-w-[20px] text-center">
                 {itemNum}
               </span>
@@ -946,10 +990,10 @@ export default function App() {
 
         // 9. Standard paragraphs
         if (trimmed === '') {
-          elements.push(<div key={i} className="h-2" />);
+          elements.push(<div key={elementKey++} className="h-2" />);
         } else {
           elements.push(
-            <p key={i} className="text-[11px] text-[var(--text-muted)] leading-relaxed mb-3 font-medium font-sans">
+            <p key={elementKey++} className="text-[11px] text-[var(--text-muted)] leading-relaxed mb-3 font-medium font-sans">
               {parseInlineFormatting(trimmed)}
             </p>
           );
@@ -1675,6 +1719,8 @@ export default function App() {
     );
   }
 
+
+
   return (
     <div className="min-h-screen flex flex-col transition-colors duration-300">
       {/* HEADER */}
@@ -1685,7 +1731,21 @@ export default function App() {
           <div 
             onClick={() => { setFilter('all'); setSelectedGame(null); setSearchQuery(''); }}
             className="flex items-center gap-2.5 cursor-pointer select-none group"
-            title={decoyType !== 'none' ? `Go to ${decoyType === 'classroom' ? 'Classroom' : decoyType === 'clever' ? 'Clever' : 'Campus'} homepage` : "Go to StudyTools homepage"}
+            title={
+              decoyType !== 'none' 
+                ? `Go to ${
+                    decoyType === 'classroom' 
+                      ? 'Classroom' 
+                      : decoyType === 'clever' 
+                      ? 'Clever' 
+                      : decoyType === 'campus' 
+                      ? 'Campus' 
+                      : decoyType === 'docs' 
+                      ? 'Google Docs' 
+                      : 'Inbox'
+                  } homepage` 
+                : "Go to StudyTools homepage"
+            }
           >
             <div className="p-2 bg-[var(--accent-color)] text-[var(--bg-color)] rounded-lg border border-[var(--card-border)] shadow-[0_2px_8.5px_var(--accent-shadow)] group-hover:rotate-12 group-hover:scale-110 transition-all duration-300 transform">
               {decoyType === 'classroom' ? (
@@ -1694,6 +1754,10 @@ export default function App() {
                 <Compass className="w-5.5 h-5.5" />
               ) : decoyType === 'campus' ? (
                 <School className="w-5.5 h-5.5" />
+              ) : decoyType === 'docs' ? (
+                <FileText className="w-5.5 h-5.5" />
+              ) : decoyType === 'gmail' ? (
+                <Mail className="w-5.5 h-5.5" />
               ) : (
                 <BookOpen className="w-5.5 h-5.5" />
               )}
@@ -1706,6 +1770,10 @@ export default function App() {
                   ? "Clever | Log in with Clever" 
                   : decoyType === 'campus' 
                   ? "Campus Student" 
+                  : decoyType === 'docs' 
+                  ? "Google Docs" 
+                  : decoyType === 'gmail' 
+                  ? "Inbox - Jersey City Public Schools" 
                   : "StudyTools"}
               </span>
             </div>
@@ -1794,7 +1862,35 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
           {/* Alt Links Removed */}
 
-          <div className="flex flex-wrap items-center gap-2 md:ml-auto w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2 md:ml-auto w-full md:w-auto overflow-visible">
+            {/* Go back to games back button */}
+            {filter === 'chat' && (
+              <button
+                id="chat-back-button"
+                onClick={() => setFilter('all')}
+                className="flex items-center gap-1.5 text-xs font-mono font-bold py-1.5 px-3.5 rounded-full border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-primary)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-all cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] active:scale-98"
+                title="Go back to games list"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                <span>Go back to games</span>
+              </button>
+            )}
+
+            {/* AI Socratic Tutor button */}
+            <button
+              onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
+              className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
+                filter === 'chat'
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
+                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
+              }`}
+              title="Toggle AI Socratic Tutor - Ask Study/Academic Questions"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+              <span>AI CHAT TUTOR</span>
+            </button>
+
             {/* Suffix Select */}
             <div className="flex items-center bg-[var(--card-bg)] border border-[var(--card-border)] rounded-full px-2.5 py-1.5 text-xs text-[var(--text-muted)] font-mono shadow-sm">
               <span className="text-[10px] uppercase font-extrabold mr-1.5 text-[var(--accent-color)]">Tab Target:</span>
@@ -1849,7 +1945,13 @@ export default function App() {
                   parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=clever.com";
                 } else if (decoyType === 'campus') {
                   parentTitle = "Campus Student";
-                  parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=infinitecampus.com";
+                  parentFavicon = "https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png";
+                } else if (decoyType === 'docs') {
+                  parentTitle = "Google Docs";
+                  parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=docs.google.com";
+                } else if (decoyType === 'gmail') {
+                  parentTitle = "Inbox - Jersey City Public Schools";
+                  parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=mail.google.com";
                 }
 
                 win.document.write(`
@@ -1909,8 +2011,13 @@ export default function App() {
                 <option value="classroom" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Google Classroom</option>
                 <option value="clever" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Clever Login</option>
                 <option value="campus" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Infinite Campus</option>
+                <option value="docs" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Google Docs</option>
+                <option value="gmail" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Inbox - Jersey City Public Schools</option>
               </select>
             </div>
+          </div>
+        </div>
+      </section>
 
             {/* Hidden legacy frame creator to preserve large assets cleanly */}
             <div style={{ display: 'none' }}>
@@ -2209,39 +2316,41 @@ export default function App() {
               <span>HIDDEN LEGACY BUTTON</span>
             </button>
             </div>
-          </div>
-        </div>
-      </section>
 
       {/* MAIN CONTAINER: SIDEBAR + GAMES */}
-      <div className="flex-1 flex flex-col md:flex-row max-w-8xl w-full mx-auto p-4 md:p-6 gap-6 self-center">
+      <div className={`flex-1 flex flex-col md:flex-row w-full mx-auto transition-all duration-300 ${
+        filter === 'chat' 
+          ? 'max-w-none p-0 gap-0 border-t border-[var(--card-border)]/50' 
+          : 'max-w-8xl p-4 md:p-6 gap-6 self-center'
+      }`}>
         
         {/* LEFT NAV PANEL - CAT SIDEBAR */}
-        <aside className={`transition-all duration-300 ease-in-out shrink-0 flex flex-col gap-2 overflow-hidden ${
-          sidebarOpen ? 'w-full md:w-64' : 'w-full md:w-14'
-        }`}>
-          
-          <div className="flex items-center justify-between px-2 py-1 min-h-[36px]">
-            {sidebarOpen ? (
-              <span className="text-[10px] font-mono tracking-wider opacity-50 uppercase whitespace-nowrap">
-                Browse Portals
-              </span>
-            ) : (
-              <span className="hidden md:inline text-[9px] font-mono tracking-wider opacity-50 uppercase text-center mx-auto font-bold text-[var(--accent-color)]">
-                NAV
-              </span>
-            )}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 rounded-lg hover:bg-[var(--card-bg)] text-[var(--accent-color)] transition-all duration-250 cursor-pointer flex items-center justify-center ml-auto"
-              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-            >
-              {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4 animate-bounce" />}
-            </button>
-          </div>
+        {filter !== 'chat' && (
+          <aside className={`transition-all duration-300 ease-in-out shrink-0 flex flex-col gap-2 overflow-hidden ${
+            sidebarOpen ? 'w-full md:w-64' : 'w-full md:w-14'
+          }`}>
+            
+            <div className="flex items-center justify-between px-2 py-1 min-h-[36px]">
+              {sidebarOpen ? (
+                <span className="text-[10px] font-mono tracking-wider opacity-50 uppercase whitespace-nowrap">
+                  Browse Portals
+                </span>
+              ) : (
+                <span className="hidden md:inline text-[9px] font-mono tracking-wider opacity-50 uppercase text-center mx-auto font-bold text-[var(--accent-color)]">
+                  NAV
+                </span>
+              )}
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-1.5 rounded-lg hover:bg-[var(--card-bg)] text-[var(--accent-color)] transition-all duration-250 cursor-pointer flex items-center justify-center ml-auto"
+                title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              >
+                {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4 animate-bounce" />}
+              </button>
+            </div>
 
-          <button
-            onClick={() => { setFilter('all'); setSelectedGame(null); }}
+            <button
+              onClick={() => { setFilter('all'); setSelectedGame(null); }}
             className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
               filter === 'all' && !selectedGame
                 ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
@@ -2360,16 +2469,20 @@ export default function App() {
             <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Other Websites</span>
           </button>
 
-          
-
         </aside>
+        )}
 
         {/* MAIN BODY DISPLAY */}
         <main className="flex-1 min-w-0">
           
           {!selectedGame ? (
-            /* LIBRARY LIST VIEW */
-            <div className="flex flex-col gap-6">
+            filter === 'chat' ? (
+              <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)]">
+                <ChatWorkspace onClose={() => setFilter('all')} />
+              </div>
+            ) : (
+              /* LIBRARY LIST VIEW */
+              <div className="flex flex-col gap-6">
               
               <div className="flex justify-between items-center border-l-4 border-[var(--accent-color)] pl-3">
                 <div>
@@ -2411,11 +2524,12 @@ export default function App() {
                       >
                         {/* Artwork container */}
                         <div className="relative h-48 bg-neutral-950 flex-shrink-0 flex items-center justify-center border-b border-[var(--card-border)] overflow-hidden">
-                          {game.thumbnail ? (
+                          {game.thumbnail && !failedThumbnails[game.id] ? (
                             <img 
                               src={game.thumbnail} 
                               alt={game.title} 
                               referrerPolicy="no-referrer"
+                              onError={() => setFailedThumbnails(prev => ({ ...prev, [game.id]: true }))}
                               className="w-full h-full object-cover transition-transform duration-500 hover:scale-110" 
                             />
                           ) : (
@@ -2461,7 +2575,21 @@ export default function App() {
               )}
 
             </div>
-          ) : (
+          )
+        ) : selectedGame.title === 'Bloons TD 5 Sandbox' ? (
+          <div className="flex flex-col gap-4 animate-fade-in bg-[#0c0f16]/90 p-4 md:p-6 rounded-2xl border border-zinc-800 shadow-2xl">
+            <div className="flex justify-start">
+              <button
+                onClick={() => setSelectedGame(null)}
+                className="flex items-center gap-2 border border-[var(--card-border)] hover:border-[var(--accent-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)] transition-all font-mono py-1.5 px-3.5 rounded-lg text-xs font-bold bg-[var(--bg-secondary)] leading-normal cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Go back to game grid</span>
+              </button>
+            </div>
+            <BloonsSandbox onClose={() => setSelectedGame(null)} />
+          </div>
+        ) : (
             /* ACTIVE GAME SCREEN */
             <div className="flex flex-col gap-4 animate-fade-in">
               
@@ -2554,12 +2682,36 @@ export default function App() {
                         alert("Popup blocked. Allow popups for this site.");
                         return;
                       }
+
+                      const bookSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
+                        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
+                      )}`;
+                      let tabTitle = selectedGame.title;
+                      let tabFavicon = bookSvgDataUri;
+                      if (decoyType === 'classroom') {
+                        tabTitle = "Home - Classroom";
+                        tabFavicon = "https://ssl.gstatic.com/classroom/favicon.png";
+                      } else if (decoyType === 'clever') {
+                        tabTitle = "Clever | Log in with Clever";
+                        tabFavicon = "https://www.google.com/s2/favicons?sz=64&domain=clever.com";
+                      } else if (decoyType === 'campus') {
+                        tabTitle = "Campus Student";
+                        tabFavicon = "https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png";
+                      } else if (decoyType === 'docs') {
+                        tabTitle = "Google Docs";
+                        tabFavicon = "https://www.google.com/s2/favicons?sz=64&domain=docs.google.com";
+                      } else if (decoyType === 'gmail') {
+                        tabTitle = "Inbox - Jersey City Public Schools";
+                        tabFavicon = "https://www.google.com/s2/favicons?sz=64&domain=mail.google.com";
+                      }
+
                       win.document.write(`
                         <!DOCTYPE html>
                         <html>
                         <head>
-                          <title>Home - Classroom</title>
-                          <link rel="icon" type="image/png" href="https://ssl.gstatic.com/classroom/favicon.png">
+                          <title>${tabTitle}</title>
+                          <link rel="icon" href="${tabFavicon}">
+                          <link rel="shortcut icon" href="${tabFavicon}">
                           <meta charset="utf-8">
                           <style>
                             html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #ffffff; }
