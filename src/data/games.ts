@@ -314,8 +314,8 @@ export const games: Game[] = [
   {
     title: 'Cluster Truck',
     description: 'yeah',
-    url: 'https://upload.wikimedia.org/wikipedia/en/c/cd/Gameplay_screenshot_of_Clustertruck%2C_2016.png',
-    thumbnail: '',
+    url: 'https://jasongamesdev.github.io/cluster-rush/',
+    thumbnail: 'https://upload.wikimedia.org/wikipedia/en/c/cd/Gameplay_screenshot_of_Clustertruck%2C_2016.png',
     category: 'Solo'
   },
    {
