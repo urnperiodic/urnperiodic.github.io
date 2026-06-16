@@ -68,7 +68,7 @@ export const games: Game[] = [
   {
     title: 'Youtube',
     description: 'Youtube unblocked, should allow you to paste videos into the URL thingy and watch it.',
-    url: 'https://grandplat2.github.io/old/yt.html',
+    url: 'https://urnperiodic.github.io/purify-video.github.io/',
     thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_yL7AtgrIozF4QESx27DN6CDTvAuxtEfPPw&s',
     category: 'Not Games'
   },  
