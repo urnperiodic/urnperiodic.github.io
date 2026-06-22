@@ -12,7 +12,7 @@ export const games: Game[] = [
   {
     title: 'test',
     description: '',
-    url: 'pokemonxye1.mp4',
+    url: 'movies/pokemonxye1.mp4',
     thumbnail: '',
     category: 'Movies'
   },
