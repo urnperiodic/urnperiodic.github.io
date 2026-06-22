@@ -10,6 +10,13 @@ export const games: Game[] = [
     category: 'Solo'
   },
   {
+    title: 'test',
+    description: '',
+    url: 'pokemonxye1.mp4',
+    thumbnail: '',
+    category: 'Movies'
+  },
+  {
     title: 'Paper.Io',
     description: '',
     url: 'clpaperio.html',
