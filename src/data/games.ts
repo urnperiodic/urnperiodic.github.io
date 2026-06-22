@@ -19,7 +19,7 @@ export const games: Game[] = [
    {
     title: 'Cookie Clicker',
     description: '',
-    url: 'https://g8hh.github.io/cookieclicker/',
+    url: 'clcookieclicker.html',
     thumbnail: 'https://upload.wikimedia.org/wikipedia/en/0/06/Cookie_Clicker_logo.png',
     category: 'Solo'
   },
@@ -68,7 +68,7 @@ export const games: Game[] = [
   {
     title: 'Youtube',
     description: 'Youtube unblocked, should allow you to paste videos into the URL thingy and watch it.',
-    url: 'https://grandplat2.github.io/old/yt.html',
+    url: 'https://urnperiodic.github.io/purify-video.github.io/',
     thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_yL7AtgrIozF4QESx27DN6CDTvAuxtEfPPw&s',
     category: 'Not Games'
   },  
@@ -314,8 +314,8 @@ export const games: Game[] = [
   {
     title: 'Cluster Truck',
     description: 'yeah',
-    url: 'https://upload.wikimedia.org/wikipedia/en/c/cd/Gameplay_screenshot_of_Clustertruck%2C_2016.png',
-    thumbnail: '',
+    url: 'https://jasongamesdev.github.io/cluster-rush/',
+    thumbnail: 'https://upload.wikimedia.org/wikipedia/en/c/cd/Gameplay_screenshot_of_Clustertruck%2C_2016.png',
     category: 'Solo'
   },
    {

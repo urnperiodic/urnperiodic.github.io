@@ -17,6 +17,7 @@ import FlashcardsWorkspace from './components/FlashcardsWorkspace';
 import QuizWorkspace from './components/QuizWorkspace';
 import GrammarCheckerWorkspace from './components/GrammarCheckerWorkspace';
 import ChatWorkspace from './components/ChatWorkspace';
+import MoviesWorkspace from './components/MoviesWorkspace';
 import { 
   School, 
   Search, 
@@ -1864,7 +1865,7 @@ if (iconUrl.includes('.ico')) {
 
           <div className="flex flex-wrap items-center gap-2 md:ml-auto w-full md:w-auto overflow-visible">
             {/* Go back to games back button */}
-            {filter === 'chat' && (
+            {(filter === 'chat' || filter === 'movies') && (
               <button
                 id="chat-back-button"
                 onClick={() => setFilter('all')}
@@ -1877,6 +1878,20 @@ if (iconUrl.includes('.ico')) {
               </button>
             )}
 
+            {/* Movies Workspace button */}
+            <button
+              onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
+              className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
+                filter === 'movies'
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
+                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
+              }`}
+              title="Toggle Movies - Stream Movies and TV Shows"
+            >
+              <Tv className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+              <span>Movies</span>
+            </button>
+
             {/* AI Socratic Tutor button */}
             <button
               onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
@@ -1888,7 +1903,7 @@ if (iconUrl.includes('.ico')) {
               title="Toggle AI Socratic Tutor - Ask Study/Academic Questions"
             >
               <MessageSquare className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-              <span>AI CHAT TUTOR</span>
+              <span>GEMINI AI / GROQ AI</span>
             </button>
 
             {/* Suffix Select */}
@@ -2319,13 +2334,13 @@ if (iconUrl.includes('.ico')) {
 
       {/* MAIN CONTAINER: SIDEBAR + GAMES */}
       <div className={`flex-1 flex flex-col md:flex-row w-full mx-auto transition-all duration-300 ${
-        filter === 'chat' 
-          ? 'max-w-none p-0 gap-0 border-t border-[var(--card-border)]/50' 
+        (filter === 'chat' || filter === 'movies')
+          ? 'max-w-none p-0 gap-0 border-t border-[var(--card-border)]/50 lg:bg-[#07090e]' 
           : 'max-w-8xl p-4 md:p-6 gap-6 self-center'
       }`}>
         
         {/* LEFT NAV PANEL - CAT SIDEBAR */}
-        {filter !== 'chat' && (
+        {filter !== 'chat' && filter !== 'movies' && (
           <aside className={`transition-all duration-300 ease-in-out shrink-0 flex flex-col gap-2 overflow-hidden ${
             sidebarOpen ? 'w-full md:w-64' : 'w-full md:w-14'
           }`}>
@@ -2479,6 +2494,10 @@ if (iconUrl.includes('.ico')) {
             filter === 'chat' ? (
               <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)]">
                 <ChatWorkspace onClose={() => setFilter('all')} />
+              </div>
+            ) : filter === 'movies' ? (
+              <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)]">
+                <MoviesWorkspace onClose={() => setFilter('all')} />
               </div>
             ) : (
               /* LIBRARY LIST VIEW */
