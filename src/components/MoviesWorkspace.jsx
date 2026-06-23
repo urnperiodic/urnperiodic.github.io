@@ -414,7 +414,7 @@
         return type==='movie' ? `https://vidsrc.to/embed/movie/${tmdb}` : `https://vidsrc.to/embed/tv/${tmdb}/${season}/${episode}`;
     }},
     { id:'dl_dwnld', name:'Download Server 1', build({type,tmdb,season,episode}) {
-        return type==='movie' ? `https://dl.vidsrc.vip/movie/${tmdb}` : `https://dl.vidsrc.vip/tv/${tmdb}/${season}/${episode}`;
+        return type==='movie' ? `https://www.vidking.net/embed/movie/${tmdb}?download=true` : `https://www.vidking.net/embed/tv/${tmdb}/${season}/${episode}?download=true`;
     }},
     { id:'dl_vidking', name:'Download Server 2', build({type,tmdb,season,episode}) {
         return type==='movie' ? `https://www.vidking.net/embed/movie/${tmdb}?download=true` : `https://www.vidking.net/embed/tv/${tmdb}/${season}/${episode}?download=true`;
