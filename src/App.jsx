@@ -2433,7 +2433,7 @@ if (iconUrl.includes('.ico')) {
             </button>
 
             <button
-              onClick={() => { window.open('https://forms.gle/qJt9X8225t6y2s6G7', '_blank'); }}
+              onClick={() => { window.open('https://forms.gle/YCN8itY7WqmN82CY8', '_blank'); }}
               className="w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80"
             >
               <ExternalLink className="w-4.5 h-4.5 shrink-0" />
