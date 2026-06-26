@@ -98,6 +98,37 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
+  const [activePortal, setActivePortal] = useState(null);
+
+  // List of Browse Portals subsection items. Each opens /category/{slug}.html in an iframe.
+  const portalList = [
+    { slug: '2-player', label: '2 Player' },
+    { slug: '3d', label: '3D' },
+    { slug: 'action', label: 'Action' },
+    { slug: 'adventure', label: 'Adventure' },
+    { slug: 'animal', label: 'Animal' },
+    { slug: 'board', label: 'Board' },
+    { slug: 'car', label: 'Car' },
+    { slug: 'fighting', label: 'Fighting' },
+    { slug: 'girls', label: 'Girls' },
+    { slug: 'idle', label: 'Idle' },
+    { slug: 'management', label: 'Management' },
+    { slug: 'moto', label: 'Moto' },
+    { slug: 'multiplayer', label: 'Multiplayer' },
+    { slug: 'new', label: 'New' },
+    { slug: 'platform', label: 'Platform' },
+    { slug: 'popular', label: 'Popular' },
+    { slug: 'puzzle', label: 'Puzzle' },
+    { slug: 'racing', label: 'Racing' },
+    { slug: 'running', label: 'Running' },
+    { slug: 'shooting', label: 'Shooting' },
+    { slug: 'simulation', label: 'Simulation' },
+    { slug: 'skill', label: 'Skill' },
+    { slug: 'sports', label: 'Sports' },
+    { slug: 'stickman', label: 'Stickman' },
+    { slug: 'strategy', label: 'Strategy' },
+    { slug: 'survival', label: 'Survival' },
+  ];
 
   // Handle game selection from embedded Classroom6x iframe
   useEffect(() => {
@@ -2541,6 +2572,47 @@ if (iconUrl.includes('.ico')) {
             <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Other Websites</span>
           </button>
 
+          {/* BROWSE PORTALS SUBSECTION (portal categories) */}
+          {sidebarOpen && (
+            <div className="mt-4 mb-1 px-2 py-1">
+              <span className="text-[10px] font-mono tracking-wider opacity-50 uppercase whitespace-nowrap">
+                Browse Portals
+              </span>
+            </div>
+          )}
+          {!sidebarOpen && (
+            <div className="hidden md:flex justify-center mt-3 mb-1">
+              <span className="text-[9px] font-mono tracking-wider opacity-50 uppercase font-bold text-[var(--accent-color)]">
+                ◆
+              </span>
+            </div>
+          )}
+
+          {portalList.map((portal) => {
+            const isActive = activePortal === portal.slug;
+            return (
+              <button
+                key={portal.slug}
+                onClick={() => {
+                  setActivePortal(portal.slug);
+                  setFilter('portal');
+                  setSelectedGame(null);
+                }}
+                className={`w-full text-left py-2 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+                  isActive && filter === 'portal' && !selectedGame
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                    : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+                }`}
+                title={`Open ${portal.label} portal`}
+              >
+                <Gamepad2 className="w-4 h-4 shrink-0" />
+                <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>
+                  {portal.label}
+                </span>
+              </button>
+            );
+          })}
+
           <div className="flex-1" />
 
           <button
@@ -2655,6 +2727,19 @@ if (iconUrl.includes('.ico')) {
             ) : filter === 'movies' ? (
               <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)]">
                 <MoviesWorkspace onClose={() => setFilter('all')} />
+              </div>
+            ) : filter === 'portal' && activePortal ? (
+              // Browse Portals: clean iframe, no header or close button
+              <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)] rounded-2xl overflow-hidden border border-[var(--card-border)]/50">
+                <iframe
+                  key={activePortal}
+                  src={`/category/${activePortal}.html`}
+                  className="w-full flex-1 border-none bg-white"
+                  title={`${activePortal} portal`}
+                  allowFullScreen
+                  referrerPolicy="no-referrer"
+                  sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-top-navigation-by-user-activation"
+                />
               </div>
             ) : filter === 'classroom6x' ? (
               <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)] rounded-2xl overflow-hidden border border-[var(--card-border)]/50">
