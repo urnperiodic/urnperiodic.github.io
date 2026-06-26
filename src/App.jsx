@@ -18,10 +18,12 @@ import QuizWorkspace from './components/QuizWorkspace';
 import GrammarCheckerWorkspace from './components/GrammarCheckerWorkspace';
 import ChatWorkspace from './components/ChatWorkspace';
 import MoviesWorkspace from './components/MoviesWorkspace';
+import InformationSection from './components/InformationSection';
 import { 
   School, 
   Search, 
-  Play, 
+  Play,
+  Info, 
   ExternalLink, 
   RotateCcw, 
   Maximize2, 
@@ -53,6 +55,8 @@ import {
   Code,
   Share2,
   Download,
+  Upload,
+  Settings,
   Check,
   X,
   Shuffle,
@@ -94,6 +98,25 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
+
+  // Handle game selection from embedded Classroom6x iframe
+  useEffect(() => {
+    const handleMessage = (e) => {
+      if (e.data && e.data.type === 'play-game') {
+        setSelectedGame({
+          id: `classroom6x-${e.data.title.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+          title: e.data.title,
+          url: e.data.url,
+          description: 'Classroom6x Unblocked Game',
+          thumbnail: e.data.thumbnail || '',
+          category: 'Classroom6x'
+        });
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   const [zoom, setZoom] = useState(1);
   const [failedThumbnails, setFailedThumbnails] = useState({});
   const [favorites, setFavorites] = useState(() => {
@@ -122,6 +145,7 @@ export default function App() {
   const [passcode, setPasscode] = useState('');
   const [isShake, setIsShake] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
+  const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
 
   // Articles and Custom AI article generator states
   const [activeEduTab, setActiveEduTab] = useState('articles'); // 'articles' | 'flashcards' | 'grammar' | 'quiz'
@@ -2364,6 +2388,27 @@ if (iconUrl.includes('.ico')) {
               </button>
             </div>
 
+
+            <button
+              onClick={() => setFilter('info')}
+              className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+                filter === 'info' 
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-lg shadow-[var(--accent-color)]/20' 
+                  : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+              }`}
+            >
+              <Info className="w-4.5 h-4.5 shrink-0" />
+              <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Information</span>
+            </button>
+
+            <button
+              onClick={() => { window.open('https://forms.gle/qJt9X8225t6y2s6G7', '_blank'); }}
+              className="w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80"
+            >
+              <ExternalLink className="w-4.5 h-4.5 shrink-0" />
+              <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Request a Game</span>
+            </button>
+
             <button
               onClick={() => { setFilter('all'); setSelectedGame(null); }}
             className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
@@ -2374,6 +2419,18 @@ if (iconUrl.includes('.ico')) {
           >
             <Layers className="w-4.5 h-4.5 shrink-0" />
             <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>All Classrooms</span>
+          </button>
+
+          <button
+            onClick={() => { setFilter('classroom6x'); setSelectedGame(null); }}
+            className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              filter === 'classroom6x' && !selectedGame
+                ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+            }`}
+          >
+            <School className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Classroom6x Games</span>
           </button>
 
           <button
@@ -2484,7 +2541,103 @@ if (iconUrl.includes('.ico')) {
             <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Other Websites</span>
           </button>
 
+          <div className="flex-1" />
+
+          <button
+            onClick={() => setIsGlobalSettingsOpen(true)}
+            className="w-full text-left py-2.5 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 cursor-pointer hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80 mt-auto"
+          >
+            <Settings className="w-4.5 h-4.5 shrink-0" />
+            <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Settings</span>
+          </button>
+
         </aside>
+        )}
+
+        {/* GLOBAL SETTINGS MODAL */}
+        {isGlobalSettingsOpen && (
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center select-none">
+            <div 
+              onClick={() => setIsGlobalSettingsOpen(false)}
+              className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+            />
+            <div className="relative w-full max-w-md bg-[#14141c] border border-white/10 rounded-2xl p-6 flex flex-col shadow-2xl z-10 animate-fade-in">
+              <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-[var(--accent-color)]" />
+                  <h3 className="text-lg font-black uppercase tracking-wider text-white">System Settings</h3>
+                </div>
+                <button 
+                  onClick={() => setIsGlobalSettingsOpen(false)}
+                  className="p-1 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white cursor-pointer transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-sm font-bold text-white mb-2 uppercase tracking-wider">One-Click Backup & Restore</h4>
+                  <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
+                    Export your favorited games, bookmarked films, watch history, and chat nickname to a JSON file. Use it to carry your profile across devices.
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={() => {
+                        const data = {
+                          favorites: safeStorage.getItem('unblocked-favorites'),
+                          moviesBookmarks: safeStorage.getItem('movies-bookmarks'),
+                          moviesHistory: safeStorage.getItem('movies-history'),
+                          chatName: safeStorage.getItem('chat_name')
+                        };
+                        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'unblocked-backup.json';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="flex-1 py-2 px-4 rounded-xl text-xs font-mono font-bold uppercase text-center bg-[var(--accent-color)] text-[var(--bg-color)] hover:opacity-90 transition-all shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Export Data
+                    </button>
+                    
+                    <label className="flex-1 py-2 px-4 rounded-xl text-xs font-mono font-bold uppercase text-center bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer border border-white/5 hover:border-white/20 flex items-center justify-center gap-2">
+                      <input 
+                        type="file" 
+                        accept=".json" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            try {
+                              const data = JSON.parse(event.target.result);
+                              if (data.favorites) safeStorage.setItem('unblocked-favorites', data.favorites);
+                              if (data.moviesBookmarks) safeStorage.setItem('movies-bookmarks', data.moviesBookmarks);
+                              if (data.moviesHistory) safeStorage.setItem('movies-history', data.moviesHistory);
+                              if (data.chatName) safeStorage.setItem('chat_name', data.chatName);
+                              
+                              if (data.favorites) setFavorites(JSON.parse(data.favorites));
+                              alert("Data restored successfully!");
+                            } catch (err) {
+                              alert("Invalid backup file.");
+                            }
+                          };
+                          reader.readAsText(file);
+                        }} 
+                      />
+                      <Upload className="w-4 h-4" />
+                      Import Data
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* MAIN BODY DISPLAY */}
@@ -2495,12 +2648,38 @@ if (iconUrl.includes('.ico')) {
               <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)]">
                 <ChatWorkspace onClose={() => setFilter('all')} />
               </div>
+            ) : filter === 'info' ? (
+              <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)]">
+                <InformationSection onClose={() => setFilter('all')} />
+              </div>
             ) : filter === 'movies' ? (
               <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)]">
                 <MoviesWorkspace onClose={() => setFilter('all')} />
               </div>
+            ) : filter === 'classroom6x' ? (
+              <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)] rounded-2xl overflow-hidden border border-[var(--card-border)]/50">
+                <div className="flex justify-between items-center bg-[#14141c] px-4 py-3 border-b border-[var(--card-border)]/50 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <School className="w-5 h-5 text-[var(--accent-color)]" />
+                    <h3 className="text-sm font-black uppercase tracking-wider text-white">Classroom6x Games</h3>
+                  </div>
+                  <button 
+                    onClick={() => setFilter('all')}
+                    className="text-xs font-mono px-3 py-1 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white rounded transition-all cursor-pointer"
+                  >
+                    Close Portal
+                  </button>
+                </div>
+                <iframe 
+                  src="/classroom6x.html" 
+                  className="w-full flex-1 border-none bg-[#211328]" 
+                  title="Classroom6x Games"
+                  allowFullScreen
+                  referrerPolicy="no-referrer"
+                  sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                />
+              </div>
             ) : (
-              /* LIBRARY LIST VIEW */
               <div className="flex flex-col gap-6">
               
               <div className="flex justify-between items-center border-l-4 border-[var(--accent-color)] pl-3">
