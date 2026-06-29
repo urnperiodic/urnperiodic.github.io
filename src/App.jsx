@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { games as gamesData } from './data/games';
+import { slopeGames } from './data/slopeGames';
 
-// Dynamically preprocess games to ensure they all possess a stable and unique ID for keys and bookmarking
-const games = gamesData.map((game, index) => {
+// Merge curated catalog with the 1090 Slope-3 Classroom6x games, then
+// ensure every entry has a stable unique id (used for keys & favorites).
+const games = [...gamesData, ...slopeGames].map((game, index) => {
   if (!game.id) {
     const slug = (game.title || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     return {
