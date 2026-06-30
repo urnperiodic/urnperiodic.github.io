@@ -8,7 +8,6 @@ if (!game.id) {
       ...game,
       id: `game-gen-${index}-${slug}`
     };
-  }
   return game;
 });
 import { initialArticles, gameOptions, toneOptions, generateMockAIArticle } from './data/articles';
