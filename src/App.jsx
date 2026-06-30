@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { games as gamesData } from './data/games';
+import { slopeGames } from './data/slopeGames';
 
-// Dynamically preprocess games to ensure they all possess a stable and unique ID for keys and bookmarking
-const games = gamesData.map((game, index) => {
+// Merge curated catalog with the 1090 Slope-3 Classroom6x games, then
+// ensure every entry has a stable unique id (used for keys & favorites).
+const games = [...gamesData, ...slopeGames].map((game, index) => {
   if (!game.id) {
     const slug = (game.title || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     return {
@@ -1960,6 +1962,18 @@ if (iconUrl.includes('.ico')) {
               <MessageSquare className="w-3.5 h-3.5 text-[var(--accent-color)]" />
               <span>GEMINI AI / GROQ AI</span>
             </button>
+
+            {/* Separate Movies Tab Button (Only visible when on Movies tab) */}
+            {filter === 'movies' && (
+              <button
+                onClick={() => window.open('https://urnperiodic.github.io/p/', '_blank')}
+                className="text-xs bg-[var(--card-bg)] text-[var(--accent-color)] border border-[var(--accent-color)]/30 hover:border-[var(--accent-color)] py-1.5 px-3.5 rounded-full hover:bg-[var(--accent-color)] hover:text-black active:scale-98 transition-all duration-200 font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                title="Open Movies in a separate tab"
+              >
+                <ExternalLink className="w-3.5 h-3.5 animate-pulse" />
+                <span>Open in a separate tab</span>
+              </button>
+            )}
 
             {/* Suffix Select */}
             <div className="flex items-center bg-[var(--card-bg)] border border-[var(--card-border)] rounded-full px-2.5 py-1.5 text-xs text-[var(--text-muted)] font-mono shadow-sm">
