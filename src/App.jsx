@@ -50,6 +50,8 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Lock,
   Unlock,
   LogOut,
@@ -101,6 +103,9 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
   const [activePortal, setActivePortal] = useState(null);
+  const [toolsExpanded, setToolsExpanded] = useState(false);
+  const [altBarOpen, setAltBarOpen] = useState(true);
+  const [headerOpen, setHeaderOpen] = useState(true);
 
   // List of Browse Portals subsection items. Each opens /category/{slug}.html in an iframe.
   const portalList = [
@@ -218,8 +223,6 @@ export default function App() {
   });
 
   const useClassroomDecoy = decoyType !== 'none';
-
-  const [aboutBlankSuffix, setAboutBlankSuffix] = useState('');
 
   // Persist decoy state to localStorage
   useEffect(() => {
@@ -1781,8 +1784,26 @@ if (iconUrl.includes('.ico')) {
 
   return (
     <div className="min-h-screen flex flex-col transition-colors duration-300">
+      {/* Unified Navigation Collapse/Expand Toggle Button (Always single, unanimated, smaller when closed) */}
+      <button
+        onClick={() => setHeaderOpen(!headerOpen)}
+        className={`fixed z-[9999] rounded-full bg-[var(--card-bg)] border border-[var(--accent-color)] text-[var(--accent-color)] hover:bg-[var(--accent-color)]/10 active:scale-95 transition-all duration-300 shadow-md flex items-center justify-center cursor-pointer ${
+          headerOpen 
+            ? 'top-3.5 right-4 p-1.5' 
+            : 'top-2 right-3 p-1'
+        }`}
+        title={headerOpen ? "Collapse Navigation Header" : "Expand Navigation Header"}
+      >
+        {headerOpen ? (
+          <ChevronUp className="w-3.5 h-3.5" />
+        ) : (
+          <ChevronDown className="w-2.5 h-2.5" />
+        )}
+      </button>
+
       {/* HEADER */}
-      <nav className="border-b border-[var(--card-border)] bg-[var(--header-bg)] py-3.5 px-4 md:px-6 flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors duration-300 sticky top-0 z-50 shadow-sm">
+      {headerOpen ? (
+        <nav className="border-b border-[var(--card-border)] bg-[var(--header-bg)] py-3.5 pl-4 pr-16 md:pl-6 md:pr-20 flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors duration-300 sticky top-0 z-50 shadow-sm animate-fade-in">
         
         {/* Left Side: Decoy Classroom Title */}
         <div className="flex items-center gap-4 self-stretch sm:self-auto justify-between w-full sm:w-auto">
@@ -1911,105 +1932,192 @@ if (iconUrl.includes('.ico')) {
               ))}
             </div>
           </div>
+
         </div>
 
       </nav>
-
-      {/* ALT LINKS BAR */}
-      <section className="bg-[var(--bg-secondary)] border-b border-[var(--card-border)] py-3 px-4 md:px-6 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-          {/* Alt Links Removed */}
-
-          <div className="flex flex-wrap items-center gap-2 md:ml-auto w-full md:w-auto overflow-visible">
-            {/* Go back to games back button */}
-            {(filter === 'chat' || filter === 'movies') && (
-              <button
-                id="chat-back-button"
-                onClick={() => setFilter('all')}
-                className="flex items-center gap-1.5 text-xs font-mono font-bold py-1.5 px-3.5 rounded-full border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-primary)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-all cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] active:scale-98"
-                title="Go back to games list"
-                aria-label="Back"
+      ) : (
+        <nav className="border-b border-[var(--card-border)] bg-[var(--header-bg)] py-1.5 pl-4 pr-14 flex flex-col md:flex-row justify-between items-center gap-3 transition-colors duration-300 sticky top-0 z-50 shadow-sm animate-fade-in">
+          
+          <div className="flex items-center justify-between w-full md:w-auto gap-3">
+            {/* Left Side: Decoy Classroom Title (Compact) */}
+            <div className="flex items-center gap-2">
+              <div 
+                onClick={() => { setFilter('all'); setSelectedGame(null); setSearchQuery(''); }}
+                className="flex items-center gap-1.5 cursor-pointer select-none group"
+                title="Go to homepage"
               >
-                <ArrowLeft className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-                <span>Go back to games</span>
-              </button>
-            )}
-
-            {/* Movies Workspace button */}
-            <button
-              onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
-              className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
-                filter === 'movies'
-                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
-                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
-              }`}
-              title="Toggle Movies - Stream Movies and TV Shows"
-            >
-              <Tv className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-              <span>Movies</span>
-            </button>
-
-            {/* AI Socratic Tutor button */}
-            <button
-              onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
-              className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
-                filter === 'chat'
-                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
-                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
-              }`}
-              title="Toggle AI Socratic Tutor - Ask Study/Academic Questions"
-            >
-              <MessageSquare className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-              <span>GEMINI AI / GROQ AI</span>
-            </button>
-
-            {/* Separate Movies Tab Button (Only visible when on Movies tab) */}
-            {filter === 'movies' && (
-              <button
-                onClick={() => window.open('https://urnperiodic.github.io/p/', '_blank')}
-                className="text-xs bg-[var(--card-bg)] text-[var(--accent-color)] border border-[var(--accent-color)]/30 hover:border-[var(--accent-color)] py-1.5 px-3.5 rounded-full hover:bg-[var(--accent-color)] hover:text-black active:scale-98 transition-all duration-200 font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
-                title="Open Movies in a separate tab"
-              >
-                <ExternalLink className="w-3.5 h-3.5 animate-pulse" />
-                <span>Open in a separate tab</span>
-              </button>
-            )}
-
-            {/* Suffix Select */}
-            <div className="flex items-center bg-[var(--card-bg)] border border-[var(--card-border)] rounded-full px-2.5 py-1.5 text-xs text-[var(--text-muted)] font-mono shadow-sm">
-              <span className="text-[10px] uppercase font-extrabold mr-1.5 text-[var(--accent-color)]">Tab Target:</span>
-              <select 
-                value={aboutBlankSuffix}
-                onChange={(e) => setAboutBlankSuffix(e.target.value)}
-                className="bg-transparent border-none outline-none font-bold text-[var(--text-primary)] cursor-pointer py-0.5"
-                style={{ colorScheme: mode }}
-              >
-                <option value="" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank (Default)</option>
-                <option value="#1" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#1</option>
-                <option value="#2" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#2</option>
-                <option value="#3" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#3</option>
-                <option value="#4" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#4</option>
-                <option value="#5" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#5</option>
-                <option value="#math" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#math</option>
-                <option value="#science" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#science</option>
-                <option value="#grades" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#grades</option>
-                <option value="#classroom" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#classroom</option>
-                <option value="#clever" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#clever</option>
-                <option value="#campus" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#campus</option>
-                <option value="#dashboard" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>about:blank#dashboard</option>
-              </select>
+                <div className="p-1 bg-[var(--accent-color)] text-[var(--bg-color)] rounded border border-[var(--card-border)] shadow-sm group-hover:rotate-12 transition-all duration-300 transform">
+                  {decoyType === 'classroom' ? (
+                    <School className="w-3.5 h-3.5" />
+                  ) : decoyType === 'clever' ? (
+                    <Compass className="w-3.5 h-3.5" />
+                  ) : decoyType === 'campus' ? (
+                    <School className="w-3.5 h-3.5" />
+                  ) : decoyType === 'docs' ? (
+                    <FileText className="w-3.5 h-3.5" />
+                  ) : decoyType === 'gmail' ? (
+                    <Mail className="w-3.5 h-3.5" />
+                  ) : (
+                    <BookOpen className="w-3.5 h-3.5" />
+                  )}
+                </div>
+                <div>
+                  <span className="text-xs font-bold tracking-tight text-[var(--text-primary)] block group-hover:text-[var(--accent-color)] transition-colors">
+                    {decoyType === 'classroom' 
+                      ? "Home - Classroom" 
+                      : decoyType === 'clever' 
+                      ? "Clever | Log in" 
+                      : decoyType === 'campus' 
+                      ? "Campus" 
+                      : decoyType === 'docs' 
+                      ? "Docs" 
+                      : decoyType === 'gmail' 
+                      ? "Inbox" 
+                      : "StudyTools"}
+                  </span>
+                </div>
+              </div>
             </div>
 
+            {/* Quick Sections with backgrounds for mobile/tablet wrapped cleanly */}
+            <div className="flex md:hidden items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--card-border)]/50 p-0.5 rounded-lg shadow-sm">
+              <button
+                onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
+                className={`p-1 rounded-md text-xs transition-all duration-200 ${
+                  filter === 'movies'
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
+                    : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
+                }`}
+                title="Movies"
+              >
+                <Tv className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
+                className={`p-1 rounded-md text-xs transition-all duration-200 ${
+                  filter === 'chat'
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
+                    : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
+                }`}
+                title="GEMINI AI / GROQ AI"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={() => {
+                  const win = window.open("about:blank", "_blank");
+                  if (!win) {
+                    alert("Popup blocked! Please allow popups to open the site in about:blank.");
+                    return;
+                  }
+                  const searchParams = new URLSearchParams(window.location.search);
+                  searchParams.set('decoyType', decoyType);
+                  const iframeSrc = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${window.location.hash}`;
+
+                  const bookSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
+                    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
+                  )}`;
+
+                  let parentTitle = "StudyTools";
+                  let parentFavicon = bookSvgDataUri;
+                  
+                  if (decoyType === 'classroom') {
+                    parentTitle = "Home - Classroom";
+                    parentFavicon = "https://ssl.gstatic.com/classroom/favicon.png";
+                  } else if (decoyType === 'clever') {
+                    parentTitle = "Clever | Log in with Clever";
+                    parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=clever.com";
+                  } else if (decoyType === 'campus') {
+                    parentTitle = "Campus Student";
+                    parentFavicon = "https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png";
+                  } else if (decoyType === 'docs') {
+                    parentTitle = "Google Docs";
+                    parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=docs.google.com";
+                  } else if (decoyType === 'gmail') {
+                    parentTitle = "Inbox - Jersey City Public Schools";
+                    parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=mail.google.com";
+                  }
+
+                  win.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                      <title>${parentTitle}</title>
+                      <link rel="icon" type="image/png" href="${parentFavicon}">
+                      <meta charset="utf-8">
+                      <style>
+                        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0c0a09; }
+                        iframe { width: 100vw; height: 100vh; border: none; display: block; }
+                      </style>
+                    </head>
+                    <body>
+                      <iframe src="${iframeSrc}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+                    </body>
+                    </html>
+                  `);
+                  win.document.close();
+                }}
+                className="p-1 rounded-md text-xs text-[var(--accent-color)] hover:text-[var(--accent-color)]/80 transition-all duration-200"
+                title="Cloak site inside about:blank"
+              >
+                <Globe className="w-3.5 h-3.5 animate-spin-slow" />
+              </button>
+
+              <select 
+                value={decoyType}
+                onChange={(e) => setDecoyType(e.target.value)}
+                className="bg-transparent border-none outline-none font-bold text-[10px] text-[var(--text-primary)] cursor-pointer py-0.5 px-1 max-w-[60px]"
+                style={{ colorScheme: mode }}
+              >
+                <option value="none">Off</option>
+                <option value="classroom">Classroom</option>
+                <option value="clever">Clever</option>
+                <option value="campus">Campus</option>
+                <option value="docs">Docs</option>
+                <option value="gmail">Gmail</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Middle: Section Icons with Background (Visible on medium+ screens) */}
+          <div className="hidden md:flex items-center gap-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)]/50 p-1 rounded-xl shadow-sm">
+            {/* Movies Button */}
+            <button
+              onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
+              className={`p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                filter === 'movies'
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
+              }`}
+              title="Movies Workspace"
+            >
+              <Tv className="w-3.5 h-3.5" />
+            </button>
+
+            {/* AI Socratic Tutor Button */}
+            <button
+              onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
+              className={`p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                filter === 'chat'
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
+              }`}
+              title="GEMINI AI / GROQ AI Tutor"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Cloak in about:blank Button */}
             <button
               onClick={() => {
-                const targetUrl = "about:blank" + aboutBlankSuffix;
-                const win = window.open(targetUrl, "_blank");
+                const win = window.open("about:blank", "_blank");
                 if (!win) {
-                  alert(`Popup blocked! Please allow popups to open the site in ${targetUrl}.`);
+                  alert("Popup blocked! Please allow popups to open the site in about:blank.");
                   return;
                 }
-                
-                // Construct query parameters to propagate the decoy state to the new document
                 const searchParams = new URLSearchParams(window.location.search);
                 searchParams.set('decoyType', decoyType);
                 const iframeSrc = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${window.location.hash}`;
@@ -2056,22 +2164,229 @@ if (iconUrl.includes('.ico')) {
                   </html>
                 `);
                 win.document.close();
-
-                // Set location hash after writing to force browser to register hash parameter in address bar
-                try {
-                  if (aboutBlankSuffix) {
-                    win.location.hash = aboutBlankSuffix;
-                  }
-                } catch (e) {
-                  // ignore
-                }
               }}
-              className="text-xs bg-[var(--card-bg)] text-[var(--text-primary)] border border-[var(--card-border)] py-1.5 px-3.5 rounded-full hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] active:scale-98 transition-all duration-200 font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
-              title="Open entire site inside about:blank tab with selected suffix to cloak history"
+              className="p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]"
+              title="Cloak site inside about:blank tab"
             >
               <Globe className="w-3.5 h-3.5 text-[var(--accent-color)] animate-spin-slow" />
-              <span>CLOAK IN {aboutBlankSuffix ? `ABOUT:BLANK ${aboutBlankSuffix.toUpperCase()}` : 'ABOUT:BLANK'}</span>
             </button>
+
+            {/* Decoy Mode Dropdown Select */}
+            <div className={`flex items-center border rounded-lg px-2 py-1 text-xs font-mono shadow-sm transition-all duration-300 ${
+              decoyType !== 'none' 
+                ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)] text-[var(--accent-color)]' 
+                : 'bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--text-primary)]'
+            }`}>
+              <School className="w-3.5 h-3.5 mr-1" />
+              <select 
+                value={decoyType}
+                onChange={(e) => setDecoyType(e.target.value)}
+                className="bg-transparent border-none outline-none font-bold cursor-pointer py-0.5 text-[11px]"
+                style={{ colorScheme: mode }}
+              >
+                <option value="none">Decoy: Off</option>
+                <option value="classroom">Classroom</option>
+                <option value="clever">Clever</option>
+                <option value="campus">Campus</option>
+                <option value="docs">Docs</option>
+                <option value="gmail">Gmail</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Right Side: Made By + Slider + Theme (Compact) */}
+          <div className="flex items-center gap-2">
+            <div className="text-[9px] font-mono select-none opacity-80 hidden lg:block">
+              <span className="opacity-50 mr-1">made by</span>
+              <span className="font-bold text-[var(--accent-color)] tracking-wider">™ & GRANDDIA2</span>
+            </div>
+
+            {/* Light/Dark slider (Compact) */}
+            <div className="flex items-center gap-1 border border-[var(--card-border)] bg-[var(--bg-secondary)] p-0.5 rounded-full shadow-sm">
+              <div 
+                onClick={() => setMode(prev => prev === 'light' ? 'dark' : 'light')}
+                className="relative w-[34px] h-4 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 select-none transition-all duration-300"
+                title="Slide to change Mode"
+              >
+                <div 
+                  className={`w-3 h-3 rounded-full bg-[var(--accent-color)] shadow-sm transition-all duration-300 ease-out flex items-center justify-center text-[7px] transform ${
+                    mode === 'dark' ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                >
+                  {mode === 'dark' ? '🌙' : '☀️'}
+                </div>
+              </div>
+            </div>
+
+            {/* Theme capsule (Compact) */}
+            <div className="border border-[var(--card-border)] bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded-full flex items-center shadow-sm">
+              <div className="flex items-center gap-1">
+                {[
+                  { key: 'cyborg', color: 'bg-green-500 border-green-300 shadow-[0_0_5px_green]', tooltip: 'Cyborg Theme' },
+                  { key: 'violet', color: 'bg-indigo-600 border-indigo-400', tooltip: 'Violet Theme' },
+                  { key: 'ice', color: 'bg-sky-400 border-sky-300', tooltip: 'Glacier Theme' },
+                  { key: 'rose-pine', color: 'bg-rose-300 border-rose-200', tooltip: 'Rose Pine Theme' },
+                  { key: 'none', color: 'bg-gradient-to-br from-neutral-300 to-neutral-700 border-neutral-400', tooltip: 'No Theme (Monochrome)' }
+                ].map((themeOpt) => (
+                  <button
+                    key={themeOpt.key}
+                    title={themeOpt.tooltip}
+                    onClick={() => setTheme(themeOpt.key)}
+                    className={`w-2 h-2 rounded-full ${themeOpt.color} border border-transparent transition-all duration-200 hover:scale-125 cursor-pointer ${
+                      theme === themeOpt.key ? 'ring-1 ring-offset-1 ring-[var(--accent-color)]' : 'opacity-80'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </nav>
+      )}
+
+      {/* ALT LINKS BAR */}
+      {headerOpen && altBarOpen && (
+        <section className="bg-[var(--bg-secondary)] border-b border-[var(--card-border)] py-3 px-4 md:px-6 transition-colors duration-300 animate-fade-in">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          {/* Alt Links Removed */}
+
+          <div className="flex flex-wrap items-center gap-2 md:ml-auto w-full md:w-auto overflow-visible">
+            {/* Go back to games back button */}
+            {(filter === 'chat' || filter === 'movies') && (
+              <button
+                id="chat-back-button"
+                onClick={() => setFilter('all')}
+                className="flex items-center gap-1.5 text-xs font-mono font-bold py-1.5 px-3.5 rounded-full border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-primary)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-all cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] active:scale-98"
+                title="Go back to games list"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                <span>Go back to games</span>
+              </button>
+            )}
+
+            {/* Movies Workspace button */}
+            <button
+              onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
+              className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
+                filter === 'movies'
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
+                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
+              }`}
+              title="Toggle Movies - Stream Movies and TV Shows"
+            >
+              <Tv className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+              <span>Movies</span>
+            </button>
+
+            {/* Toggle Button for Collapsible Cloak & AI Tools */}
+            <button
+              onClick={() => setToolsExpanded(!toolsExpanded)}
+              className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
+                toolsExpanded
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
+                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
+              }`}
+              title="Toggle Cloak & AI Tools"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span>Cloak & AI Tools</span>
+              {toolsExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+
+            {/* Collapsible Container for Cloak & AI Tools */}
+            {toolsExpanded && (
+              <div className="flex flex-wrap items-center gap-2 bg-[var(--bg-primary)]/40 p-1 px-2 rounded-2xl border border-[var(--card-border)]/50 transition-all duration-200 animate-fade-in">
+                {/* AI Socratic Tutor button */}
+                <button
+                  onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
+                  className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
+                    filter === 'chat'
+                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
+                      : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
+                  }`}
+                  title="Toggle AI Socratic Tutor - Ask Study/Academic Questions"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                  <span>GEMINI AI / GROQ AI</span>
+                </button>
+
+                {/* Separate Movies Tab Button (Only visible when on Movies tab) */}
+                {filter === 'movies' && (
+                  <button
+                    onClick={() => window.open('https://urnperiodic.github.io/p/', '_blank')}
+                    className="text-xs bg-[var(--card-bg)] text-[var(--accent-color)] border border-[var(--accent-color)]/30 hover:border-[var(--accent-color)] py-1.5 px-3.5 rounded-full hover:bg-[var(--accent-color)] hover:text-black active:scale-98 transition-all duration-200 font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    title="Open Movies in a separate tab"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 animate-pulse" />
+                    <span>Open in a separate tab</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    const win = window.open("about:blank", "_blank");
+                    if (!win) {
+                      alert("Popup blocked! Please allow popups to open the site in about:blank.");
+                      return;
+                    }
+                    
+                    // Construct query parameters to propagate the decoy state to the new document
+                    const searchParams = new URLSearchParams(window.location.search);
+                    searchParams.set('decoyType', decoyType);
+                    const iframeSrc = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${window.location.hash}`;
+
+                    const bookSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
+                      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
+                    )}`;
+
+                    let parentTitle = "StudyTools";
+                    let parentFavicon = bookSvgDataUri;
+                    
+                    if (decoyType === 'classroom') {
+                      parentTitle = "Home - Classroom";
+                      parentFavicon = "https://ssl.gstatic.com/classroom/favicon.png";
+                    } else if (decoyType === 'clever') {
+                      parentTitle = "Clever | Log in with Clever";
+                      parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=clever.com";
+                    } else if (decoyType === 'campus') {
+                      parentTitle = "Campus Student";
+                      parentFavicon = "https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png";
+                    } else if (decoyType === 'docs') {
+                      parentTitle = "Google Docs";
+                      parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=docs.google.com";
+                    } else if (decoyType === 'gmail') {
+                      parentTitle = "Inbox - Jersey City Public Schools";
+                      parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=mail.google.com";
+                    }
+
+                    win.document.write(`
+                      <!DOCTYPE html>
+                      <html>
+                      <head>
+                        <title>${parentTitle}</title>
+                        <link rel="icon" type="image/png" href="${parentFavicon}">
+                        <meta charset="utf-8">
+                        <style>
+                          html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0c0a09; }
+                          iframe { width: 100vw; height: 100vh; border: none; display: block; }
+                        </style>
+                      </head>
+                      <body>
+                        <iframe src="${iframeSrc}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+                      </body>
+                      </html>
+                    `);
+                    win.document.close();
+                  }}
+                  className="text-xs bg-[var(--card-bg)] text-[var(--text-primary)] border border-[var(--card-border)] py-1.5 px-3.5 rounded-full hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] active:scale-98 transition-all duration-200 font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  title="Open entire site inside about:blank tab to cloak history"
+                >
+                  <Globe className="w-3.5 h-3.5 text-[var(--accent-color)] animate-spin-slow" />
+                  <span>CLOAK IN ABOUT:BLANK</span>
+                </button>
+              </div>
+            )}
 
             {/* Decoy Mode Selector */}
             <div className={`flex items-center border rounded-full px-3 py-1.5 text-xs font-mono shadow-sm transition-all duration-300 ${
@@ -2102,6 +2417,7 @@ if (iconUrl.includes('.ico')) {
           </div>
         </div>
       </section>
+      )}
 
             {/* Hidden legacy frame creator to preserve large assets cleanly */}
             <div style={{ display: 'none' }}>
@@ -2731,20 +3047,20 @@ if (iconUrl.includes('.ico')) {
           
           {!selectedGame ? (
             filter === 'chat' ? (
-              <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)]">
+              <div className={`flex flex-col w-full min-h-[550px] animate-fade-in bg-[var(--bg-secondary)] ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}>
                 <ChatWorkspace onClose={() => setFilter('all')} />
               </div>
             ) : filter === 'info' ? (
-              <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)]">
+              <div className={`flex flex-col w-full min-h-[550px] animate-fade-in bg-[var(--bg-secondary)] ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}>
                 <InformationSection onClose={() => setFilter('all')} />
               </div>
             ) : filter === 'movies' ? (
-              <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)]">
+              <div className={`flex flex-col w-full min-h-[550px] animate-fade-in bg-[var(--bg-secondary)] ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}>
                 <MoviesWorkspace onClose={() => setFilter('all')} />
               </div>
             ) : filter === 'portal' && activePortal ? (
               // Browse Portals: clean iframe, no header or close button
-              <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)] rounded-2xl overflow-hidden border border-[var(--card-border)]/50">
+              <div className={`flex flex-col w-full min-h-[550px] animate-fade-in bg-[var(--bg-secondary)] rounded-2xl overflow-hidden border border-[var(--card-border)]/50 ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}>
                 <iframe
                   key={activePortal}
                   src={`/category/${activePortal}.html`}
@@ -2756,7 +3072,7 @@ if (iconUrl.includes('.ico')) {
                 />
               </div>
             ) : filter === 'classroom6x' ? (
-              <div className="flex flex-col w-full h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] min-h-[550px] animate-fade-in bg-[var(--bg-secondary)] rounded-2xl overflow-hidden border border-[var(--card-border)]/50">
+              <div className={`flex flex-col w-full min-h-[550px] animate-fade-in bg-[var(--bg-secondary)] rounded-2xl overflow-hidden border border-[var(--card-border)]/50 ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}>
                 <div className="flex justify-between items-center bg-[#14141c] px-4 py-3 border-b border-[var(--card-border)]/50 shrink-0">
                   <div className="flex items-center gap-2">
                     <School className="w-5 h-5 text-[var(--accent-color)]" />
@@ -2781,7 +3097,7 @@ if (iconUrl.includes('.ico')) {
             ) : (
               <div className="flex flex-col gap-6">
               
-              <div className="flex justify-between items-center border-l-4 border-[var(--accent-color)] pl-3">
+              <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center border-l-4 border-[var(--accent-color)] pl-3 gap-4 sm:gap-10">
                 <div>
                   <h2 className="text-lg font-black uppercase tracking-wider text-[var(--text-primary)]">
                     {filter === 'all' && 'Games Library'}
@@ -2799,6 +3115,20 @@ if (iconUrl.includes('.ico')) {
                   <p className="text-xs text-[var(--text-muted)] mt-0.5">
                     Showing {filteredGames.length} unblocked resources
                   </p>
+                </div>
+
+                {/* Library Search Bar */}
+                <div className="relative w-full max-w-xs">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[var(--text-muted)]">
+                    <Search className="h-4 w-4 text-[var(--accent-color)] animate-pulse" />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search unblocked resources..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full text-xs rounded-xl py-2 pl-9 pr-4 border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] placeholder:opacity-50 transition-all duration-300 shadow-sm"
+                  />
                 </div>
               </div>
 
