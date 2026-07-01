@@ -15,7 +15,7 @@ import {
   Film,
   Laugh
 } from 'lucide-react';
-import { isBlocked } from '../utils/bannedWords';
+import { isBlocked } from '../utils/BannedWords';
 
 // Firebase credentials from the original widget
 const firebaseConfig = {
