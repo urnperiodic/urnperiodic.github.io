@@ -1,3 +1,23 @@
+import { useState, useEffect, useRef } from 'react';
+import { initializeApp, getApps } from 'firebase/app';
+import { getDatabase, ref, push, onChildAdded, query, limitToLast } from 'firebase/database';
+import { 
+  Send, 
+  User, 
+  Hash, 
+  MessageSquare, 
+  ShieldAlert, 
+  Check, 
+  Clock, 
+  X,
+  Image,
+  Gamepad2,
+  Film,
+  Laugh
+} from 'lucide-react';
+import { isBlocked } from '../utils/bannedWords';
+
+// Firebase credentials from the original widget
 const firebaseConfig = {
   apiKey: "AIzaSyA_qbIeZ5rwP-8J5cMUYVlmtGdpwU7fr7Y",
   authDomain: "chat-f9251.firebaseapp.com",
