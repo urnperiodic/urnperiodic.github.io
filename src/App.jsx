@@ -19,6 +19,7 @@ import FlashcardsWorkspace from './components/FlashcardsWorkspace';
 import QuizWorkspace from './components/QuizWorkspace';
 import GrammarCheckerWorkspace from './components/GrammarCheckerWorkspace';
 import ChatWorkspace from './components/ChatWorkspace';
+import UserChat from './components/UserChat';
 import MoviesWorkspace from './components/MoviesWorkspace';
 import InformationSection from './components/InformationSection';
 import { 
@@ -105,7 +106,40 @@ export default function App() {
   const [activePortal, setActivePortal] = useState(null);
   const [toolsExpanded, setToolsExpanded] = useState(false);
   const [altBarOpen, setAltBarOpen] = useState(true);
-  const [headerOpen, setHeaderOpen] = useState(true);
+  const [headerOpen, setHeaderOpen] = useState(false);
+  const [userChatOpen, setUserChatOpen] = useState(false);
+
+  // States for collapsible & resizable docked game chat
+  const [dockedChatWidth, setDockedChatWidth] = useState(288); // 288px default (w-72)
+  const [dockedChatCollapsed, setDockedChatCollapsed] = useState(true);
+  const [isDraggingDock, setIsDraggingDock] = useState(false);
+
+  // Monitor mouse moving & mouse up for docking drag resize
+  useEffect(() => {
+    if (!isDraggingDock) return;
+    const handleMouseMove = (e) => {
+      const container = document.getElementById('game-arena-container');
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const width = rect.right - e.clientX;
+      
+      // Clamp width: min 180px, max 50% of the game arena container width
+      const minW = 180;
+      const maxW = Math.min(600, rect.width * 0.5);
+      if (width >= minW && width <= maxW) {
+        setDockedChatWidth(width);
+      }
+    };
+    const handleMouseUp = () => {
+      setIsDraggingDock(false);
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingDock]);
 
   // List of Browse Portals subsection items. Each opens /category/{slug}.html in an iframe.
   const portalList = [
@@ -178,7 +212,18 @@ export default function App() {
     setViewMode(mode);
     safeStorage.setItem('classroom-view-mode', mode);
     safeStorage.setItem('classroom-passcode-unlocked', mode === 'games' ? 'true' : 'false');
+    if (mode === 'games') {
+      setHeaderOpen(false);
+      setSidebarOpen(false);
+    }
   };
+
+    useEffect(() => {
+      if (viewMode === 'games') {
+        setHeaderOpen(false);
+        setSidebarOpen(false);
+      }
+    }, [viewMode]);
 
   const [passcode, setPasscode] = useState('');
   const [isShake, setIsShake] = useState(false);
@@ -468,9 +513,7 @@ if (iconUrl.includes('.ico')) {
       }
     };
 
-    const bookSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
-    )}`;
+    const bookSvgDataUri = "https://ssl.gstatic.com/classroom/favicon.png";
 
     if (viewMode === 'articles') {
       setBothTitles("StudyTools");
@@ -1078,7 +1121,7 @@ if (iconUrl.includes('.ico')) {
               title="StudyTools Home"
             >
               <div className="p-2 bg-[var(--accent-color)] text-[var(--bg-color)] rounded-xl shadow-[0_2px_8.5px_var(--accent-shadow)] border border-[var(--card-border)]">
-                <BookOpen className="w-6 h-6 animate-pulse" />
+                <img src="https://ssl.gstatic.com/classroom/favicon.png" className="w-6 h-6 object-contain" alt="Classroom Logo" referrerPolicy="no-referrer" />
               </div>
               <div>
                 <h1 className="text-sm font-bold tracking-tight text-[var(--text-primary)] sm:text-base">
@@ -1562,7 +1605,7 @@ if (iconUrl.includes('.ico')) {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--card-border)]">
             <div>
               <h3 className="text-lg font-extrabold tracking-tight text-[var(--text-primary)] flex items-center gap-2">
-                <BookOpen className="text-[var(--accent-color)] w-5 h-5" />
+                <img src="https://ssl.gstatic.com/classroom/favicon.png" className="w-5 h-5 object-contain" alt="Classroom Logo" referrerPolicy="no-referrer" />
                 Examples of some articles
               </h3>
             </div>
@@ -1828,7 +1871,7 @@ if (iconUrl.includes('.ico')) {
           >
             <div className="p-2 bg-[var(--accent-color)] text-[var(--bg-color)] rounded-lg border border-[var(--card-border)] shadow-[0_2px_8.5px_var(--accent-shadow)] group-hover:rotate-12 group-hover:scale-110 transition-all duration-300 transform">
               {decoyType === 'classroom' ? (
-                <School className="w-5.5 h-5.5" />
+                <img src="https://ssl.gstatic.com/classroom/favicon.png" className="w-5.5 h-5.5 object-contain" alt="Classroom Logo" referrerPolicy="no-referrer" />
               ) : decoyType === 'clever' ? (
                 <Compass className="w-5.5 h-5.5" />
               ) : decoyType === 'campus' ? (
@@ -1838,7 +1881,7 @@ if (iconUrl.includes('.ico')) {
               ) : decoyType === 'gmail' ? (
                 <Mail className="w-5.5 h-5.5" />
               ) : (
-                <BookOpen className="w-5.5 h-5.5" />
+                <img src="https://ssl.gstatic.com/classroom/favicon.png" className="w-5.5 h-5.5 object-contain" alt="Classroom Logo" referrerPolicy="no-referrer" />
               )}
             </div>
             <div>
@@ -1892,6 +1935,62 @@ if (iconUrl.includes('.ico')) {
           <div className="text-[11px] font-mono select-none opacity-80 pl-1">
             <span className="text-xs opacity-50 block sm:inline mr-1">made by</span>
             <span className="font-bold text-[var(--accent-color)] tracking-wider">™ AND GRANDDIA2</span>
+          </div>
+
+          {/* Quick Sections in Full Header */}
+          <div className="flex items-center gap-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)]/50 p-1 rounded-xl shadow-sm">
+            {/* Movies Button */}
+            <button
+              onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
+              className={`p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                filter === 'movies'
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
+              }`}
+              title="Movies Workspace"
+            >
+              <Tv className="w-3.5 h-3.5" />
+            </button>
+
+            {/* AI Socratic Tutor Button */}
+            <button
+              onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
+              className={`p-1.5 px-2.5 rounded-lg border text-xs font-sans font-black flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                filter === 'chat'
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
+              }`}
+              title="GEMINI AI / GROQ AI Tutor"
+            >
+              <span>AI</span>
+            </button>
+
+            {/* Quick Exit & Open Separately buttons for Workspaces (Sticky) */}
+            {(filter === 'movies' || filter === 'chat') && (
+              <div className="flex items-center gap-1.5 pl-2 ml-1 border-l border-[var(--card-border)]/50">
+                <button
+                  onClick={() => {
+                    const url = filter === 'movies' 
+                      ? 'https://urnperiodic.github.io/p/' 
+                      : 'https://urnperiodic.github.io/extrastuffforwebsite/';
+                    window.open(url, '_blank');
+                  }}
+                  className="px-2.5 py-1.5 text-[10px] font-mono font-black tracking-tight uppercase border border-[var(--accent-color)]/30 hover:border-[var(--accent-color)] bg-[var(--accent-color)]/10 hover:bg-[var(--accent-color)]/20 text-[var(--accent-color)] rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-sm shrink-0"
+                  title="Open separately"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open separately</span>
+                </button>
+                
+                <button
+                  onClick={() => setFilter('all')}
+                  className="p-1.5 rounded-lg border border-rose-500/40 hover:border-rose-500 bg-rose-500/10 text-rose-500 hover:text-white hover:bg-rose-500 transition-all cursor-pointer flex items-center justify-center shrink-0 group"
+                  title="Close Workspace"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Light/Dark slider */}
@@ -1949,7 +2048,7 @@ if (iconUrl.includes('.ico')) {
               >
                 <div className="p-1 bg-[var(--accent-color)] text-[var(--bg-color)] rounded border border-[var(--card-border)] shadow-sm group-hover:rotate-12 transition-all duration-300 transform">
                   {decoyType === 'classroom' ? (
-                    <School className="w-3.5 h-3.5" />
+                    <img src="https://ssl.gstatic.com/classroom/favicon.png" className="w-3.5 h-3.5 object-contain" alt="Classroom Logo" referrerPolicy="no-referrer" />
                   ) : decoyType === 'clever' ? (
                     <Compass className="w-3.5 h-3.5" />
                   ) : decoyType === 'campus' ? (
@@ -1959,7 +2058,7 @@ if (iconUrl.includes('.ico')) {
                   ) : decoyType === 'gmail' ? (
                     <Mail className="w-3.5 h-3.5" />
                   ) : (
-                    <BookOpen className="w-3.5 h-3.5" />
+                    <img src="https://ssl.gstatic.com/classroom/favicon.png" className="w-3.5 h-3.5 object-contain" alt="Classroom Logo" referrerPolicy="no-referrer" />
                   )}
                 </div>
                 <div>
@@ -1996,15 +2095,53 @@ if (iconUrl.includes('.ico')) {
 
               <button
                 onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
-                className={`p-1 rounded-md text-xs transition-all duration-200 ${
+                className={`p-1 px-1.5 rounded-md text-xs font-sans font-black transition-all duration-200 ${
                   filter === 'chat'
-                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)]'
                     : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
                 }`}
                 title="GEMINI AI / GROQ AI"
               >
+                <span>AI</span>
+              </button>
+
+              <button
+                onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); }}
+                className={`p-1 rounded-md text-xs transition-all duration-200 ${
+                  filter === 'lobbychat'
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
+                    : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
+                }`}
+                title="Lobby Chat"
+              >
                 <MessageSquare className="w-3.5 h-3.5" />
               </button>
+
+            {/* Quick Exit & Open Separately buttons for Workspaces (Mobile) */}
+            {(filter === 'movies' || filter === 'chat') && (
+              <div className="flex items-center gap-1 ml-0.5 pl-0.5 border-l border-[var(--card-border)]/30">
+                <button
+                  onClick={() => {
+                    const url = filter === 'movies' 
+                      ? 'https://urnperiodic.github.io/p/' 
+                      : 'https://urnperiodic.github.io/extrastuffforwebsite/';
+                    window.open(url, '_blank');
+                  }}
+                  className="p-1 text-[9px] font-mono font-black border border-[var(--accent-color)]/30 bg-[var(--accent-color)]/10 text-[var(--accent-color)] rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0"
+                  title="Open separately"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                </button>
+                
+                <button
+                  onClick={() => setFilter('all')}
+                  className="p-1 rounded-md border border-rose-500/40 hover:border-rose-500 bg-rose-500/10 text-rose-500 hover:text-white hover:bg-rose-500 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                  title="Close Workspace"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
 
               <button
                 onClick={() => {
@@ -2017,9 +2154,7 @@ if (iconUrl.includes('.ico')) {
                   searchParams.set('decoyType', decoyType);
                   const iframeSrc = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${window.location.hash}`;
 
-                  const bookSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
-                    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
-                  )}`;
+                  const bookSvgDataUri = "https://ssl.gstatic.com/classroom/favicon.png";
 
                   let parentTitle = "StudyTools";
                   let parentFavicon = bookSvgDataUri;
@@ -2069,15 +2204,15 @@ if (iconUrl.includes('.ico')) {
               <select 
                 value={decoyType}
                 onChange={(e) => setDecoyType(e.target.value)}
-                className="bg-transparent border-none outline-none font-bold text-[10px] text-[var(--text-primary)] cursor-pointer py-0.5 px-1 max-w-[60px]"
+                className="p-1 text-[9px] font-mono font-black border border-[var(--accent-color)]/30 bg-[var(--accent-color)]/5 text-[var(--accent-color)] rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0"
                 style={{ colorScheme: mode }}
               >
-                <option value="none">Off</option>
-                <option value="classroom">Classroom</option>
-                <option value="clever">Clever</option>
-                <option value="campus">Campus</option>
-                <option value="docs">Docs</option>
-                <option value="gmail">Gmail</option>
+                <option value="none" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Off</option>
+                <option value="classroom" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Classroom</option>
+                <option value="clever" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Clever</option>
+                <option value="campus" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Campus</option>
+                <option value="docs" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Docs</option>
+                <option value="gmail" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Gmail</option>
               </select>
             </div>
           </div>
@@ -2100,15 +2235,42 @@ if (iconUrl.includes('.ico')) {
             {/* AI Socratic Tutor Button */}
             <button
               onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
-              className={`p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
+              className={`p-1.5 px-2.5 rounded-lg border text-xs font-sans font-black flex items-center justify-center cursor-pointer transition-all duration-200 ${
                 filter === 'chat'
                   ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
                   : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
               }`}
               title="GEMINI AI / GROQ AI Tutor"
             >
-              <MessageSquare className="w-3.5 h-3.5" />
+              <span>AI</span>
             </button>
+
+            {/* Quick Exit & Open Separately buttons for Workspaces (Main) */}
+            {(filter === 'movies' || filter === 'chat') && (
+              <div className="flex items-center gap-1.5 pl-2 ml-1 border-l border-[var(--card-border)]/50">
+                <button
+                  onClick={() => {
+                    const url = filter === 'movies' 
+                      ? 'https://urnperiodic.github.io/p/' 
+                      : 'https://urnperiodic.github.io/extrastuffforwebsite/';
+                    window.open(url, '_blank');
+                  }}
+                  className="px-2.5 py-1.5 text-[10px] font-mono font-black tracking-tight uppercase border border-[var(--accent-color)]/30 hover:border-[var(--accent-color)] bg-[var(--accent-color)]/10 hover:bg-[var(--accent-color)]/20 text-[var(--accent-color)] rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-sm shrink-0"
+                  title="Open separately"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open separately</span>
+                </button>
+                
+                <button
+                  onClick={() => setFilter('all')}
+                  className="p-1.5 rounded-lg border border-rose-500/40 hover:border-rose-500 bg-rose-500/10 text-rose-500 hover:text-white hover:bg-rose-500 transition-all cursor-pointer flex items-center justify-center shrink-0 group"
+                  title="Close Workspace"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             {/* Cloak in about:blank Button */}
             <button
@@ -2122,9 +2284,7 @@ if (iconUrl.includes('.ico')) {
                 searchParams.set('decoyType', decoyType);
                 const iframeSrc = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${window.location.hash}`;
 
-                const bookSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
-                  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
-                )}`;
+                const bookSvgDataUri = "https://ssl.gstatic.com/classroom/favicon.png";
 
                 let parentTitle = "StudyTools";
                 let parentFavicon = bookSvgDataUri;
@@ -2184,12 +2344,12 @@ if (iconUrl.includes('.ico')) {
                 className="bg-transparent border-none outline-none font-bold cursor-pointer py-0.5 text-[11px]"
                 style={{ colorScheme: mode }}
               >
-                <option value="none">Decoy: Off</option>
-                <option value="classroom">Classroom</option>
-                <option value="clever">Clever</option>
-                <option value="campus">Campus</option>
-                <option value="docs">Docs</option>
-                <option value="gmail">Gmail</option>
+                <option value="none" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Decoy: Off</option>
+                <option value="classroom" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Classroom</option>
+                <option value="clever" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Clever</option>
+                <option value="campus" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Campus</option>
+                <option value="docs" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Docs</option>
+                <option value="gmail" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Gmail</option>
               </select>
             </div>
           </div>
@@ -2307,8 +2467,22 @@ if (iconUrl.includes('.ico')) {
                   }`}
                   title="Toggle AI Socratic Tutor - Ask Study/Academic Questions"
                 >
-                  <MessageSquare className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                  <span className="font-sans font-black text-xs text-[var(--accent-color)]">AI</span>
                   <span>GEMINI AI / GROQ AI</span>
+                </button>
+
+                {/* Live Lobby Chat button */}
+                <button
+                  onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); }}
+                  className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
+                    filter === 'lobbychat'
+                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
+                      : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
+                  }`}
+                  title="Toggle Live Lobby Chat"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                  <span>Lobby Chat</span>
                 </button>
 
                 {/* Separate Movies Tab Button (Only visible when on Movies tab) */}
@@ -2336,9 +2510,7 @@ if (iconUrl.includes('.ico')) {
                     searchParams.set('decoyType', decoyType);
                     const iframeSrc = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${window.location.hash}`;
 
-                    const bookSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
-                      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
-                    )}`;
+                    const bookSvgDataUri = "https://ssl.gstatic.com/classroom/favicon.png";
 
                     let parentTitle = "StudyTools";
                     let parentFavicon = bookSvgDataUri;
@@ -2395,7 +2567,7 @@ if (iconUrl.includes('.ico')) {
                 : 'bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--text-muted)]'
             }`}>
               <span className="text-[10px] uppercase font-extrabold mr-1.5 flex items-center gap-1">
-                <School className="w-3.5 h-3.5 animate-pulse" />
+                <img src="https://ssl.gstatic.com/classroom/favicon.png" className="w-3.5 h-3.5 object-contain" alt="Classroom Logo" referrerPolicy="no-referrer" />
                 <span>Decoy:</span>
               </span>
               <select 
@@ -2406,12 +2578,12 @@ if (iconUrl.includes('.ico')) {
                 }`}
                 style={{ colorScheme: mode }}
               >
-                <option value="none" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Off (StudyTools)</option>
-                <option value="classroom" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Google Classroom</option>
-                <option value="clever" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Clever Login</option>
-                <option value="campus" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Infinite Campus</option>
-                <option value="docs" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Google Docs</option>
-                <option value="gmail" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}>Inbox - Jersey City Public Schools</option>
+                <option value="none" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Off (StudyTools)</option>
+                <option value="classroom" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Google Classroom</option>
+                <option value="clever" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Clever Login</option>
+                <option value="campus" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Infinite Campus</option>
+                <option value="docs" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Google Docs</option>
+                <option value="gmail" style={{ backgroundColor: '#1a1a24', color: '#ffffff' }}>Inbox - Jersey City Public Schools</option>
               </select>
             </div>
           </div>
@@ -2419,307 +2591,10 @@ if (iconUrl.includes('.ico')) {
       </section>
       )}
 
-            {/* Hidden legacy frame creator to preserve large assets cleanly */}
-            <div style={{ display: 'none' }}>
-              <button
-                onClick={() => {
-                  const win = window.open("about:blank", "_blank");
-                  if (!win) {
-                    alert("Popup blocked! Accessing classroom decoys requires popup permissions.");
-                    return;
-                  }
-                win.document.write(`
-                  <!DOCTYPE html>
-                  <html>
-                  <head>
-                    <title>Classwork - Algebra II</title>
-                    <link rel="icon" type="image/png" href="https://ssl.gstatic.com/classroom/favicon.png">
-                    <meta charset="utf-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <style>
-                      * { box-sizing: border-box; margin: 0; padding: 0; }
-                      html, body {
-                        width: 100vw;
-                        height: 100vh;
-                        overflow: hidden;
-                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                        background-color: #ffffff;
-                        display: flex;
-                        flex-direction: column;
-                      }
-                      
-                      /* CLASSROOM HEADER */
-                      .classroom-header {
-                        height: 64px;
-                        background-color: #ffffff;
-                        border-bottom: 1px solid #e0e0e0;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        padding: 0 16px;
-                        position: relative;
-                        user-select: none;
-                      }
-                      
-                      .header-left { display: flex; align-items: center; gap: 12px; }
-                      
-                      .menu-btn {
-                        width: 48px;
-                        height: 48px;
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        cursor: pointer;
-                        color: #5f6368;
-                      }
-                      .menu-btn:hover { background-color: rgba(95, 99, 104, 0.04); }
-                      
-                      .classroom-logo { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-                      .classroom-logo img { width: 24px; height: 24px; }
-                      .classroom-logo span {
-                        font-size: 22px;
-                        color: #5f6368;
-                        font-weight: 400;
-                        font-family: Arial, sans-serif;
-                      }
-                      
-                      .course-title-section {
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                        margin-left: 8px;
-                        border-left: 1px solid #dadce0;
-                        padding-left: 16px;
-                      }
-                      
-                      .course-title { font-size: 16px; color: #3c4043; font-weight: 500; }
-                      .course-section { font-size: 12px; color: #5f6368; }
-                      
-                      /* TABS */
-                      .header-middle {
-                        display: flex;
-                        align-items: center;
-                        gap: 24px;
-                        position: absolute;
-                        left: 50%;
-                        transform: translateX(-50%);
-                        height: 100%;
-                      }
-                      
-                      .tab {
-                        height: 100%;
-                        display: flex;
-                        align-items: center;
-                        padding: 0 8px;
-                        font-size: 14px;
-                        font-weight: 500;
-                        color: #5f6368;
-                        cursor: pointer;
-                        border-bottom: 3px solid transparent;
-                      }
-                      .tab:hover { color: #137333; background-color: rgba(19, 115, 51, 0.04); }
-                      .tab.active { color: #137333; border-bottom-color: #137333; }
-                      
-                      /* RIGHT SIDE */
-                      .header-right { display: flex; align-items: center; gap: 8px; }
-                      
-                      .icon-btn {
-                        width: 40px;
-                        height: 40px;
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        cursor: pointer;
-                        color: #5f6368;
-                      }
-                      .icon-btn:hover { background-color: rgba(95, 99, 104, 0.04); }
-                      
-                      .avatar {
-                        width: 32px;
-                        height: 32px;
-                        border-radius: 50%;
-                        background-color: #1a73e8;
-                        color: #ffffff;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 14px;
-                        font-weight: 500;
-                        margin-left: 8px;
-                        cursor: pointer;
-                      }
-                      
-                      /* MAIN CONTENT */
-                      .main-body {
-                        flex: 1;
-                        position: relative;
-                        width: 100%;
-                        height: calc(100vh - 64px);
-                        background-color: #ffffff;
-                      }
-                      
-                      iframe { width: 100%; height: 100%; border: none; display: block; }
-                      
-                      .decoy-content {
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        background-color: #ffffff;
-                        display: none;
-                        padding: 32px;
-                        overflow-y: auto;
-                      }
-                      
-                      .decoy-active #game-iframe { display: none; }
-                      .decoy-active .decoy-content { display: block; }
-                    </style>
-                  </head>
-                  <body>
-                    <!-- Header -->
-                    <div class="classroom-header">
-                      <div class="header-left">
-                        <div class="menu-btn" id="menu-btn-click">
-                          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
-                          </svg>
-                        </div>
-                        <div class="classroom-logo" id="brand-logo-click">
-                          <img src="https://ssl.gstatic.com/classroom/favicon.png" alt="Classroom Logo">
-                          <span>Classroom</span>
-                        </div>
-                        <div class="course-title-section" id="course-banner-click" style="cursor: pointer;">
-                          <div class="course-title">Algebra II</div>
-                          <div class="course-section">&nbsp;- Honors Period 3</div>
-                        </div>
-                      </div>
-                      
-                      <div class="header-middle">
-                        <div class="tab">Stream</div>
-                        <div class="tab active">Classwork</div>
-                        <div class="tab">People</div>
-                        <div class="tab">Grades</div>
-                      </div>
-                      
-                      <div class="header-right">
-                        <div class="icon-btn">
-                          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                            <path d="M20 18H4v-7h16v7zm1-9h-3V6c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v3H3c-1.1 0-2 .9-2 2v9c0 1.1.9 2 2 2h18c1.1 0-2-.9-2-2v-9c0-1.1-.9-2-2-2zm-3-3v3H8V6h10z"/>
-                          </svg>
-                        </div>
-                        <div class="icon-btn">
-                          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
-                          </svg>
-                        </div>
-                        <div class="icon-btn" style="margin-right: 4px;">
-                          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                          </svg>
-                        </div>
-                        <div class="avatar">S</div>
-                      </div>
-                    </div>
-                    
-                    <!-- Main Body Area -->
-                    <div class="main-body" id="main-body">
-                      <iframe id="game-iframe" src="${window.location.origin}${window.location.pathname}${window.location.search}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
-                      
-                      <!-- Decoy Homework Board -->
-                      <div class="decoy-content">
-                        <div style="background-color: #137333; color: white; padding: 24px 32px; border-radius: 8px; margin-bottom: 24px; text-align: left;">
-                          <h1 style="font-size: 26px; font-weight: 400; margin-bottom: 6px; font-family: Roboto, Arial, sans-serif;">Algebra II - Period 3 Homework & Resource Portal</h1>
-                          <p style="font-size: 14px; opacity: 0.9; font-family: Roboto, Arial, sans-serif;">Honors Mathematics Course Resources</p>
-                        </div>
-
-                        <div style="display: flex; gap: 24px; text-align: left; font-family: Roboto, Arial, sans-serif; flex-wrap: wrap;">
-                          <div style="flex: 2; min-width: 300px;">
-                            <div style="background: white; border: 1px solid #dadce0; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
-                              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #dadce0; padding-bottom: 16px; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-                                <div>
-                                  <h2 style="font-size: 20px; font-weight: 500; color: #1967d2; margin-bottom: 4px;">Interactive Graphing Lab & Exercises</h2>
-                                  <p style="font-size: 12px; color: #5f6368;">Teacher: Mrs. Katherine Vance &bull; Assigned: Jun 4</p>
-                                </div>
-                                <div style="text-align: right; min-width: 120px;">
-                                  <p style="font-size: 14px; font-weight: 500; color: #3c4043;">100 points</p>
-                                  <p style="font-size: 12px; color: #c5221f; font-weight: 500;">Due Tomorrow, 11:59 PM</p>
-                                </div>
-                              </div>
-
-                              <p style="font-size: 14px; color: #3c4043; line-height: 1.6; margin-bottom: 16px;">
-                                Use the web interactive math sandbox or scientific plotter loaded below to map standard polynomial structures and quadratic graphs. Note the curves, intersections, and coordinates. Fill in the homework matrix PDF when complete.
-                              </p>
-                              
-                              <div style="border: 1px solid #dadce0; border-radius: 8px; overflow: hidden; height: 400px; margin-top: 16px; background-color: #f1f3f4;">
-                                <iframe src="https://www.desmos.com/calculator" style="width:100%; height:100%; border:0;" referrerpolicy="no-referrer"></iframe>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div style="flex: 1; min-width: 240px; max-width: 300px;">
-                            <div style="background: white; border: 1px solid #dadce0; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                              <h3 style="font-size: 16px; font-weight: 500; color: #3c4043; margin-bottom: 16px;">Your work</h3>
-                              <div style="border: 1px dashed #dadce0; border-radius: 4px; padding: 24px; text-align: center; margin-bottom: 16px; font-size: 12px; color: #5f6368;">
-                                No files attached
-                              </div>
-                              <button style="width: 100%; background: #1a73e8; color: white; border: none; border-radius: 4px; padding: 10px 16px; font-size: 14px; font-weight: 500; cursor: pointer; margin-bottom: 8px;">
-                                + Add or create
-                              </button>
-                              <button style="width: 100%; background: transparent; border: 1px solid #dadce0; color: #1a73e8; border-radius: 4px; padding: 10px 16px; font-size: 14px; font-weight: 500; cursor: pointer;">
-                                Mark as done
-                              </button>
-                            </div>
-
-                            <div style="background: white; border: 1px solid #dadce0; border-radius: 8px; padding: 16px;">
-                              <h3 style="font-size: 14px; font-weight: 500; color: #3c4043; margin-bottom: 8px;">Private comments</h3>
-                              <p style="font-size: 12px; color: #5f6368; margin-bottom: 8px;">Send a private comment to Mrs. Vance</p>
-                              <input placeholder="Add private comment..." style="width:100%; border: 1px solid #dadce0; padding: 8px 12px; font-size: 12px; border-radius: 4px; outline: none; box-sizing: border-box;" />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <script>
-                      var isDecoy = false;
-                      function togglePanic() {
-                        isDecoy = !isDecoy;
-                        if (isDecoy) {
-                          document.getElementById('main-body').classList.add('decoy-active');
-                        } else {
-                          document.getElementById('main-body').classList.remove('decoy-active');
-                        }
-                      }
-                      
-                      // Esc key triggers emergency switch to real study material
-                      window.addEventListener('keydown', function(e) {
-                        if (e.key === 'Escape' || e.key === '\\x60') {
-                          togglePanic();
-                        }
-                      });
-                      
-                      // Clicking on banner/logo acts as interactive quick toggle
-                      document.getElementById('course-banner-click').addEventListener('click', togglePanic);
-                      document.getElementById('brand-logo-click').addEventListener('click', togglePanic);
-                      document.getElementById('menu-btn-click').addEventListener('click', togglePanic);
-                    </script>
-                  </body>
-                  </html>
-                `);
-                win.document.close();
-              }}
-              className="hidden"
-            >
-              <span>HIDDEN LEGACY BUTTON</span>
-            </button>
-            </div>
 
       {/* MAIN CONTAINER: SIDEBAR + GAMES */}
       <div className={`flex-1 flex flex-col md:flex-row w-full mx-auto transition-all duration-300 ${
-        (filter === 'chat' || filter === 'movies')
+        (filter === 'chat' || filter === 'movies' || filter === 'lobbychat')
           ? 'max-w-none p-0 gap-0 border-t border-[var(--card-border)]/50 lg:bg-[#07090e]' 
           : 'max-w-8xl p-4 md:p-6 gap-6 self-center'
       }`}>
@@ -2727,7 +2602,7 @@ if (iconUrl.includes('.ico')) {
         {/* LEFT NAV PANEL - CAT SIDEBAR */}
         {filter !== 'chat' && filter !== 'movies' && (
           <aside className={`transition-all duration-300 ease-in-out shrink-0 flex flex-col gap-2 overflow-hidden ${
-            sidebarOpen ? 'w-full md:w-64' : 'w-full md:w-14'
+            sidebarOpen ? 'w-full md:w-44' : 'w-full md:w-14'
           }`}>
             
             <div className="flex items-center justify-between px-2 py-1 min-h-[36px]">
@@ -3050,6 +2925,10 @@ if (iconUrl.includes('.ico')) {
               <div className={`flex flex-col w-full min-h-[550px] animate-fade-in bg-[var(--bg-secondary)] ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}>
                 <ChatWorkspace onClose={() => setFilter('all')} />
               </div>
+            ) : filter === 'lobbychat' ? (
+              <div className={`flex flex-col w-full max-w-4xl mx-auto min-h-[500px] rounded-2xl border border-[var(--card-border)]/40 overflow-hidden shadow-2xl animate-fade-in bg-[var(--bg-secondary)] ${headerOpen ? 'h-[calc(100vh-150px)] md:h-[calc(100vh-130px)]' : 'h-[calc(100vh-110px)] md:h-[calc(100vh-90px)]'}`}>
+                <UserChat onClose={() => setFilter('all')} />
+              </div>
             ) : filter === 'info' ? (
               <div className={`flex flex-col w-full min-h-[550px] animate-fade-in bg-[var(--bg-secondary)] ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}>
                 <InformationSection onClose={() => setFilter('all')} />
@@ -3310,9 +3189,7 @@ if (iconUrl.includes('.ico')) {
                         return;
                       }
 
-                      const bookSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(
-                        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h15M6 10h15"/></svg>`
-                      )}`;
+                      const bookSvgDataUri = "https://ssl.gstatic.com/classroom/favicon.png";
                       let tabTitle = selectedGame.title;
                       let tabFavicon = bookSvgDataUri;
                       if (decoyType === 'classroom') {
@@ -3359,6 +3236,22 @@ if (iconUrl.includes('.ico')) {
                     <span className="hidden sm:inline text-[10px] font-bold">OPEN IN NEW TAB</span>
                   </button>
 
+                  {/* Lobby Chat Toggle Button */}
+                  <button
+                    onClick={() => setDockedChatCollapsed(!dockedChatCollapsed)}
+                    className={`flex items-center gap-1.5 border py-1.5 px-3 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
+                      !dockedChatCollapsed 
+                        ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)] font-bold shadow-[0_0_8px_rgba(0,229,176,0.15)]' 
+                        : 'border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)]'
+                    }`}
+                    title="Toggle Live Lobby Chat inside Game Arena"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline text-[10px] font-bold">
+                      {dockedChatCollapsed ? 'OPEN CHAT' : 'CLOSE CHAT'}
+                    </span>
+                  </button>
+
                   {/* Panic Key / Escape to Academic Articles */}
                   <button
                     onClick={() => {
@@ -3376,29 +3269,82 @@ if (iconUrl.includes('.ico')) {
 
               </div>
 
-              {/* Game Viewport Container */}
+              {/* Game Arena with Side-by-Side Docked Chat */}
               <div 
-                id="frame-viewport"
-                className="w-full h-[65vh] min-h-[420px] rounded-2xl border border-[var(--card-border)] bg-black overflow-hidden relative shadow-lg"
+                id="game-arena-container"
+                className="flex flex-col lg:flex-row gap-0 w-full h-[65vh] min-h-[500px] relative"
               >
+                {/* Game Viewport Container */}
                 <div 
-                  className="w-full h-full duration-150 transition-transform origin-top-left"
-                  style={{ 
-                    transform: `scale(${zoom})`,
-                    width: `${100 / zoom}%`,
-                    height: `${100 / zoom}%`
-                  }}
+                  id="frame-viewport"
+                  className="flex-1 h-full rounded-2xl border border-[var(--card-border)] bg-black overflow-hidden relative shadow-lg"
                 >
-                  <iframe 
-                    id="game-frame"
-                    src={selectedGame.url} 
-                    className="w-full h-full border-none"
-                    title={selectedGame.title}
-                    allowFullScreen
-                    referrerPolicy="no-referrer"
-                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-                  />
+                  <div 
+                    className="w-full h-full duration-150 transition-transform origin-top-left"
+                    style={{ 
+                      transform: `scale(${zoom})`,
+                      width: `${100 / zoom}%`,
+                      height: `${100 / zoom}%`
+                    }}
+                  >
+                    <iframe 
+                      id="game-frame"
+                      src={selectedGame.url} 
+                      className="w-full h-full border-none"
+                      title={selectedGame.title}
+                      allowFullScreen
+                      referrerPolicy="no-referrer"
+                      sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                    />
+                  </div>
                 </div>
+
+                {/* RESIZE HANDLE - only on desktop (lg) and when chat is NOT collapsed */}
+                {!dockedChatCollapsed && (
+                  <div 
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setIsDraggingDock(true);
+                    }}
+                    className={`hidden lg:block w-3 hover:w-3.5 self-stretch cursor-col-resize transition-all duration-150 relative z-30 shrink-0 select-none ${
+                      isDraggingDock ? 'bg-[var(--accent-color)]/20' : 'bg-transparent hover:bg-white/5'
+                    }`}
+                    title="Drag to resize chat"
+                  >
+                    {/* Vertical line indicator */}
+                    <div className={`absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-0.5 h-16 rounded-full transition-all ${
+                      isDraggingDock ? 'bg-[var(--accent-color)] h-24 w-1' : 'bg-neutral-700'
+                    }`} />
+                  </div>
+                )}
+
+                {/* DOCKED LIVE LOBBY CHAT */}
+                {!dockedChatCollapsed && (
+                  <div 
+                    style={{ width: window.innerWidth >= 1024 ? `${dockedChatWidth}px` : '100%' }}
+                    className="w-full lg:h-full h-[320px] shrink-0 flex flex-col bg-[#070a11] border border-[var(--card-border)]/50 rounded-2xl overflow-hidden shadow-2xl"
+                  >
+                    <div className="bg-[#0b0f19] px-2.5 py-1.5 border-b border-white/5 flex items-center justify-between shrink-0">
+                      <span className="text-[9px] font-black text-[var(--accent-color)] uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Lobby Live Chat
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[8px] font-bold text-neutral-400">Play & Chat!</span>
+                        <button
+                          onClick={() => setDockedChatCollapsed(true)}
+                          className="p-1 hover:bg-white/10 text-neutral-400 hover:text-white rounded transition-all cursor-pointer flex items-center justify-center"
+                          title="Collapse Chat"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-h-0">
+                      <UserChat onClose={() => {}} isMini={true} />
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>
@@ -3406,6 +3352,47 @@ if (iconUrl.includes('.ico')) {
 
         </main>
       </div>
+
+      {/* Floating User Chat Overlay for Games Section / Inside Games */}
+      {viewMode === 'games' && !selectedGame && filter !== 'chat' && filter !== 'info' && filter !== 'movies' && (
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 font-sans">
+          {/* Floating Chat Panel */}
+          {userChatOpen && (
+            <div 
+              id="user-chat-overlay"
+              className="w-[380px] h-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-100px)] rounded-2xl border border-[var(--card-border)] bg-[#0a0d16] shadow-2xl overflow-hidden flex flex-col animate-fade-in"
+            >
+              <div className="flex-1 min-h-0">
+                <UserChat onClose={() => setUserChatOpen(false)} />
+              </div>
+            </div>
+          )}
+
+          {/* Floating Button */}
+          <button
+            onClick={() => setUserChatOpen(!userChatOpen)}
+            className={`flex items-center justify-center w-12 h-12 rounded-full text-white shadow-lg cursor-pointer transition-all duration-300 transform active:scale-90 select-none ${
+              userChatOpen 
+                ? 'bg-rose-500 hover:bg-rose-600 rotate-90' 
+                : 'bg-[var(--accent-color)] hover:bg-[var(--accent-color)]/95 hover:scale-105 hover:shadow-[0_4px_15px_var(--accent-shadow)]'
+            }`}
+            title={userChatOpen ? "Close Lobby Chat" : "Open Live Lobby Chat"}
+          >
+            {userChatOpen ? (
+              <X className="w-5 h-5 text-white" />
+            ) : (
+              <div className="relative">
+                <MessageSquare className="w-5 h-5 text-[#0d1222] fill-current" />
+                {/* Small indicator badge */}
+                <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+              </div>
+            )}
+          </button>
+        </div>
+      )}
 
     </div>
   );
