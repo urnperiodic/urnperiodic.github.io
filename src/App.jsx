@@ -141,6 +141,37 @@ export default function App() {
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDraggingDock]);
+
+  // List of Browse Portals subsection items. Each opens /category/{slug}.html in an iframe.
+  const portalList = [
+    { slug: '2-player', label: '2 Player' },
+    { slug: '3d', label: '3D' },
+    { slug: 'action', label: 'Action' },
+    { slug: 'adventure', label: 'Adventure' },
+    { slug: 'animal', label: 'Animal' },
+    { slug: 'board', label: 'Board' },
+    { slug: 'car', label: 'Car' },
+    { slug: 'fighting', label: 'Fighting' },
+    { slug: 'girls', label: 'Girls' },
+    { slug: 'idle', label: 'Idle' },
+    { slug: 'management', label: 'Management' },
+    { slug: 'moto', label: 'Moto' },
+    { slug: 'multiplayer', label: 'Multiplayer' },
+    { slug: 'new', label: 'New' },
+    { slug: 'platform', label: 'Platform' },
+    { slug: 'popular', label: 'Popular' },
+    { slug: 'puzzle', label: 'Puzzle' },
+    { slug: 'racing', label: 'Racing' },
+    { slug: 'running', label: 'Running' },
+    { slug: 'shooting', label: 'Shooting' },
+    { slug: 'simulation', label: 'Simulation' },
+    { slug: 'skill', label: 'Skill' },
+    { slug: 'sports', label: 'Sports' },
+    { slug: 'stickman', label: 'Stickman' },
+    { slug: 'strategy', label: 'Strategy' },
+    { slug: 'survival', label: 'Survival' },
+  ];
+
   // Handle game selection from embedded Classroom6x iframe
   useEffect(() => {
     const handleMessage = (e) => {
@@ -750,7 +781,7 @@ export default function App() {
     if (c === 'minecraft' || c === 'emulated' || c === 'other websites') return true;
     return ['solo', 'single', 'platformer', 'skill', 'science', 'driving', 'horror', 'creative', 'ai'].some(kw => c.includes(kw));
   };
-https://github.com/urnperiodic/urnperiodic.github.io/blob/main/src/App.jsx
+
   const isMultiplayerCategory = (cat) => {
     if (!cat) return false;
     const c = cat.toLowerCase().trim();
