@@ -2119,7 +2119,7 @@ export default function App() {
     const inputPass = (customPass !== undefined ? customPass : passcode).trim().toLowerCase();
     if (!inputPass) return;
 
-    if (inputPass === 'ttt0609') {
+    if (inputPass === 'ttt1234' || inputPass === 'ttt0609') {
       const win = window.open("about:blank", "_blank");
       if (win) {
         // Automatically save that we are unlocked so the iframe can read it
@@ -2276,7 +2276,7 @@ export default function App() {
         alert("Popup blocked! Please allow popups to open the portals in a cloaked tab.");
       }
       setPasscode('');
-    } else if (inputPass === 'tt0609' || inputPass === '1378') {
+    } else if (inputPass === 'tungtung' || inputPass === 'tt0609' || inputPass === '1378') {
       setTimeout(() => {
         setViewModeAndSave('games');
         setPasscode('');
@@ -2362,13 +2362,13 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [passcode, viewMode]);
 
-  // Automated trigger checks for "0609" and "2026" within the article system's search tab
+  // Automated trigger checks for passwords within the article search tab
   useEffect(() => {
     const q = articleSearch.trim().toLowerCase();
-    if (q === 'ttt0609') {
+    if (q === 'ttt1234' || q === 'ttt0609') {
       setArticleSearch('');
-      handlePasswordSubmit('ttt0609');
-    } else if (q === '2026' || q === 'tt0609') {
+      handlePasswordSubmit(q);
+    } else if (q === 'tungtung' || q === '2026' || q === 'tt0609') {
       setViewModeAndSave('games');
       setArticleSearch('');
     } else if (q === '0609') {
@@ -3302,7 +3302,8 @@ export default function App() {
     if (filter === 'og') {
       if (!game.isOg && (game.category || '').toLowerCase().trim() !== 'og') return false;
     } else {
-      if (gameCatalogMode === 'original' && !game.isOg && !isEmulatedActive) {
+      // Only restrict to originals when on 'all' filter and catalog mode is set to 'original'
+      if (filter === 'all' && gameCatalogMode === 'original' && !game.isOg && !isEmulatedActive) {
         return false;
       }
       if (filter === 'single') {
@@ -6818,31 +6819,68 @@ export default function App() {
                 </div>
               )}
 
-              {filteredGames.length > GAMES_PER_PAGE && (
-                <div className="flex items-center justify-center gap-4 pt-6 border-t border-[var(--card-border)]/50">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 mt-6 border-t border-[var(--card-border)]/50 flex-wrap">
+                {/* Catalog Mode Switcher at bottom */}
+                <div className="flex items-center bg-[var(--bg-secondary)] border border-[var(--card-border)] p-0.5 rounded-xl shadow-sm select-none gap-0.5 transition-colors">
                   <button
                     type="button"
-                    onClick={() => setCurrentGamePage((page) => Math.max(1, page - 1))}
-                    disabled={safeGamePage === 1}
-                    className="flex items-center gap-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--bg-secondary)] px-4 py-2 text-xs font-bold text-[var(--text-primary)] transition-colors hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] disabled:cursor-not-allowed disabled:opacity-40 shadow-sm"
+                    onClick={() => {
+                      setGameCatalogMode('original');
+                      safeStorage.setItem('unblocked-game-catalog-mode', 'original');
+                      setCurrentGamePage(1);
+                    }}
+                    className={`text-[10px] font-mono font-black uppercase px-2.5 py-1.5 rounded-lg transition-all cursor-pointer tracking-wider ${
+                      gameCatalogMode === 'original'
+                        ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-sm'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
+                    }`}
                   >
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                    Go Back
+                    ORIGINALS
                   </button>
-                  <span className="min-w-28 text-center font-mono text-xs text-[var(--text-muted)] font-bold">
-                    Page {safeGamePage} of {totalGamePages}
-                  </span>
                   <button
                     type="button"
-                    onClick={() => setCurrentGamePage((page) => Math.min(totalGamePages, page + 1))}
-                    disabled={safeGamePage === totalGamePages}
-                    className="flex items-center gap-1.5 rounded-lg bg-[var(--accent-color)] px-4 py-2 text-xs font-extrabold text-[var(--bg-color)] transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 shadow-sm"
+                    onClick={() => {
+                      setGameCatalogMode('all');
+                      safeStorage.setItem('unblocked-game-catalog-mode', 'all');
+                      setCurrentGamePage(1);
+                    }}
+                    className={`text-[10px] font-mono font-black uppercase px-2.5 py-1.5 rounded-lg transition-all cursor-pointer tracking-wider ${
+                      gameCatalogMode === 'all'
+                        ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-sm'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
+                    }`}
                   >
-                    Next Page
-                    <ChevronRight className="h-3.5 w-3.5" />
+                    ALL PORTALS (2708)
                   </button>
                 </div>
-              )}
+
+                {/* Pagination Controls */}
+                {totalGamePages > 1 && (
+                  <div className="flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentGamePage((page) => Math.max(1, page - 1))}
+                      disabled={safeGamePage === 1}
+                      className="flex items-center gap-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--bg-secondary)] px-3.5 py-2 text-xs font-bold text-[var(--text-primary)] transition-colors hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] disabled:cursor-not-allowed disabled:opacity-40 shadow-sm cursor-pointer"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                      Go Back
+                    </button>
+                    <span className="min-w-24 text-center font-mono text-xs text-[var(--text-muted)] font-bold">
+                      Page {safeGamePage} of {totalGamePages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentGamePage((page) => Math.min(totalGamePages, page + 1))}
+                      disabled={safeGamePage === totalGamePages}
+                      className="flex items-center gap-1.5 rounded-lg bg-[var(--accent-color)] px-3.5 py-2 text-xs font-extrabold text-[var(--bg-color)] transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 shadow-sm cursor-pointer"
+                    >
+                      Next Page
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
 
             </motion.div>
           )}
