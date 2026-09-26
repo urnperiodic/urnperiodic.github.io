@@ -2262,16 +2262,25 @@ export default function App() {
         `);
         win.document.close();
 
-        // Automatically close the unsigned / original window
+        // Automatically close the original window using self-open script trick
         try {
+          window.opener = null;
+          window.open("", "_self");
           window.close();
         } catch (e) {}
-        // Fallback for browsers that prevent closing unscripted opener tabs
+        // Fallback: If browser security prevents script-closing a manually opened tab,
+        // stay in decoy disguise mode or safely redirect to classroom
         setTimeout(() => {
-          try {
-            window.location.replace("https://classroom.google.com");
-          } catch (e) {}
-        }, 120);
+          if (!window.closed) {
+            try {
+              window.opener = null;
+              window.open("", "_self");
+              window.close();
+            } catch (e) {}
+            // If still not closed, keep page in decoy mode without force navigating
+            setViewModeAndSave('articles');
+          }
+        }, 150);
       } else {
         alert("Popup blocked! Please allow popups to open the portals in a cloaked tab.");
       }
