@@ -222,6 +222,9 @@ const getDirectGmfilesUrl = (url) => {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
   let cleanName = url.startsWith('/') ? url.slice(1) : url;
+  if (cleanName.toLowerCase().startsWith('iframe/')) {
+    return `https://urnperiodic.github.io/public/${cleanName}`;
+  }
   if (cleanName.toLowerCase().startsWith('gmfiles/')) {
     cleanName = cleanName.slice(8);
   }
