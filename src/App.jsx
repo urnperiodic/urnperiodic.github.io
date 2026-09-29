@@ -154,7 +154,8 @@ import {
   GripVertical,
   Crown,
   Trophy,
-  Medal
+  Medal,
+  Calculator
 } from 'lucide-react';
 
 // Safe storage helper to prevent SecurityError crash in sandboxed iframes
@@ -1143,6 +1144,14 @@ export default function App() {
     }
   });
   const [targetPageInput, setTargetPageInput] = useState('');
+  const [hideUnranked, setHideUnranked] = useState(() => {
+    try {
+      const saved = safeStorage.getItem('unblocked-hide-unranked');
+      return saved === null ? true : saved !== 'false';
+    } catch {
+      return true;
+    }
+  });
   const [games, setGames] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
@@ -3008,25 +3017,6 @@ export default function App() {
     return emulatedOtherTags.reduce((sum, tag) => sum + (emulatedTagCounts[tag] || 0), 0);
   }, [emulatedOtherTags, emulatedTagCounts]);
 
-  const totalEmulatedGamesCount = useMemo(() => {
-    return games.filter(g => {
-      const c = (g.category || '').trim().toLowerCase();
-      return EMULATED_PLATFORMS.includes(c) || c === 'emulated';
-    }).length;
-  }, [games]);
-
-  const isEmulatedActive = filter === 'Emulated' || filter === 'emulated-other' || emulatedTags.includes(filter);
-
-  const [emulatedDropdownOpen, setEmulatedDropdownOpen] = useState(false);
-
-  useEffect(() => {
-    if (isEmulatedActive) {
-      setEmulatedDropdownOpen(true);
-      setGameCatalogMode('all');
-      safeStorage.setItem('unblocked-game-catalog-mode', 'all');
-    }
-  }, [isEmulatedActive]);
-
   const isSinglePlayerCategory = (cat) => {
     if (!cat) return true;
     const c = cat.toLowerCase().trim();
@@ -3041,6 +3031,52 @@ export default function App() {
     if (c === 'minecraft') return true;
     return ['social', 'sport', 'multiplayer', 'fast', 'party', 'puzzle', 'shooter'].some(kw => c.includes(kw)) || c.includes('or');
   };
+
+  const totalEmulatedGamesCount = useMemo(() => {
+    return games.filter(g => {
+      const c = (g.category || '').trim().toLowerCase();
+      return EMULATED_PLATFORMS.includes(c) || c === 'emulated';
+    }).length;
+  }, [games]);
+
+  const totalGenizyMathGamesCount = useMemo(() => {
+    return games.filter(g => {
+      const c = (g.category || '').trim().toLowerCase();
+      return c === 'genizy math' || c === 'genizy' || (typeof g.url === 'string' && g.url.includes('genizymath'));
+    }).length;
+  }, [games]);
+
+  const ogGamesCount = useMemo(() => {
+    return games.filter(g => g.isOg || (g.category || '').toLowerCase() === 'og').length;
+  }, [games]);
+
+  const singlePlayerGamesCount = useMemo(() => {
+    return games.filter(g => isSinglePlayerCategory(g.category)).length;
+  }, [games]);
+
+  const multiplayerGamesCount = useMemo(() => {
+    return games.filter(g => isMultiplayerCategory(g.category)).length;
+  }, [games]);
+
+  const minecraftGamesCount = useMemo(() => {
+    return games.filter(g => (g.category || '').toLowerCase() === 'minecraft').length;
+  }, [games]);
+
+  const featuredGamesCount = useMemo(() => {
+    return games.filter(g => g.featured).length;
+  }, [games]);
+
+  const isEmulatedActive = filter === 'Emulated' || filter === 'emulated-other' || emulatedTags.includes(filter);
+
+  const [emulatedDropdownOpen, setEmulatedDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    if (isEmulatedActive) {
+      setEmulatedDropdownOpen(true);
+      setGameCatalogMode('all');
+      safeStorage.setItem('unblocked-game-catalog-mode', 'all');
+    }
+  }, [isEmulatedActive]);
 
   const rankedGameSections = useMemo(() => {
     return [
@@ -3077,7 +3113,7 @@ export default function App() {
     ].filter((section) => section.games.length > 0);
   }, [games, isSinglePlayerCategory, isMultiplayerCategory]);
 
-  const gameTierOrder = ['S', 'A', 'B', 'C'];
+  const gameTierOrder = ['S', 'A', 'B', 'C', 'F'];
   const [selectedTier, setSelectedTier] = useState('S');
   const [randomRankingPool, setRandomRankingPool] = useState('all');
   const [randomPickerOpen, setRandomPickerOpen] = useState(false);
@@ -3181,7 +3217,7 @@ export default function App() {
       const info = gameRankMap.get(normalizeTierTitle(candidateTitle)) || gameRankMap.get(normalizeLiteralTitle(candidateTitle));
       if (info) return info;
     }
-    if (['S', 'A', 'B', 'C', 'D'].includes(explicitTier)) {
+    if (['S', 'A', 'B', 'C', 'D', 'F'].includes(explicitTier)) {
       return { rank: 999, tier: explicitTier, canonicalTitle: game.title };
     }
     return null;
@@ -3204,7 +3240,7 @@ export default function App() {
   }, [games, getGameRankInfo]);
 
   const rankedGamesByTier = useMemo(() => {
-    const tiers = { S: [], A: [], B: [], C: [], D: [] };
+    const tiers = { S: [], A: [], B: [], C: [], D: [], F: [] };
     rankedGamesList.forEach((g) => {
       if (tiers[g.rankTier]) tiers[g.rankTier].push(g);
     });
@@ -3306,7 +3342,12 @@ export default function App() {
   // Filter games based on category sidebar, matching search query
   const normalizedSearchQuery = deferredSearchQuery.trim().toLowerCase();
   const filteredGames = games.filter(game => {
-    // When a search query is entered, search across every game in the entire library
+    // When hideUnranked is active (default ON), exclude any game without a rank from the active view
+    if (hideUnranked && !getGameRankInfo(game)) {
+      return false;
+    }
+
+    // When a search query is entered, search across every game in the active library
     if (normalizedSearchQuery !== '') {
       return (game.searchText || '').includes(normalizedSearchQuery);
     }
@@ -3340,6 +3381,10 @@ export default function App() {
       } else if (filter === 'emulated-other') {
         const c = (game.category || '').trim().toLowerCase();
         if (!emulatedOtherTags.includes(c)) return false;
+      } else if (filter === 'genizy-math' || filter === 'Genizy Math' || filter === 'genizy' || filter.toLowerCase() === 'genizy math') {
+        const c = (game.category || '').trim().toLowerCase();
+        const isGenizy = c === 'genizy math' || c === 'genizy' || (typeof game.url === 'string' && game.url.includes('genizymath'));
+        if (!isGenizy) return false;
       } else if (filter !== 'all') {
         // Direct category filter matching
         if ((game.category || '').toLowerCase().trim() !== filter.toLowerCase().trim()) return false;
@@ -5863,42 +5908,75 @@ export default function App() {
               whileHover={animationsEnabled ? { x: 4 } : undefined}
               whileTap={animationsEnabled ? { scale: 0.97 } : undefined}
               onClick={() => { setFilter('all'); setSelectedGame(null); }}
-              className={`w-full text-left py-1.5 px-2.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all duration-200 cursor-pointer ${
+              className={`w-full text-left py-1.5 px-2.5 rounded-lg flex items-center justify-between text-xs font-medium transition-all duration-200 cursor-pointer ${
                 filter === 'all' && !selectedGame
                   ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
                   : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
               }`}
             >
-              <Layers className="w-3.5 h-3.5 shrink-0" />
-              <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>All Classrooms</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <Layers className="w-3.5 h-3.5 shrink-0" />
+                <span className={`transition-all duration-300 truncate ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>All Classrooms</span>
+              </div>
+              {sidebarOpen && (
+                <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                  filter === 'all' && !selectedGame
+                    ? 'bg-black/20 text-[var(--bg-color)]'
+                    : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
+                }`}>
+                  {games.length}
+                </span>
+              )}
             </motion.button>
 
             <motion.button
               whileHover={animationsEnabled ? { x: 4 } : undefined}
               whileTap={animationsEnabled ? { scale: 0.97 } : undefined}
               onClick={() => { setFilter('single'); setSelectedGame(null); }}
-              className={`w-full text-left py-1.5 px-2.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all duration-200 cursor-pointer ${
+              className={`w-full text-left py-1.5 px-2.5 rounded-lg flex items-center justify-between text-xs font-medium transition-all duration-200 cursor-pointer ${
                 filter === 'single' && !selectedGame
                   ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
                   : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
               }`}
             >
-              <Gamepad2 className="w-3.5 h-3.5 shrink-0" />
-              <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Single Player</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <Gamepad2 className="w-3.5 h-3.5 shrink-0" />
+                <span className={`transition-all duration-300 truncate ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Single Player</span>
+              </div>
+              {sidebarOpen && (
+                <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                  filter === 'single' && !selectedGame
+                    ? 'bg-black/20 text-[var(--bg-color)]'
+                    : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
+                }`}>
+                  {singlePlayerGamesCount}
+                </span>
+              )}
             </motion.button>
             
             <motion.button
               whileHover={animationsEnabled ? { x: 4 } : undefined}
               whileTap={animationsEnabled ? { scale: 0.97 } : undefined}
               onClick={() => { setFilter('minecraft'); setSelectedGame(null); }}
-              className={`w-full text-left py-1.5 px-2.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all duration-200 cursor-pointer ${
+              className={`w-full text-left py-1.5 px-2.5 rounded-lg flex items-center justify-between text-xs font-medium transition-all duration-200 cursor-pointer ${
                 filter === 'minecraft' && !selectedGame
                   ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
                   : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
               }`}
             >
-              <Box className="w-3.5 h-3.5 shrink-0" />
-              <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Minecraft</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <Box className="w-3.5 h-3.5 shrink-0" />
+                <span className={`transition-all duration-300 truncate ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Minecraft</span>
+              </div>
+              {sidebarOpen && (
+                <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                  filter === 'minecraft' && !selectedGame
+                    ? 'bg-black/20 text-[var(--bg-color)]'
+                    : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
+                }`}>
+                  {minecraftGamesCount}
+                </span>
+              )}
             </motion.button>
             
             <div>
@@ -6068,42 +6146,106 @@ export default function App() {
               whileHover={animationsEnabled ? { x: 4 } : undefined}
               whileTap={animationsEnabled ? { scale: 0.97 } : undefined}
               onClick={() => { setFilter('featured'); setSelectedGame(null); }}
-              className={`w-full text-left py-1.5 px-2.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all duration-200 cursor-pointer ${
+              className={`w-full text-left py-1.5 px-2.5 rounded-lg flex items-center justify-between text-xs font-medium transition-all duration-200 cursor-pointer ${
                 filter === 'featured' && !selectedGame
                   ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
                   : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 shrink-0" />
-              <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Featured</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                <span className={`transition-all duration-300 truncate ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Featured</span>
+              </div>
+              {sidebarOpen && (
+                <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                  filter === 'featured' && !selectedGame
+                    ? 'bg-black/20 text-[var(--bg-color)]'
+                    : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
+                }`}>
+                  {featuredGamesCount}
+                </span>
+              )}
             </motion.button>
 
             <motion.button
               whileHover={animationsEnabled ? { x: 4 } : undefined}
               whileTap={animationsEnabled ? { scale: 0.97 } : undefined}
               onClick={() => { setFilter('og'); setSelectedGame(null); }}
-              className={`w-full text-left py-1.5 px-2.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all duration-200 cursor-pointer ${
+              className={`w-full text-left py-1.5 px-2.5 rounded-lg flex items-center justify-between text-xs font-medium transition-all duration-200 cursor-pointer ${
                 filter === 'og' && !selectedGame
                   ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
                   : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
               }`}
             >
-              <Crown className="w-3.5 h-3.5 shrink-0" />
-              <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>OG Classics</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <Crown className="w-3.5 h-3.5 shrink-0" />
+                <span className={`transition-all duration-300 truncate ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>OG Classics</span>
+              </div>
+              {sidebarOpen && (
+                <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                  filter === 'og' && !selectedGame
+                    ? 'bg-black/20 text-[var(--bg-color)]'
+                    : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
+                }`}>
+                  {ogGamesCount}
+                </span>
+              )}
             </motion.button>
 
             <motion.button
               whileHover={animationsEnabled ? { x: 4 } : undefined}
               whileTap={animationsEnabled ? { scale: 0.97 } : undefined}
               onClick={() => { setFilter('multiplayer'); setSelectedGame(null); }}
-              className={`w-full text-left py-1.5 px-2.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all duration-200 cursor-pointer ${
+              className={`w-full text-left py-1.5 px-2.5 rounded-lg flex items-center justify-between text-xs font-medium transition-all duration-200 cursor-pointer ${
                 filter === 'multiplayer' && !selectedGame
                   ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
                   : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
               }`}
             >
-              <Users className="w-3.5 h-3.5 shrink-0" />
-              <span className={`transition-all duration-300 ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Multiplayer</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <Users className="w-3.5 h-3.5 shrink-0" />
+                <span className={`transition-all duration-300 truncate ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Multiplayer</span>
+              </div>
+              {sidebarOpen && (
+                <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                  filter === 'multiplayer' && !selectedGame
+                    ? 'bg-black/20 text-[var(--bg-color)]'
+                    : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
+                }`}>
+                  {multiplayerGamesCount}
+                </span>
+              )}
+            </motion.button>
+
+            <motion.button
+              whileHover={animationsEnabled ? { x: 4 } : undefined}
+              whileTap={animationsEnabled ? { scale: 0.97 } : undefined}
+              onClick={() => {
+                setGameCatalogMode('all');
+                safeStorage.setItem('unblocked-game-catalog-mode', 'all');
+                setFilter('genizy-math');
+                setSelectedGame(null);
+              }}
+              className={`w-full text-left py-1.5 px-2.5 rounded-lg flex items-center justify-between text-xs font-medium transition-all duration-200 cursor-pointer ${
+                (filter === 'genizy-math' || filter === 'Genizy Math' || filter.toLowerCase() === 'genizy math') && !selectedGame
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                  : 'hover:bg-[var(--card-bg)] text-[var(--text-primary)] opacity-80'
+              }`}
+              title="Genizy Math Games"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <Calculator className="w-3.5 h-3.5 shrink-0" />
+                <span className={`transition-all duration-300 truncate ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Genizy Math</span>
+              </div>
+              {sidebarOpen && (
+                <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                  (filter === 'genizy-math' || filter === 'Genizy Math' || filter.toLowerCase() === 'genizy math') && !selectedGame
+                    ? 'bg-black/20 text-[var(--bg-color)]'
+                    : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
+                }`}>
+                  {totalGenizyMathGamesCount}
+                </span>
+              )}
             </motion.button>
 
             {/* RANKING TIERS IN SIDEBAR (Below Multiplayer): S Tier, A Tier, B Tier, C Tier */}
@@ -6133,6 +6275,7 @@ export default function App() {
                 { tier: 'A', name: 'A Tier', desc: 'Great', count: rankedGamesByTier.A?.length || 0, badge: 'text-emerald-400 border-emerald-400/40 bg-emerald-400/10' },
                 { tier: 'B', name: 'B Tier', desc: 'Good', count: rankedGamesByTier.B?.length || 0, badge: 'text-sky-400 border-sky-400/40 bg-sky-400/10' },
                 { tier: 'C', name: 'C Tier', desc: 'Mid & Niche', count: rankedGamesByTier.C?.length || 0, badge: 'text-purple-400 border-purple-400/40 bg-purple-400/10' },
+                { tier: 'F', name: 'F Tier', desc: 'Lowest Ranked / Broken', count: rankedGamesByTier.F?.length || 0, badge: 'text-rose-400 border-rose-400/40 bg-rose-400/10' },
               ].map(({ tier, name, count, badge }) => {
                 const isSelected = filter === `tier-${tier}` && !selectedGame;
                 return (
@@ -6495,6 +6638,7 @@ export default function App() {
                           {filter === 'tier-A' && 'TIER A: GREAT & HUGELY POPULAR'}
                           {filter === 'tier-B' && 'TIER B: WEB & FLASH CLASSICS'}
                           {filter === 'tier-C' && 'TIER C: RECOGNIZABLE & NICHE'}
+                          {filter === 'tier-F' && 'TIER F: LOWEST RANKED / BROKEN / DUPES'}
                           {filter === 'featured' && 'FEATURED SHOWCASES'}
                           {filter === 'og' && 'OG CLASSICS & ORIGINALS'}
                           {filter === 'single' && 'SINGLEPLAYER PORTALS'}
@@ -6503,6 +6647,7 @@ export default function App() {
                           {filter === 'emulated-other' && 'EMULATED: OTHER SYSTEMS (<10 GAMES)'}
                           {emulatedTags.includes(filter) && `EMULATED: ${(EMULATED_SYSTEM_NAMES[filter] || filter).toUpperCase()}`}
                           {filter === 'minecraft' && 'MINECRAFT PLATFORM'}
+                          {(filter === 'genizy-math' || filter === 'Genizy Math' || filter.toLowerCase() === 'genizy math') && 'GENIZY MATH COLLECTION'}
                         </>
                       )}
                     </h2>
@@ -6531,7 +6676,7 @@ export default function App() {
                           : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
                       }`}
                     >
-                      ORIGINALS
+                      ORIGINALS ({ogGamesCount})
                     </button>
                     <button
                       type="button"
@@ -6546,7 +6691,37 @@ export default function App() {
                           : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
                       }`}
                     >
-                      ALL PORTALS (2708)
+                      ALL PORTALS ({hideUnranked ? `${rankedGamesList.length} ranked` : games.length})
+                    </button>
+
+                    {/* Slider Switch for Hide Unranked (default ON) */}
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={hideUnranked}
+                      onClick={() => {
+                        const next = !hideUnranked;
+                        setHideUnranked(next);
+                        safeStorage.setItem('unblocked-hide-unranked', String(next));
+                        setCurrentGamePage(1);
+                      }}
+                      className={`group flex items-center gap-2 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold tracking-wider transition-all duration-200 cursor-pointer select-none border ${
+                        hideUnranked
+                          ? 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] border-[var(--accent-color)]/30 hover:border-[var(--accent-color)]/60'
+                          : 'bg-black/10 dark:bg-white/5 text-[var(--text-muted)] border-transparent hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
+                      }`}
+                      title={hideUnranked ? "Unranked games (~2,200 entries) are hidden. Click to show all games." : "All unranked games are visible. Click to hide unranked games."}
+                    >
+                      <span className="truncate">Hide Unranked</span>
+                      <div className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out p-0.5 ${
+                        hideUnranked ? 'bg-[var(--accent-color)]' : 'bg-neutral-600 dark:bg-neutral-700'
+                      }`}>
+                        <span
+                          className={`pointer-events-none inline-block h-3 w-3 transform rounded-full shadow-sm ring-0 transition duration-200 ease-in-out ${
+                            hideUnranked ? 'translate-x-3 bg-white' : 'translate-x-0 bg-neutral-300'
+                          }`}
+                        />
+                      </div>
                     </button>
 
                     {/* Subtle divider */}
@@ -6599,9 +6774,15 @@ export default function App() {
                   <p className="text-xs text-[var(--text-muted)] mt-1">Try searching a different keyword or resetting filters.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className={
+                  (filter === 'genizy-math' || filter === 'Genizy Math' || filter.toLowerCase() === 'genizy math')
+                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3.5"
+                    : "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"
+                }>
                   {paginatedGames.map((game, index) => {
                     const isFav = favorites.includes(game.id);
+                    const isGenizyView = filter === 'genizy-math' || filter === 'Genizy Math' || filter.toLowerCase() === 'genizy math';
+                    const isCompactLayout = isGenizyView;
                     return (
                       <motion.div 
                         key={game.id}
@@ -6625,13 +6806,15 @@ export default function App() {
                         }`}
                       >
                         {/* Artwork container */}
-                        <div className="relative aspect-video w-full bg-neutral-950 flex-shrink-0 flex items-center justify-center border-b border-[var(--card-border)] overflow-hidden">
+                        <div className={`relative w-full bg-neutral-950 flex-shrink-0 flex items-center justify-center border-b border-[var(--card-border)] overflow-hidden ${
+                          isCompactLayout ? 'aspect-square' : 'aspect-video'
+                        }`}>
                           {game.thumbnail && !failedThumbnails[game.id] ? (
                             <img 
                               src={getOptimizedThumbnail(game.thumbnail)} 
                               alt={game.title} 
-                              width="640"
-                              height="360"
+                              width={isCompactLayout ? "300" : "640"}
+                              height={isCompactLayout ? "300" : "360"}
                               loading="lazy"
                               decoding="async"
                               referrerPolicy="no-referrer"
@@ -6643,8 +6826,8 @@ export default function App() {
                             <img
                               src={defaultThumbnail}
                               alt={game.title}
-                              width="640"
-                              height="360"
+                              width={isCompactLayout ? "300" : "640"}
+                              height={isCompactLayout ? "300" : "360"}
                               loading="lazy"
                               decoding="async"
                               draggable="false"
@@ -6657,7 +6840,9 @@ export default function App() {
                             const rankInfo = getGameRankInfo(game);
                             if (rankInfo && (isRankingsActive || rankInfo.rank <= 10)) {
                               return (
-                                <span className={`absolute top-2.5 left-2.5 z-10 flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-md shadow-md font-mono ${
+                                <span className={`absolute top-2 left-2 z-10 flex items-center gap-1 font-black rounded-md shadow-md font-mono ${
+                                  isCompactLayout ? 'text-[8px] px-1.5 py-0.5' : 'text-[9px] px-2 py-0.5'
+                                } ${
                                   rankInfo.rank === 1
                                     ? 'bg-amber-400 text-black border border-amber-300'
                                     : rankInfo.rank === 2
@@ -6666,14 +6851,16 @@ export default function App() {
                                     ? 'bg-amber-700 text-amber-100 border border-amber-600'
                                     : 'bg-black/85 text-amber-300 border border-amber-400/40 backdrop-blur-sm'
                                 }`}>
-                                  <Trophy className="w-2.5 h-2.5 shrink-0" />
+                                  <Trophy className={`${isCompactLayout ? 'w-2 h-2' : 'w-2.5 h-2.5'} shrink-0`} />
                                   <span>#{rankInfo.rank} · TIER {rankInfo.tier}</span>
                                 </span>
                               );
                             }
                             if (game.featured) {
                               return (
-                                <span className="absolute top-2.5 left-2.5 text-[12px] font-black bg-black/85 text-amber-400 border border-amber-500/30 w-6 h-6 rounded-md inline-flex items-center justify-center z-10 shadow-sm font-mono">
+                                <span className={`absolute top-2 left-2 font-black bg-black/85 text-amber-400 border border-amber-500/30 rounded-md inline-flex items-center justify-center z-10 shadow-sm font-mono ${
+                                  isCompactLayout ? 'text-[10px] w-5 h-5' : 'text-[12px] w-6 h-6'
+                                }`}>
                                   ★
                                 </span>
                               );
@@ -6681,12 +6868,14 @@ export default function App() {
                             return null;
                           })()}
 
-                          <span className="absolute top-2.5 right-2.5 text-[8px] font-bold uppercase tracking-widest bg-black/75 backdrop-blur-sm text-white border border-white/10 px-2.5 py-0.5 rounded-full inline-block z-10">
+                          <span className={`absolute top-2 right-2 font-bold uppercase tracking-widest bg-black/75 backdrop-blur-sm text-white border border-white/10 rounded-full inline-block z-10 ${
+                            isCompactLayout ? 'text-[7px] px-1.5 py-0.5' : 'text-[8px] px-2.5 py-0.5'
+                          }`}>
                             {game.category}
                           </span>
 
                           {game.isAiGenerated && (
-                            <span className="absolute bottom-2.5 left-2.5 flex items-center gap-1 text-[8px] font-extrabold tracking-wider bg-black/85 backdrop-blur-sm text-white border border-white/20 px-2 py-0.5 rounded-full inline-flex z-10 shadow-sm font-mono uppercase">
+                            <span className="absolute bottom-2 left-2 flex items-center gap-1 text-[7.5px] font-extrabold tracking-wider bg-black/85 backdrop-blur-sm text-white border border-white/20 px-2 py-0.5 rounded-full inline-flex z-10 shadow-sm font-mono uppercase">
                               <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z" fill="currentColor" />
                               </svg>
@@ -6697,57 +6886,65 @@ export default function App() {
                         </div>
 
                         {/* Title and descriptions */}
-                        <div className="games-card-copy p-4 flex-1 flex flex-col justify-between">
-                          <div className="space-y-1.5">
-                            <h3 className={`games-card-copy-title text-sm font-black line-clamp-1 leading-snug transition-colors flex items-center gap-1.5 ${
+                        <div className={`games-card-copy flex-1 flex flex-col justify-between ${
+                          isCompactLayout ? 'p-2.5 sm:p-3' : 'p-4'
+                        }`}>
+                          <div className={isCompactLayout ? "space-y-1" : "space-y-1.5"}>
+                            <h3 className={`games-card-copy-title font-black line-clamp-1 leading-snug transition-colors flex items-center gap-1.5 ${
+                              isCompactLayout ? 'text-xs' : 'text-sm'
+                            } ${
                               game.featured 
                                 ? 'text-[var(--text-primary)] group-hover:text-amber-400' 
                                 : 'text-[var(--text-primary)] group-hover:text-[var(--accent-color)]'
                             }`}>
                               <span className="min-w-0 flex-1 truncate">{game.title}</span>
                               {game.isAiGenerated && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--accent-color)]/10 border border-[var(--card-border)] text-[var(--text-primary)]" title="Gemini AI Generated">
+                                <span className="inline-flex items-center px-1 py-0.5 rounded bg-[var(--accent-color)]/10 border border-[var(--card-border)] text-[var(--text-primary)]" title="Gemini AI Generated">
                                   <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z" fill="currentColor" />
                                   </svg>
                                 </span>
                               )}
-                              <div className="ml-auto flex items-center gap-1.5 shrink-0">
-                                <span className="text-[9px] font-mono text-[var(--text-muted)] font-medium select-none tracking-tight">
-                                  (Dev tools)
-                                </span>
-                                <button
-                                  type="button"
-                                  aria-label={`Copy piece path for ${game.title} (Dev tools)`}
-                                  title={`Copy piece path for ${game.title} (Dev tools)`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    copyTextToClipboard(getGamePathName(game.url));
-                                  }}
-                                  className="p-1 rounded border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-colors"
-                                >
-                                  <Copy className="w-3 h-3" />
-                                </button>
-                                <button
-                                  type="button"
-                                  aria-label={`Copy piece title for ${game.title} (Dev tools)`}
-                                  title={`Copy piece title for ${game.title} (Dev tools)`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    copyTextToClipboard(game.title);
-                                  }}
-                                  className="p-1 rounded border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-colors"
-                                >
-                                  <Copy className="w-3 h-3" />
-                                </button>
-                              </div>
+                              {!isCompactLayout && (
+                                <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                                  <span className="text-[9px] font-mono text-[var(--text-muted)] font-medium select-none tracking-tight">
+                                    (Dev tools)
+                                  </span>
+                                  <button
+                                    type="button"
+                                    aria-label={`Copy piece path for ${game.title} (Dev tools)`}
+                                    title={`Copy piece path for ${game.title} (Dev tools)`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      copyTextToClipboard(getGamePathName(game.url));
+                                    }}
+                                    className="p-1 rounded border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-colors"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-label={`Copy piece title for ${game.title} (Dev tools)`}
+                                    title={`Copy piece title for ${game.title} (Dev tools)`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      copyTextToClipboard(game.title);
+                                    }}
+                                    className="p-1 rounded border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-colors"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
                             </h3>
-                            <p className="text-xs text-[var(--text-muted)] line-clamp-3 leading-relaxed">
+                            <p className={`text-[var(--text-muted)] leading-relaxed ${
+                              isCompactLayout ? 'text-[11px] line-clamp-2' : 'text-xs line-clamp-3'
+                            }`}>
                               {game.description}
                             </p>
                           </div>
 
-                          <div className="flex items-center gap-2 mt-3 w-full">
+                          <div className={`flex items-center gap-1.5 w-full ${isCompactLayout ? 'mt-2' : 'mt-3'}`}>
                             {game.featured ? (
                               <button
                                 onClick={() => {
@@ -6755,9 +6952,11 @@ export default function App() {
                                   setSelectedGame(game);
                                   setZoom(1);
                                 }}
-                                className="flex-1 border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500 hover:text-black hover:font-bold hover:shadow-[0_4px_14px_rgba(245,158,11,0.35)] text-[11px] font-semibold tracking-wider text-amber-500 dark:text-amber-400 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all duration-200 uppercase cursor-pointer"
+                                className={`flex-1 border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500 hover:text-black hover:font-bold hover:shadow-[0_4px_14px_rgba(245,158,11,0.35)] font-semibold tracking-wider text-amber-500 dark:text-amber-400 rounded-lg flex items-center justify-center gap-1 transition-all duration-200 uppercase cursor-pointer ${
+                                  isCompactLayout ? 'py-1.5 px-2 text-[10px]' : 'py-2 px-3 text-[11px]'
+                                }`}
                               >
-                                <Play className="w-3 h-3 fill-current" />
+                                <Play className={`${isCompactLayout ? 'w-2.5 h-2.5' : 'w-3 h-3'} fill-current`} />
                                 <span>Play</span>
                               </button>
                             ) : (
@@ -6767,9 +6966,11 @@ export default function App() {
                                   setSelectedGame(game);
                                   setZoom(1);
                                 }}
-                                className="flex-1 border border-[var(--card-border)] bg-[var(--accent-color)]/5 hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] hover:font-bold hover:shadow-[0_4px_14px_var(--accent-shadow)] text-[11px] font-semibold tracking-wider text-[var(--text-primary)] py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all duration-200 uppercase cursor-pointer"
+                                className={`flex-1 border border-[var(--card-border)] bg-[var(--accent-color)]/5 hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] hover:font-bold hover:shadow-[0_4px_14px_var(--accent-shadow)] font-semibold tracking-wider text-[var(--text-primary)] rounded-lg flex items-center justify-center gap-1 transition-all duration-200 uppercase cursor-pointer ${
+                                  isCompactLayout ? 'py-1.5 px-2 text-[10px]' : 'py-2 px-3 text-[11px]'
+                                }`}
                               >
-                                <Play className="w-3 h-3 fill-current" />
+                                <Play className={`${isCompactLayout ? 'w-2.5 h-2.5' : 'w-3 h-3'} fill-current`} />
                                 <span>Play</span>
                               </button>
                             )}
@@ -6781,11 +6982,13 @@ export default function App() {
                                 recordRecentlyPlayed(game.id);
                                 openGameInAboutBlank(game);
                               }}
-                              className="p-2 border border-[var(--card-border)] hover:border-[var(--accent-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)] bg-[var(--bg-secondary)] hover:bg-[var(--card-bg)] rounded-lg transition-all flex items-center justify-center shrink-0 cursor-pointer"
+                              className={`border border-[var(--card-border)] hover:border-[var(--accent-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)] bg-[var(--bg-secondary)] hover:bg-[var(--card-bg)] rounded-lg transition-all flex items-center justify-center shrink-0 cursor-pointer ${
+                                isCompactLayout ? 'p-1.5' : 'p-2'
+                              }`}
                               title="Open Portal in about:blank"
                               aria-label={`Open ${game.title} in about:blank`}
                             >
-                              <ExternalLink className="w-4 h-4" />
+                              <ExternalLink className={isCompactLayout ? "w-3.5 h-3.5" : "w-4 h-4"} />
                             </button>
 
                             {isLocalGame(game.url) && (
@@ -6847,7 +7050,7 @@ export default function App() {
                         : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
                     }`}
                   >
-                    ORIGINALS
+                    ORIGINALS ({ogGamesCount})
                   </button>
                   <button
                     type="button"
@@ -6862,7 +7065,37 @@ export default function App() {
                         : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
                     }`}
                   >
-                    ALL PORTALS (2708)
+                    ALL PORTALS ({hideUnranked ? `${rankedGamesList.length} ranked` : games.length})
+                  </button>
+
+                  {/* Bottom Slider Switch for Hide Unranked */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={hideUnranked}
+                    onClick={() => {
+                      const next = !hideUnranked;
+                      setHideUnranked(next);
+                      safeStorage.setItem('unblocked-hide-unranked', String(next));
+                      setCurrentGamePage(1);
+                    }}
+                    className={`group flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold tracking-wider transition-all duration-200 cursor-pointer select-none border ${
+                      hideUnranked
+                        ? 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] border-[var(--accent-color)]/30 hover:border-[var(--accent-color)]/60'
+                        : 'bg-black/10 dark:bg-white/5 text-[var(--text-muted)] border-transparent hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
+                    }`}
+                    title={hideUnranked ? "Unranked games are hidden. Click to show all games." : "All games are visible. Click to hide unranked games."}
+                  >
+                    <span className="truncate">Hide Unranked</span>
+                    <div className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out p-0.5 ${
+                      hideUnranked ? 'bg-[var(--accent-color)]' : 'bg-neutral-600 dark:bg-neutral-700'
+                    }`}>
+                      <span
+                        className={`pointer-events-none inline-block h-3 w-3 transform rounded-full shadow-sm ring-0 transition duration-200 ease-in-out ${
+                          hideUnranked ? 'translate-x-3 bg-white' : 'translate-x-0 bg-neutral-300'
+                        }`}
+                      />
+                    </div>
                   </button>
                 </div>
 
