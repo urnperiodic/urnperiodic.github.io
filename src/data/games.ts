@@ -272,6 +272,14 @@ const gameData: Game[] = [
   // ── SOLO ──
   // ─────────────────────────────────────────────────────────────
   {
+    title: '60 Seconds',
+    description: 'Scavenge supplies and get your family to shelter before the apocalypse hits.',
+    url: '60Seconds.html',
+    thumbnail: 'https://i.ytimg.com/vi/smWcR6Rk3Zo/maxresdefault.jpg',
+    category: 'Solo',
+    featured: true
+  },
+  {
     title: 'Paper.io',
     description: '',
     url: 'clpaperio.html',

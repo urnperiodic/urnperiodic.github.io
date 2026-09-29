@@ -1,5 +1,6 @@
 export const GMFILES_PATH_LOOKUP: Record<string, string> = {
   'Bank Robbery.html': 'html5-games/Bank Robbery.html',
+  '60Seconds.html': 'html5-games/60Seconds.html',
   'Eaglercraft-Beta-1.7.3-Offline.html': 'html5-games/eagler/Eaglercraft-Beta-1.7.3-Offline.html',
   'Eaglercraft1.12.html': 'html5-games/eagler/Eaglercraft1.12.html',
   'Harrypotterandthechamberofsecrets.html': 'gba/Harrypotterandthechamberofsecrets.html',
