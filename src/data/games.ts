@@ -2,8 +2,13 @@ import { Game } from '../types';
 import { GMFILES_PATH_LOOKUP } from './gmfilesPaths';
 
 export const PUBLIC_GAMES_BASE_URL = '/Gmfiles/';
+const GENIZY_MATH_BASE_URL = 'https://genizymath.github.io/';
 
 const resolveLocalGmfilesUrl = (url: string): string => {
+  if (url.startsWith(GENIZY_MATH_BASE_URL)) {
+    return `/${url.slice(GENIZY_MATH_BASE_URL.length)}`;
+  }
+
   if (!url || url.startsWith('http') || url.startsWith('/')) {
     return url;
   }
@@ -21733,7 +21738,3367 @@ const gameData: Game[] = [
     category: 'Emulated',
     featured: false
   },
-  ...legacyGameData
+  ...legacyGameData,
+  {
+    title: 'OvO 2',
+    description: 'Genizy Math game by Dedra Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/2e.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/2.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin',
+    description: 'Genizy Math game by ninja-muffin24. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/8-wow2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/8.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Attack Hole',
+    description: 'Genizy Math game by Homa Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/13.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/13.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Color Water Sort 3D',
+    description: 'Genizy Math game by Tapnation. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/15.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/15.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Magic Tiles 3',
+    description: 'Genizy Math game by AmaNotes. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/17.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/17.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Stacky Dash',
+    description: 'Genizy Math game by Supersonic Studios LTD. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/18.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/18.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Tall Man Run',
+    description: 'Genizy Math game by Supersonic Studios LTD. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/20a.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/20.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Turbo Stars',
+    description: 'Genizy Math game by https://play.google.com/store/apps/details?id=com.turbo.stars. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/21.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/21.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Mob Control HTML5',
+    description: 'Genizy Math game by Voodoo. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/22.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/22.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Amaze',
+    description: 'Genizy Math game by CrazyLabs. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/26.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/26.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Geometry Dash Lite (REMAKE)',
+    description: 'Genizy Math game by RobTop Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/27-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/27.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Bazooka Boy',
+    description: 'Genizy Math game by Supersonic Studios LTD. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/29.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/29.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Color Match',
+    description: 'Genizy Math game by Supersonic Studios LTD. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/31.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/31.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Dig Deep',
+    description: 'Genizy Math game by CrazyLabs LTD. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/32.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/32.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Freddy\'s',
+    description: 'Genizy Math game by Scott Cawthon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/38-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/38.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Freddy\'s 2',
+    description: 'Genizy Math game by Scott Cawthon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/39-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/39.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Freddy\'s 3',
+    description: 'Genizy Math game by Scott Cawthon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/40-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/40.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Freddy\'s 4',
+    description: 'Genizy Math game by Scott Cawthon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/41-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/41.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Vex 1',
+    description: 'Genizy Math game by Lorenzo De Carlo. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/45-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/45.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Baldi\'s Basics',
+    description: 'Genizy Math game by Basically Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/65-fixed.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/65.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Bloons TD',
+    description: 'Genizy Math game by Ninja Kiwi. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/71.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/71.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Bloons TD 2',
+    description: 'Genizy Math game by Ninja Kiwi. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/72.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/72.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Bloons TD 3',
+    description: 'Genizy Math game by Ninja Kiwi. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/73.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/73.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Bloons TD 4',
+    description: 'Genizy Math game by Ninja Kiwi. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/74.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/74.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Bloons TD 5',
+    description: 'Genizy Math game by Ninja Kiwi. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/75-fix2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/75.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Burrito Bison: Launcha Libre',
+    description: 'Genizy Math game by Juicy Beast. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/78.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/78.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Cannon Basketball',
+    description: 'Genizy Math game by Oleh "qzix13" Kuzyk. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/79.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/79.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Cannon Basketball 2',
+    description: 'Genizy Math game by Oleh "qzix13" Kuzyk. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/80.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/80.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Coreball',
+    description: 'Genizy Math game by Ben Vinegar. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/83-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/83.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Cubefield',
+    description: 'Genizy Math game by Max Abernethy. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/84.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/84.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Emulator.JS',
+    description: 'Genizy Math game by Ethan O\'Brien. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/87-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/87.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Gunspin',
+    description: 'Genizy Math game by minijuegos.com. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/91.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/91.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Highway Racer 2',
+    description: 'Genizy Math game by Bone Cracker Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/92.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/92.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Moto X3M',
+    description: 'Genizy Math game by MadPuffers. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/96.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/96.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Moto X3M 2',
+    description: 'Genizy Math game by MadPuffers. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/97.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/97.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Moto X3M 3',
+    description: 'Genizy Math game by MadPuffers. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/98.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/98.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Moto X3M Spooky',
+    description: 'Genizy Math game by MadPuffers. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/99.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/99.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Moto X3M Winter',
+    description: 'Genizy Math game by MadPuffers. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/100-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/100.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Ninja vs EvilCorp',
+    description: 'Genizy Math game by Rémi Vansteelandt. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/101.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/101.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Paper.io 2',
+    description: 'Genizy Math game by VOODOO. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/102.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/102.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'The World\'s Hardest Game',
+    description: 'Genizy Math game by Stevie Critoph. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/103.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/103.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'The World\'s Hardest Game 3',
+    description: 'Genizy Math game by Stevie Critoph. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/104.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/104.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'The World\'s Hardest Game 4',
+    description: 'Genizy Math game by Stevie Critoph. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/105.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/105.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'This Is The Only Level 2',
+    description: 'Genizy Math game by jmtb02. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/107.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/107.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Ruffle',
+    description: 'Genizy Math game by Mike Welsh. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/113.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/113.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Offroad Mountain Bike',
+    description: 'Genizy Math game by RHM Interactive OÜ. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/116.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/116.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Brawl Guys.io',
+    description: 'Genizy Math game by Lagged. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/121.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/121.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Survival Race',
+    description: 'Genizy Math game by Brain Massage. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/122.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/122.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Moto X3M Pool Party',
+    description: 'Genizy Math game by MadPuffers. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/124.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/124.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Flappy Dunk',
+    description: 'Genizy Math game by Voodoo. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/153.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/153.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Pac-Man Superfast',
+    description: 'Genizy Math game by RedFox Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/158.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/158.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Race Master 3D',
+    description: 'Genizy Math game by Beresnev Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/160.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/160.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Bad Parenting 1',
+    description: 'Genizy Math game by 98corbins. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/166-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/166.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Blade Ball',
+    description: 'Genizy Math game by ??. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/167.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/167.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Candy Crush',
+    description: 'Genizy Math game by King.com. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/171.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/171.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'World Box',
+    description: 'Genizy Math game by Kendja. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/174.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/174.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Run 1',
+    description: 'Genizy Math game by Joseph Cloutier. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/175.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/175.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Soundboard',
+    description: 'Genizy Math game by genizy. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/179-a3.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/179.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Minecraft 1.8.8',
+    description: 'Genizy Math game by lax1dude. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/181-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/181.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Minecraft 1.12.2',
+    description: 'Genizy Math game by lax1dude. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/182-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/182.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Minecraft 1.21.4',
+    description: 'Genizy Math game by zardoy. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/183.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/183.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Freddy\'s: Sister Location',
+    description: 'Genizy Math game by Scott Cawthon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/185-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/185.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papers, Please',
+    description: 'Genizy Math game by Lucas Pope. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/187.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/187.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Freddy\'s: World',
+    description: 'Genizy Math game by Scott Cawthon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/190-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/190.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Freddy\'s: Pizza Simulator',
+    description: 'Genizy Math game by Scott Cawthon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/191-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/191.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Freddy\'s: Ultimate Custom Night',
+    description: 'Genizy Math game by Scott Cawthon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/192-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/192.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Do NOT Take This Cat Home',
+    description: 'Genizy Math game by Pixelliminal. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/193-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/193.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'People Playground',
+    description: 'Genizy Math game by Studio Minus, 98corbins. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/194-a.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/194-m.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'R.E.P.O',
+    description: 'Genizy Math game by semiwork, 98corbins. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/195-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/195.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'ULTRAKILL',
+    description: 'Genizy Math game by New Blood Interactive, Cake Logic. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/196-fixedf.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/196.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Elastic Man',
+    description: 'Genizy Math game by David Li. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/197.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/197.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Time Shooter 1',
+    description: 'Genizy Math game by g80g. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/199.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/199.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Time Shooter 3: SWAT',
+    description: 'Genizy Math game by g80g. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/201.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/201.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Carrom Clash',
+    description: 'Genizy Math game by GameSnacks. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/202.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/202.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Snowbattle.io',
+    description: 'Genizy Math game by Royalec/Tokyo. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/207-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/207.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Draw the Hill',
+    description: 'Genizy Math game by Stelennnn. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/209-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/209.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Dragon vs Bricks',
+    description: 'Genizy Math game by Voodoo. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/210-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/210.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Death Run 3D',
+    description: 'Genizy Math game by kevin.wang. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/211-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/211.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Cut the Rope: Time Travel',
+    description: 'Genizy Math game by ZeptoLab. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/213-f2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/213.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Cut the Rope: Holiday Gift',
+    description: 'Genizy Math game by ZeptoLab. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/214-fi2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/214.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'That\'s Not My Neighbor',
+    description: 'Genizy Math game by Nacho Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/216-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/216.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Hotline Miami',
+    description: 'Genizy Math game by Dennaton Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/217-cf.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/217.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papa\'s Bakeria',
+    description: 'Genizy Math game by Flipline Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/218.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/218.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papa\'s Burgeria',
+    description: 'Genizy Math game by Flipline Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/219.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/219.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papa\'s Cheeseria',
+    description: 'Genizy Math game by Flipline Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/220.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/220.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papa\'s Cupcakeria',
+    description: 'Genizy Math game by Flipline Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/221.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/221.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papa\'s Donuteria',
+    description: 'Genizy Math game by Flipline Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/222.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/222.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papa\'s Freezeria',
+    description: 'Genizy Math game by Flipline Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/223.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/223.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papa\'s Hot Doggeria',
+    description: 'Genizy Math game by Flipline Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/224.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/224.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papa\'s Pancakeria',
+    description: 'Genizy Math game by Flipline Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/225.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/225.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papa\'s Pastaria',
+    description: 'Genizy Math game by Flipline Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/226.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/226.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papa\'s Pizeria',
+    description: 'Genizy Math game by Flipline Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/227.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/227.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papa\'s Scooperia',
+    description: 'Genizy Math game by Flipline Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/228.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/228.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papa\'s Sushiria',
+    description: 'Genizy Math game by Flipline Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/229.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/229.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papa\'s Taco Mia',
+    description: 'Genizy Math game by Flipline Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/230.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/230.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papa\'s Wingeria',
+    description: 'Genizy Math game by Flipline Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/231.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/231.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Red Ball 4 Vol. 2',
+    description: 'Genizy Math game by Yohoho Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/243.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/243.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Red Ball 4 Vol. 3',
+    description: 'Genizy Math game by Yohoho Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/244.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/244.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Chat Bot AI (A.I GPT)',
+    description: 'Genizy Math game by gn-math. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/253-update2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/253.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Crazy Kitty 3D',
+    description: 'Genizy Math game by Teasle. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/256.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/256.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'A Bite at Freddy\'s',
+    description: 'Genizy Math game by Garrett McKay. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/258.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/258.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Class of \'09',
+    description: 'Genizy Math game by sbn3. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/259-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/259.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'RE:RUN',
+    description: 'Genizy Math game by DaniDev. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/260.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/260.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'CircloO',
+    description: 'Genizy Math game by Florian van Strien. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/274-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/274.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Madalin Stunt Cars 3',
+    description: 'Genizy Math game by Madalin Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/279.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/279.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Papery Planes',
+    description: 'Genizy Math game by Akos Makovics. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/280.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/280.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Pixel Gun Survival',
+    description: 'Genizy Math game by Mentolatux. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/281.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/281.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Protektor',
+    description: 'Genizy Math game by rujogames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/282-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/282.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'War The Knights',
+    description: 'Genizy Math game by BANZAI. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/284.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/284.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Endoparasitic',
+    description: 'Genizy Math game by Deep Root Interactive. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/286.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/286.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Riddle School 4',
+    description: 'Genizy Math game by JonBro. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/290.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/290.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Riddle School 5',
+    description: 'Genizy Math game by JonBro. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/291.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/291.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Minecraft Beta 1.7.3',
+    description: 'Genizy Math game by lax1dude. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/300.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/300.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Shipo.io',
+    description: 'Genizy Math game by OnRush Studio. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/306.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/306.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Rainbow Obby',
+    description: 'Genizy Math game by emolingo games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/307.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/307.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Nazi Zombies: Portable',
+    description: 'Genizy Math game by nzp team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/308.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/308.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Minesweeper Mania',
+    description: 'Genizy Math game by gamesnacks. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/313.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/313.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Angry Birds Chrome',
+    description: 'Genizy Math game by Rovio. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/316.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/316.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'sandspiel',
+    description: 'Genizy Math game by maxbittker. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/317.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/317.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Build a Queen',
+    description: 'Genizy Math game by Supersonic Studios LTD. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/319.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/319.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: '3D Bowling',
+    description: 'Genizy Math game by Italic Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/320.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/320.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Room Sort',
+    description: 'Genizy Math game by Gamincat. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/321.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/321.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Sushi Roll',
+    description: 'Genizy Math game by Famobi. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/322.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/322.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Maze Speedrun',
+    description: 'Genizy Math game by Raval Matic. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/324.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/324.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Kitchen Bazar',
+    description: 'Genizy Math game by Gameloft. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/325.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/325.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Pokey Ball',
+    description: 'Genizy Math game by Voodoo. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/326.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/326.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Slime.io',
+    description: 'Genizy Math game by GameSnacks. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/327.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/327.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Om Nom Run',
+    description: 'Genizy Math game by ZeptoLab. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/328.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/328.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'TileTopia',
+    description: 'Genizy Math game by GameSnacks. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/329a.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/329.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'BitPlanes',
+    description: 'Genizy Math game by Anton Medvedev. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/330.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/330.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Fancy Pants Adventure 3',
+    description: 'Genizy Math game by Brad Borne. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/335.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/335.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'SpiderDoll',
+    description: 'Genizy Math game by Ysopprod. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/347.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/347.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Binding of Issac: Wrath of the Lamb',
+    description: 'Genizy Math game by Edmund McMillen. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/350.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/350.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Happy Sheepies',
+    description: 'Genizy Math game by Berker Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/351.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/351.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'DON\'T YOU LECTURE ME',
+    description: 'Genizy Math game by GD Colon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/352.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/352.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Adventure Capatalist',
+    description: 'Genizy Math game by Hyper Hippo Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/354-a.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/354.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Dadish 2',
+    description: 'Genizy Math game by Thomas K. Young. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/355.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/355.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Dadish 3',
+    description: 'Genizy Math game by Thomas K. Young. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/356.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/356.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Dadish 3D',
+    description: 'Genizy Math game by Thomas K. Young. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/358.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/358.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Daily Dadish',
+    description: 'Genizy Math game by Thomas K. Young. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/359.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/359.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'EvoWars.io',
+    description: 'Genizy Math game by Night Steed S.C.. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/360.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/360.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Google Feud',
+    description: 'Genizy Math game by Justin Hook. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/361.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/361.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Idle Lumber Inc',
+    description: 'Genizy Math game by NoPowerUp. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/363.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/363.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Idle Mining Empire',
+    description: 'Genizy Math game by marketjs. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/364.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/364.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Merge Harvest',
+    description: 'Genizy Math game by idfk. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/366.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/366.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Parking Fury 3D',
+    description: 'Genizy Math game by Brain Software. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/367.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/367.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Slope 2',
+    description: 'Genizy Math game by idfk. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/368.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/368.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Slowroads',
+    description: 'Genizy Math game by Topograph Interactive. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/369.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/369.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Stickman Fight Ragdoll',
+    description: 'Genizy Math game by Vanorium. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/371e.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/371.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Stickman Boost',
+    description: 'Genizy Math game by y8. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/372.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/372.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Stickman Climb',
+    description: 'Genizy Math game by No Pressure Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/373.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/373.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Stickman Golf',
+    description: 'Genizy Math game by NoodleCake. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/374e2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/374.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: '2048 Merge Run',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/375-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/375.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Build a Big Army',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/376.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/376.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Build a Plane',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/377.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/377.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Camouflage and Sniper',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/378.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/378.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Car Survival 3D',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/379.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/379.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'City Defense',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/380.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/380.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Clothing Shop 3D',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/381-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/381.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Cool Cars Run 3D',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/382.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/382.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Crush Cars 3D',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/383.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/383.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Destiny Run 3D',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/384.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/384.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Destroy The Car 3D',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/385-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/385.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Diamond Seeker',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/386.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/386.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Draw Joust',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/387-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/387.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Evolving Bombs 3D',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/388-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/388.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Fire and Frost Master',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/389-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/389.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Fitness Empire',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/390-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/390.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Flick Goal',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/391.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/391.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Flip Master',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/392.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/392.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Giant Wanted',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/393.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/393.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Gun Clone',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/394.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/394.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Gun Runner',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/395-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/395.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Kaji Run',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/396-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/396.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Make a SuperBoat',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/397.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/397.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Makeover Run',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/398.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/398.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Mega Car Jumps',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/399.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/399.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Monster Box 3D',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/401.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/401.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Office Fight',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/402-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/402.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Robot Invasion',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/403.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/403.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Seat Jam 3D',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/404.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/404.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Shooting Master',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/405.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/405.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Supermarket 3D',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/406-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/406.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Survive to Victory',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/407-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/407.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Telekinesis Attack',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/408-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/408.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Telekinesis Car',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/409.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/409.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Telekinesis Drive',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/410.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/410.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Telekinesis',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/411.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/411.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Tug of War with Cars',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/413.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/413.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Twerk Race 3D',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/414.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/414.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Twisted Rope 3D',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/415.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/415.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Wall Crawler',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/416-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/416.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'War Regions',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/417.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/417.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Weapon Craft Run',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/418.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/418.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Weapon Upgrade Rush',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/419-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/419.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Weapon Scale',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/420.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/420.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Rich Run 3D',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/421-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/421.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'High Heels',
+    description: 'Genizy Math game by Yandex. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/422-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/422.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Andy\'s Apple Farm',
+    description: 'Genizy Math game by M36games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/426-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/426.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'OMORI',
+    description: 'Genizy Math game by Omocat. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/427-z.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/427.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Freddy\'s 4: Halloween',
+    description: 'Genizy Math game by Scott Cawthon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/428-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/428.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Code Editor',
+    description: 'Genizy Math game by gn-math. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/429-ff.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/429.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'God\'s Flesh',
+    description: 'Genizy Math game by Glompyy. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/434.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/434.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Kitty Toy',
+    description: 'Genizy Math game by Rakqoi. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/441.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/441.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Infinimoes',
+    description: 'Genizy Math game by Werxzy. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/442.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/442.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Adventure Drivers',
+    description: 'Genizy Math game by Domas Kazragis. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/443-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/443.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Kindergarten',
+    description: 'Genizy Math game by Con Man Games, SmashGames and Sean Young. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/445-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/445.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Kindergarten 2',
+    description: 'Genizy Math game by Con Man Games, SmashGames and Sean Young. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/446-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/446.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Nijika\'s Ahoge',
+    description: 'Genizy Math game by TamaniDamani. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/447-e.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/447.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'City Smash',
+    description: 'Genizy Math game by Paradyme Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/449.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/449.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Amanda the Adventurer',
+    description: 'Genizy Math game by MANGLEDmaw Games, DreadXP. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/450-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/450.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Slender: The 8 Pages',
+    description: 'Genizy Math game by Parsec Productions. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/451-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/451.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'BLOODMONEY!',
+    description: 'Genizy Math game by SHROOMYCHRIST-STUDIOS. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/454-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/454.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Raft',
+    description: 'Genizy Math game by Redbeet Interactive, Axolot Games, Ashen Arrow. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/457-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/457.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'The Man In The Window',
+    description: 'Genizy Math game by Zed Technician. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/459-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/459.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Fears to Fathom: Home Alone',
+    description: 'Genizy Math game by Rayll. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/460-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/460.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Lacey\'s Flash Games',
+    description: 'Genizy Math game by ghosttundra, Euroclipse, Brand New Groove. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/463-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/463.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Cuphead',
+    description: 'Genizy Math game by Studio MDHR Entertainment Inc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/465-fix.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/465.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Baldi\'s Basics Classic Remastered',
+    description: 'Genizy Math game by Basically Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/466-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/466.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Baldi\'s Basics Plus',
+    description: 'Genizy Math game by Basically Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/467-updateef.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/467.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Hollow Knight',
+    description: 'Genizy Math game by Team Cherry. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/468-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/468.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'sandstone',
+    description: 'Genizy Math game by ading2210. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/469.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/469.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Madness Combat: Project Nexus (classic)',
+    description: 'Genizy Math game by Krinkels, The-Swain, cheshyre, Luis, Rebel666. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/471.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/471.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': V.S. Whitty',
+    description: 'Genizy Math game by Nate Anim8. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/474.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/474.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': B-Sides',
+    description: 'Genizy Math game by Rozebud. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/475.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/475.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Vs. Hex',
+    description: 'Genizy Math game by YingYang48 etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/476.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/476.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Vs. Hatsune Miku',
+    description: 'Genizy Math game by evidal etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/477.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/477.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Neo',
+    description: 'Genizy Math game by JellyFishedm etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/478.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/478.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Sarvente\'s Mid-Fight Masses',
+    description: 'Genizy Math game by Dokki.doodlez etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/480.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/480.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': vs. Tricky',
+    description: 'Genizy Math game by Banbuds etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/481.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/481.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Hit Single Real',
+    description: 'Genizy Math game by Sturm/Churgney Gurgney etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/483.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/483.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Creepypasta JP',
+    description: 'Genizy Math game by CPJP Team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/484.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/484.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': vs. Garcello',
+    description: 'Genizy Math game by atsuover etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/485.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/485.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Sonic Legacy',
+    description: 'Genizy Math game by JoeDoughBoi etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/486.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/486.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': vs. QT',
+    description: 'Genizy Math game by Hazardous24 etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/487.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/487.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Mistful Crimson Morning Reboot',
+    description: 'Genizy Math game by Stonesteve etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/488.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/488.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Indie Cross',
+    description: 'Genizy Math game by MORØ etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/489.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/489.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'I woke up next to you again.',
+    description: 'Genizy Math game by angela he. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/491.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/491.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'UNDERWHEELS',
+    description: 'Genizy Math game by LakenDaCoda. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/492.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/492.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'RigBMX',
+    description: 'Genizy Math game by Cartoon Network. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/493.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/493.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'RigBMX 2',
+    description: 'Genizy Math game by Cartoon Network. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/494.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/494.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'groon groon, babey!',
+    description: 'Genizy Math game by tanner bananer. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/495.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/495.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Jeffy\'s Endless Aethos',
+    description: 'Genizy Math game by jeffyfansml99 etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/496.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/496.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': vs. BOPCITY',
+    description: 'Genizy Math game by Daniel Hummus. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/497.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/497.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': 17 Bucks: Floor 1',
+    description: 'Genizy Math game by Peacocok6k. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/498.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/498.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': FIRE IN THE HOLE: Lobotomy Dash Funkin\'',
+    description: 'Genizy Math game by CoolDudeCrafter. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/499.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/499.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': TWIDDLEFINGER',
+    description: 'Genizy Math game by MAXPROLOVER998. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/500.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/500.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Kindergarten 3',
+    description: 'Genizy Math game by Con Man Games, SmashGames and Sean Young. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/501.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/501.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Candy\'s',
+    description: 'Genizy Math game by Emil "Ace" Macko. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/503.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/503.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Candy\'s 2',
+    description: 'Genizy Math game by Emil "Ace" Macko. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/504.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/504.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Pokemon Red',
+    description: 'Genizy Math game by Nintendo. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/505.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/505.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Swordfight!!',
+    description: 'Genizy Math game by Studio-19. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/513-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/513.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'PortaBoy+',
+    description: 'Genizy Math game by Enchae, Lumpy. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/514-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/514.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'PacMan (Horror)',
+    description: 'Genizy Math game by BerickCook. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/515-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/515.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Oshi Oshi Punch!',
+    description: 'Genizy Math game by Empty House Games, Shuu. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/516-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/516.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Nubby\'s Number Factory',
+    description: 'Genizy Math game by MogDogBlog Productions. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/517-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/517.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Touhou: Luminous Strike',
+    description: 'Genizy Math game by NitNitori, LadyEbony. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/518-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/518.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Bust a Loop',
+    description: 'Genizy Math game by PeachTreeOath. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/521-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/521.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Touhou Mother',
+    description: 'Genizy Math game by vgperson. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/523-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/523.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Darkness Takeover',
+    description: 'Genizy Math game by MiniSymba. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/525.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/525.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'SpongeBob SquarePants: Land Ho!',
+    description: 'Genizy Math game by Nickelodeon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/526.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/526.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'SpongeBob SquarePants: SpongeBob Run',
+    description: 'Genizy Math game by Nickelodeon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/527.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/527.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'SpongeBob SquarePants: Squidward\'s Sizzlin\' Scare',
+    description: 'Genizy Math game by Nickelodeon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/528.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/528.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'SpongeBob SquarePants: Sandy\'s Sponge Stacker',
+    description: 'Genizy Math game by Nickelodeon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/529.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/529.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'SpongeBob SquarePants: Tasty Pastry Party',
+    description: 'Genizy Math game by Nickelodeon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/530.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/530.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'SpongeBob SquarePants: The Kah-Ray-Tay Squid',
+    description: 'Genizy Math game by Nickelodeon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/531.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/531.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'SpongeBob SquarePants: WereSquirrel',
+    description: 'Genizy Math game by Nickelodeon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/532.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/532.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'SpongeBob SquarePants: Krabby Katch',
+    description: 'Genizy Math game by Nickelodeon. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/533.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/533.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Teen Titans GO!: Jump Jousts',
+    description: 'Genizy Math game by Cartoon Network. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/534.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/534.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Teen Titans GO!: Jump Jousts 2',
+    description: 'Genizy Math game by Cartoon Network. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/535.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/535.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Cat Connection',
+    description: 'Genizy Math game by MOSTLY MAD PRODUCTIONS. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/536.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/536.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Cat Gunner: Super Zombie Shoot',
+    description: 'Genizy Math game by Poki. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/537.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/537.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Love Letters',
+    description: 'Genizy Math game by Nozomu Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/538.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/538.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Chiikawa Puzzle',
+    description: 'Genizy Math game by emptygamer. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/539.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/539.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'myTeardrop',
+    description: 'Genizy Math game by VENDORMINT. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/540.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/540.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Pibby: Apocalypse',
+    description: 'Genizy Math game by BAUDASlel etc.. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/541.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/541.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Sonic the Hedgehog 2: Community\'s Cut',
+    description: 'Genizy Math game by heyjoeway and SEGA. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/549.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/549.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Sonic the Hedgehog 3: Angel Island Remastered',
+    description: 'Genizy Math game by Eukaryot3K and SEGA. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/550.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/550.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin VS. Sky',
+    description: 'Genizy Math game by Alexander0110 etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/556.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/556.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Getting Over It with Bennett Foddy',
+    description: 'Genizy Math game by Bennett Foddy. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/557-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/557.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin vs Shaggy',
+    description: 'Genizy Math game by srPerez etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/559.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/559.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'BitGun.io',
+    description: 'Genizy Math game by Hazmob. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/561-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/561.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Boom Slingers: Reboom',
+    description: 'Genizy Math game by Boom Corp. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/562-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/562.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'CG FC 25',
+    description: 'Genizy Math game by Finz Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/563-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/563.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Count Masters: Stickman Games',
+    description: 'Genizy Math game by FreePlay LLC. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/564-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/564.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Dalgona Candy Honeycomb Cookie',
+    description: 'Genizy Math game by CrazyGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/565-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/565.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Highway Racer 2 REMASTERED',
+    description: 'Genizy Math game by CrazyGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/568-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/568.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Hula Hoop Race',
+    description: 'Genizy Math game by CrazyGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/569-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/569.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Jelly Restaurant',
+    description: 'Genizy Math game by CrazyGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/570-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/570.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Layers Roll',
+    description: 'Genizy Math game by CrazyGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/571-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/571.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Lazy Jumper',
+    description: 'Genizy Math game by CrazyGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/572-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/572.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Man Runner 2048',
+    description: 'Genizy Math game by CrazyGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/573-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/573.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Pottery Master',
+    description: 'Genizy Math game by CrazyGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/574-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/574.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Shovel 3D',
+    description: 'Genizy Math game by CrazyGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/575-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/575.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Steal Brainrot Online',
+    description: 'Genizy Math game by CrazyGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/577-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/577.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Super Star Car',
+    description: 'Genizy Math game by CrazyGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/579-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/579.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Traffic Rider',
+    description: 'Genizy Math game by CrazyGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/580-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/580.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Mario\'s Madness',
+    description: 'Genizy Math game by Dewott2501 etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/582.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/582.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\' vs Hypno Lullaby',
+    description: 'Genizy Math game by Hypno Lullaby Team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/583.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/583.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Sonic Mania',
+    description: 'Genizy Math game by SEGA, crunch arcade. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/590-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/590.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Slime Rancher',
+    description: 'Genizy Math game by Monomi Park, Ported by Snubby.top. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/591-awe.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/591.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Pac Man World',
+    description: 'Genizy Math game by Full Fat Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/592-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/592.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Pac Man World 2',
+    description: 'Genizy Math game by Full Fat Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/593-ff.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/593.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Waterworks!',
+    description: 'Genizy Math game by scriptwelder. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/594-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/594.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Shapez.io',
+    description: 'Genizy Math game by scriptwelder. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/595-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/595.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: '[!] COMMENTS',
+    description: 'Genizy Math game by gn-math. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/596-fixx.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/596-uu.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Plants vs. Zombies 2 Gardenless',
+    description: 'Genizy Math game by Gzh0821. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/597-a.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/597.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Sonic.EXE',
+    description: 'Genizy Math game by  Cinossu. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/598.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/598.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'FNF Vs. Hypno\'s Lullaby v2',
+    description: 'Genizy Math game by Hypno\'s Lullaby Team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/600.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/600.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'FNF Vs. Sonic.EXE 3.0/4.0',
+    description: 'Genizy Math game by FNF Vs. Sonic.EXE Team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/601.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/601.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Sonic.EXE (ORIGINAL)',
+    description: 'Genizy Math game by MY5TCrimson. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/606-ef.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/606.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Tattletail',
+    description: 'Genizy Math game by Waygetter Electronics, Ported by Snubby.top. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/607-ef.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/607.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin vs Sunday Remastered HD',
+    description: 'Genizy Math game by Sunday Remastered team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/609-a.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/609.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin vs Carol V2',
+    description: 'Genizy Math game by Carol V2 team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/610.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/610.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'The Legend of Zelda Majora\'s Mask',
+    description: 'Genizy Math game by Nintendo. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/612--f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/612.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Toy Rider',
+    description: 'Genizy Math game by CrazyGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/614.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/614.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin Vs. Dave and Bambi v3',
+    description: 'Genizy Math game by Dave and Bambi team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/615.html-a',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/615.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'FNF vs Bob v2.0 (Bob’s Onslaught)',
+    description: 'Genizy Math game by bob v2.0 team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/618.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/618.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Rev-Mixed',
+    description: 'Genizy Math game by Rev-Mixed team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/619.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/619.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Gumballs',
+    description: 'Genizy Math game by Gumballs team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/621.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/621.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Oneshot (LEGACY)',
+    description: 'Genizy Math game by Future Cat LLC, ARandomPerson. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/622.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/622.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Celeste',
+    description: 'Genizy Math game by MaddyMakesGames, Mercury Workshop. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/623-work.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/623.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Doom 3',
+    description: 'Genizy Math game by id Software, 98corbins. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/626-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/626.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Pizza Tower: Scoutdigo',
+    description: 'Genizy Math game by only1indigo, burnedpopcorn. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/628-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/628.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Off',
+    description: 'Genizy Math game by Mortis Ghost, Fangamer. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/629.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/629.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Space Funeral',
+    description: 'Genizy Math game by Stephen Gillmurphy. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/630.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/630.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Endroll',
+    description: 'Genizy Math game by  Segawa. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/631-a.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/631.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': VS. Impostor: Alternated',
+    description: 'Genizy Math game by Alternated team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/633.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/633.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Chaos Nightmare - Sonic Vs. Fleetway',
+    description: 'Genizy Math game by Fleetway team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/634.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/634.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\' D-Sides',
+    description: 'Genizy Math game by d-sides team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/636.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/636.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'BFDIA 5b: 5*30',
+    description: 'Genizy Math game by Mawilite, Cary Huang. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/638-ff.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/638.gif',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\' VS Impostor B-Sides',
+    description: 'Genizy Math game by Imposter b-sides team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/639.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/639.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Mutilate a Doll 2',
+    description: 'Genizy Math game by SilverGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/640.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/640.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Godzilla Daikaiju Battle Royale',
+    description: 'Genizy Math game by AWM Studio Productions LLC. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/641.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/641.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\' Sunday Night Suicide: Rookies Edition',
+    description: 'Genizy Math game by Rookies team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/642.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/642.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Rio Rex',
+    description: 'Genizy Math game by Gametornado. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/643.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/643.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin vs Nonsense',
+    description: 'Genizy Math game by NonsenseNH. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/644.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/644.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Arthur\'s Nightmare',
+    description: 'Genizy Math game by Varun R.. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/645-e.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/645.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Look Outside',
+    description: 'Genizy Math game by Francis Coulombe. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/649.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/649.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Milk Inside a Bag of Milk Inside a Bag of Milk',
+    description: 'Genizy Math game by Nikita Kryukov. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/650-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/650.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Milk Outside A Bag Of Milk Outside A Bag Of Milk',
+    description: 'Genizy Math game by Nikita Kryukov. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/651.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/651.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: '1 Date Danger',
+    description: 'Genizy Math game by Knives. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/653-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/653.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Final Fantasy VII',
+    description: 'Genizy Math game by Square Enix. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/654-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/654.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Goblin Goopmaxxing',
+    description: 'Genizy Math game by BugfightStudio. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/655.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/655.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Rogue Sergeant The Final Operation',
+    description: 'Genizy Math game by Studiohammergames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/656.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/656.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin vs Undertale',
+    description: 'Genizy Math game by vs undertale team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/657.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/657.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Midnight Shift',
+    description: 'Genizy Math game by Phantom GD. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/658.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/658.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Please Dont Touch Anything',
+    description: 'Genizy Math game by Four Quarters. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/660.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/660.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Royal Towers: Medieval TD',
+    description: 'Genizy Math game by Superplus Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/661.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/661.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: '3D Bolt Master',
+    description: 'Genizy Math game by Joymaster Puzzle Game Studio. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/663.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/663.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Match Triple 3D',
+    description: 'Genizy Math game by LIHUHU PTE. LTD.. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/665.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/665.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Stick War: Legacy',
+    description: 'Genizy Math game by Max Games Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/666.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/666.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'In Stars and Time',
+    description: 'Genizy Math game by insertdisc5. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/667-fixes2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/667.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Terraria',
+    description: 'Genizy Math game by Re-Logic, Mercury Workshop. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/669.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/669.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Raldi\'s Crackhouse',
+    description: 'Genizy Math game by RCHTeam, Grayson. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/670.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/670.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'A Difficult Game About Climbing',
+    description: 'Genizy Math game by Pontypants. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/672-2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/672.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Hobo 1',
+    description: 'Genizy Math game by SeethingSwarm. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/673.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/673.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Pico\'s School (1999)',
+    description: 'Genizy Math game by Tom Fulp. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/687.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/687.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': AKAGE',
+    description: 'Genizy Math game by owoskitty etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/690.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/690.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': Heartbreak Havoc [Vs. Sky: REDUX]',
+    description: 'Genizy Math game by REDUX Team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/691.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/691.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Kirby ~ Soft & Wet',
+    description: 'Genizy Math game by Strimp\'s Kitchen. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/692.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/692.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Half Life: Opposing Force',
+    description: 'Genizy Math game by Valve. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/693.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/693.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Duck Life 8',
+    description: 'Genizy Math game by Wix Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/695.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/695.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Pokemon HeartGold',
+    description: 'Genizy Math game by Nintendo. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/696-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/696.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Bank Robbery',
+    description: 'Genizy Math game by justaliendev. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/697-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/697.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Bank Robbery 3',
+    description: 'Genizy Math game by justaliendev. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/698-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/698.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Stickman Destruction',
+    description: 'Genizy Math game by freezenova. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/699.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/699.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'FNF vs Pibby Corrupted',
+    description: 'Genizy Math game by Pibby Corrupted team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/700.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/700.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'JavascriptPS1',
+    description: 'Genizy Math game by Alex Ashnov. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/702.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/702.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'VS Rewrite: ROUND 2',
+    description: 'Genizy Math game by Rewrite team. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/703.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/703.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Freddy\'s: World Refreshed',
+    description: 'Genizy Math game by Pyturret, Willowy (squall.cc). From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/704-fix.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/704.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Iron Lung',
+    description: 'Genizy Math game by David Szymanski, 98corbins. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/705-fix.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/705.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Fear & Hunger',
+    description: 'Genizy Math game by Miro Haverinen, Happy Paintings. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/706-fix.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/706.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Traffic Racer',
+    description: 'Genizy Math game by skgames, madkidgames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/707-fixf.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/707.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Needy Streamer Overload',
+    description: 'Genizy Math game by WSS playground, EDURocks. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/708-fix.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/708.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Epstein\'s',
+    description: 'Genizy Math game by EvanProductions. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/710-fix.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/710.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Antonblast',
+    description: 'Genizy Math game by Summitsphere. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/711.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/711.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin vs Tabi',
+    description: 'Genizy Math game by SangMareZG. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/714.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/714.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin vs Zardy',
+    description: 'Genizy Math game by SwankyBox. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/715.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/715.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Clover Pit',
+    description: 'Genizy Math game by Panik Arcade. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/716-fix2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/716.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Peaks of Yore',
+    description: 'Genizy Math game by Anders Grube Jensen. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/717-fix2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/717.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Untitled Goose Game',
+    description: 'Genizy Math game by House House. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/718.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/718.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'A Game About Feeding A Black Hole',
+    description: 'Genizy Math game by Aarimous, Thornityco. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/719-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/719.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Endoparasitic 2',
+    description: 'Genizy Math game by Miziziziz, Deep Root Interactive, Individual/Stinkalistic. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/724.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/724.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Breath of the Wild NDS',
+    description: 'Genizy Math game by unknown. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/726-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/726.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Dimension Incident',
+    description: 'Genizy Math game by biznesbear. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/727.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/727.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Fear Assessment',
+    description: 'Genizy Math game by Alexander Wiseman. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/728.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/728.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'game inside a game inside a game inside a game inside a game inside a game',
+    description: 'Genizy Math game by Sam Hogan. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/729.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/729.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Undertale: Last Breath',
+    description: 'Genizy Math game by caijiqaq. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/731.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/731.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: '64 in 1 NES',
+    description: 'Genizy Math game by idk. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/732.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/732.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Christmas Massacre',
+    description: 'Genizy Math game by Puppet Combo. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/734.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/734.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Famidash',
+    description: 'Genizy Math game by Zephyrside. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/735.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/735.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Saihate Station (さいはて駅)',
+    description: 'Genizy Math game by びぶ/viv. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/737.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/737.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Bart Blast',
+    description: 'Genizy Math game by epickface. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/740-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/740.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Power Hover',
+    description: 'Genizy Math game by ODDROK. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/743.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/743.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Fundamental Paper Novel',
+    description: 'Genizy Math game by yakubell. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/746.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/746.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Worst Time Simulator',
+    description: 'Genizy Math game by omegafredo. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/747.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/747.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Undertale Last Breath PHASE THREE',
+    description: 'Genizy Math game by mario1d240. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/748.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/748.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Super Monkey Ball 1&2',
+    description: 'Genizy Math game by Amusement Vision, camthesaxman etc. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/749.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/749.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Last Breath',
+    description: 'Genizy Math game by Free_Breath. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/750-u.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/750.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Jeffrey Epstein Basics In Education And Kidnapping',
+    description: 'Genizy Math game by Zakaria_ALZ. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/751.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/751.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Breaklock',
+    description: 'Genizy Math game by Print More India. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/753.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/753.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Witch\'s Heart',
+    description: 'Genizy Math game by IZ (BLUE STAR Entertainment). From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/756-ff.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/756.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Ultrapool',
+    description: 'Genizy Math game by Icedrop Games, mysmic. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/757-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/757.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Dice a Million',
+    description: 'Genizy Math game by countlessnights, 2 Left Thumbs, NotRexed. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/759.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/759.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'FISH',
+    description: 'Genizy Math game by dmcaguy. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/761.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/761.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Flying Gorilla 3D',
+    description: 'Genizy Math game by Pinbit LLC. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/763.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/763.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Night\'s at Shrek\'s Hotel',
+    description: 'Genizy Math game by rend-pii. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/764.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/764.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Scary Shawarma Kiosk: the ANOMALY',
+    description: 'Genizy Math game by kharbor_ykt. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/765.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/765.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Hollow Knight: Silksong',
+    description: 'Genizy Math game by Team Cherry, Edurocks. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/771-z.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/771.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Sam & Max Hit the Road',
+    description: 'Genizy Math game by Lucasfilm. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/772.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/772.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Command & Conquer',
+    description: 'Genizy Math game by Westwood Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/773.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/773.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Bart Bash',
+    description: 'Genizy Math game by TeleSTOP. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/775.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/775.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Your Only Move Is HUSTLE',
+    description: 'Genizy Math game by ivysly. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/776.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/776.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Serial Experiments Lain',
+    description: 'Genizy Math game by NBCUniversal Entertainment Japan, Pioneer Productions. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/778.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/778.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'I Have No Mouth, and I Must Scream',
+    description: 'Genizy Math game by Cyberdreams. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/779.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/779.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Thing-Thing Arena 3',
+    description: 'Genizy Math game by Weasel. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/780.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/780.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Scratch Inc',
+    description: 'Genizy Math game by Makopaz. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/781.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/781.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Apes vs Helium',
+    description: 'Genizy Math game by mdtowerz. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/783.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/783.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Gabriel\'s Awesome Schoolhouse (GASH)',
+    description: 'Genizy Math game by Gabriel115GJ. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/784.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/784.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'BeatBlock',
+    description: 'Genizy Math game by BubbleTabby, sunsuke. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/787.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/787.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Stardew Valley',
+    description: 'Genizy Math game by The Secret Police Limited, ConcernedApe, Cirsius. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/789-fix.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/789.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Who\'s Your Daddy',
+    description: 'Genizy Math game by Evil Tortilla Games, reeyuki. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/791-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/791.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Lethal Ape',
+    description: 'Genizy Math game by StellaDev. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/793.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/793.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Fear & Hunger 2: Termina',
+    description: 'Genizy Math game by Miro Haverinen, Happy Paintings. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/794-fixed.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/794.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'UvuvwevwevweOnyetenvewveUgwemubwemOssas',
+    description: 'Genizy Math game by Zakaria_ALZ. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/795.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/795.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Slendytubbies 1',
+    description: 'Genizy Math game by Sean Toman. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/796.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/796.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Fih',
+    description: 'Genizy Math game by starrymari. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/797.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/797.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Scampton The Great',
+    description: 'Genizy Math game by sad_bread, shyxder. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/802.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/802.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Bendy and the Ink Machine: ALL CHAPTERS',
+    description: 'Genizy Math game by Joey Drew Studios. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/803-fix.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/803.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Plague Inc',
+    description: 'Genizy Math game by Ndemic Creations, Reeyuki. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/805.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/805.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Slendytubbies 2',
+    description: 'Genizy Math game by Sean Toman. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/806.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/806.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Slendytubbies 2D',
+    description: 'Genizy Math game by Sean Toman. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/807.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/807.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Spaceflight Simulator',
+    description: 'Genizy Math game by Team Curiosity. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/808.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/808.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Need For Speed: Carbon',
+    description: 'Genizy Math game by EA Sports. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/810-fix2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/810.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Need For Speed: Most Wanted',
+    description: 'Genizy Math game by EA Sports. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/811-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/811.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Need For Speed: Underground 2',
+    description: 'Genizy Math game by EA Sports. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/812-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/812.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Five Nights at Frickbear\'s 3',
+    description: 'Genizy Math game by SpookyRick, Reeyuki. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/813-f3.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/813.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'MiSide',
+    description: 'Genizy Math game by AIHASTO. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/814.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/814.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: '-3',
+    description: 'Genizy Math game by Mauzer2137. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/816.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/816.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: '-b',
+    description: 'Genizy Math game by bermud. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/817-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/817.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 't³ (T cubed)',
+    description: 'Genizy Math game by Blidb. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/818.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/818.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: '20 Minutes Till Dawn',
+    description: 'Genizy Math game by Flanne, Rah, Bog. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/819-fix2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/819.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Apollo Justice - Ace Attorney',
+    description: 'Genizy Math game by Capcom. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/821-fix2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/821.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Ace Attorney Investigations - Miles Edgeworth',
+    description: 'Genizy Math game by Capcom. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/823-fix2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/823.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Cruelty Squad',
+    description: 'Genizy Math game by Consumer Softproducts, dizzy. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/825.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/825.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Just Shapes & Beats',
+    description: 'Genizy Math game by Berzerk Studio. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/826-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/826.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Totally Accurate Battle Simulator (TABS)',
+    description: 'Genizy Math game by Landfall. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/827-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/827.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Animal Crossing (GAMECUBE)',
+    description: 'Genizy Math game by Nintendo, turtlekiosk. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/828.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/828.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'I Wanna Be The Guy',
+    description: 'Genizy Math game by Michael "Kayin" O\'Reilly. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/834.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/834.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin vs Shucks v2',
+    description: 'Genizy Math game by CurtisDev. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/836.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/836.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Vena',
+    description: 'Genizy Math game by Leonhard Kohl-Lörting. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/838.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/838.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 's.p.l.i.t',
+    description: 'Genizy Math game by Mike Klubnika. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/839.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/839.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'My Talking Baby Hippo',
+    description: 'Genizy Math game by Outfit7. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/840-fix2.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/840.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'WarioWare: Touched!',
+    description: 'Genizy Math game by Nintendo. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/841-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/841.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Plants vs. Zombies GOTY Edition',
+    description: 'Genizy Math game by PopCap Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/842.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/842.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'La Madriguera (Lazy Bear Game)',
+    description: 'Genizy Math game by camiloh488. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/843.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/843.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Hammer 2: Reloaded',
+    description: 'Genizy Math game by RewindApp. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/844-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/844.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Swords and Sandals 2',
+    description: 'Genizy Math game by eGames. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/845-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/845.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'One Shot: World Machine edition',
+    description: 'Genizy Math game by Future Cat LLC, shxyder. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/846.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/846.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'PEAK',
+    description: 'Genizy Math game by Aggro Crab, dasher. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/847.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/847.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'ClusterTruck',
+    description: 'Genizy Math game by Landfall, NotRexed. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/848.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/848.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Azahar (Emulator)',
+    description: 'Genizy Math game by Azahar Contributors, Sexyplankton. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/849.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/849.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Lobotomy Corporation',
+    description: 'Genizy Math game by Project Moon, reeyuki. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/850.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/850.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Grand Theft Auto 3',
+    description: 'Genizy Math game by Rockstar Games, shxyder. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/851.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/851.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'SCP: Containment Breach',
+    description: 'Genizy Math game by Undertow Games, q8j. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/853.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/853.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Ravenfield',
+    description: 'Genizy Math game by SteelRaven7, gurtmuncher. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/854.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/854.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Trombone Champion',
+    description: 'Genizy Math game by Holy Wow Studios, gurtmuncher. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/855.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/855.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'PikuNiku',
+    description: 'Genizy Math game by Arnaud De Bock, Remi Forcadell, and bog. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/856.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/856.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Inscryption',
+    description: 'Genizy Math game by Daniel Mullins, Reeyuki. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/857.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/857.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: '60 Seconds! Reatomized',
+    description: 'Genizy Math game by Robot Gentleman. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/858.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/858.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'JoJo\'s Bizarre Adventure: Heritage for the Future',
+    description: 'Genizy Math game by Capcom. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/859-f.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/859.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': VS. Mario Ultra Rebooted',
+    description: 'Genizy Math game by Crappy Productions. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/861.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/861.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': VS. Henry Stickmin V4',
+    description: 'Genizy Math game by SpiderThiago. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/862.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/862.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': VS. Super Mario Bros. Funk Mix DX',
+    description: 'Genizy Math game by Traveler_Snak. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/863.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/863.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Friday Night Funkin\': VS. Seek\'s Cool Deltarune',
+    description: 'Genizy Math game by seeksstuff. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/864.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/864.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Lethal Company',
+    description: 'Genizy Math game by Zeekerss. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/865.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/865.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Team Fortress 2',
+    description: 'Genizy Math game by Valve. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/866.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/866.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Gang Beasts',
+    description: 'Genizy Math game by Boneloaf, Rocket Science. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/867.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/867.png',
+    category: 'Genizy Math'
+  },
+  {
+    title: 'Geometry Dash',
+    description: 'Genizy Math game by RobTop Games. From the Genizy Math games collection.',
+    url: 'https://genizymath.github.io/iframe/868.html',
+    thumbnail: 'https://cdn.jsdelivr.net/gh/freebuisness/covers@main/868.png',
+    category: 'Genizy Math'
+  },
 ];
 
 export const EXPLICIT_OG_TITLES: string[] = [
@@ -21837,3 +25202,187 @@ export const games: Game[] = gameData.map((game) => {
 });
 
 export const ogGames: Game[] = games.filter((game) => game.isOg);
+
+export type GameTier = 'S' | 'A' | 'B' | 'C' | 'D';
+
+// Curated tier rankings. Games not listed here are below D tier and intentionally unranked.
+export const gameRankings: Record<string, GameTier> = {
+  'The Legend of Zelda Ocarina of Time': 'S',
+  'The Legend of Zelda': 'A',
+  'Chrono Trigger': 'S',
+  'EarthBound': 'S',
+  'Castlevania: Aria of Sorrow': 'S',
+  'Cave Story': 'S',
+  'Grand Theft Auto Advance': 'B',
+  'Call of Duty 4 - Modern Warfare': 'C',
+  'Madden NFL 2002': 'C',
+  'FIFA 11': 'D',
+  'Ace Attorney: Investigations - Miles Edgeworth': 'A',
+  'Phoenix Wright - Ace Attorney - Justice For All': 'A',
+  'Phoenix Wright - Ace Attorney - Trials and Tribulations': 'A',
+  'Tomodachi Collection': 'A',
+  'City Skylines copy': 'B',
+  'The Final Earth 2': 'A',
+  'Paper.io': 'S',
+  'Cookie Clicker': 'S',
+  '99 Nights In The Forest': 'A',
+  'Slope': 'S',
+  'Epilepsy game': 'C',
+  '2048': 'S',
+  'Bitlife': 'S',
+  'OvO': 'S',
+  'Wordle Unlimited': 'A',
+  'Sandboxels': 'A',
+  'Tanuki Sunset': 'A',
+  'Minecraft Launcher': 'B',
+  'Bloons TD6 copy': 'S',
+  'Bloons Tower Defense 5': 'S',
+  'Tetris': 'S',
+  'Tomb of the Mask': 'S',
+  'Crossy Road': 'A',
+  'Champion Island': 'A',
+  'Suika Watermelon copy': 'A',
+  'Crazy Cattle 3D': 'S',
+  'Slow Roads': 'A',
+  'Raft - Old': 'A',
+  'Schoolboy Runaway': 'A',
+  'Buckshot Roulette': 'S',
+  'Bendy and the Ink Machine': 'A',
+  'Block Blast 2': 'C',
+  'Yandere Simulator': 'A',
+  'Adventure Capitalist': 'B',
+  'Angry Birds': 'A',
+  'Animals Volleyball': 'B',
+  'Tag': 'A',
+  'Basket Random': 'A',
+  'Smash Karts': 'S',
+  'Leader Strike': 'B',
+  'Imposter': 'B',
+  'Volley Random': 'A',
+  'Among Us': 'S',
+  'Wavelength': 'B',
+  'Chess': 'S',
+  'Wordle 1v1': 'B',
+  'Mafia': 'B',
+  'Rocket goal': 'B',
+  'Wrassling': 'A',
+  'Soccer Random': 'A',
+  'Getaway Shootout': 'S',
+  'Skribbl.io': 'S',
+  'Uno': 'A',
+  '20 Questions': 'B',
+  'Hangman': 'B',
+  'Minecraft 1.12': 'S',
+  '1v1.lol': 'S',
+  'A Dance of Fire and Ice': 'S',
+  'Basket Battle': 'B',
+  'Basketball FRVR': 'B',
+  'Basketball Stars': 'A',
+  'Block Blast': 'A',
+  'Bottle Jump 3d': 'B',
+  'Bowmasters': 'B',
+  'Boxing Random': 'B',
+  'Bridge Race': 'B',
+  'Cut the Rope': 'A',
+  'Doodle Jump': 'A',
+  'Draw Climber': 'B',
+  'Drift Hunters': 'S',
+  'Drive Mad': 'S',
+  'Driven Wild': 'B',
+  'Eggy Car': 'S',
+  'FNAF': 'A',
+  'Fruit Ninja': 'C',
+  'Gladihoppers': 'A',
+  'Gobble': 'B',
+  'Going Balls': 'D',
+  'Granny': 'B',
+  'Helix Jump': 'C',
+  'Hide n Seek': 'B',
+  'Hole.io': 'C',
+  'House of Hazards': 'A',
+  'Ice Dodo': 'A',
+  'Jetpack Joyride': 'A',
+  'Monster Tracks': 'A',
+  'OVO 3 Dimensions': 'A',
+  'Parking Fury': 'B',
+  'Pou': 'B',
+  'Ragdoll Hit': 'B',
+  'Retro Bowl': 'S',
+  'Retro Bowl College': 'A',
+  'Rooftop Snipers': 'A',
+  'Run 3': 'S',
+  'Slither.io': 'C',
+  'Snowball.io': 'C',
+  'Sprunki': 'A',
+  'Stickman Hook': 'A',
+  'Supreme Duelist': 'A',
+  'Temple Run 2': 'A',
+  'Time Shooter 3': 'S',
+  'Tube Jumpers': 'B',
+  'Vex 3': 'B',
+  'Vex 3 Xmas': 'B',
+  'Vex 4': 'B',
+  'Vex 5': 'A',
+  'Vex 6': 'A',
+  'Vex 7': 'A',
+  'Vex 8': 'A',
+  'Vex Challenges': 'B',
+  'Vex x3m': 'A',
+  'Vex x3m 2': 'B',
+  '8 Ball Pool': 'C',
+  'Achievement Unlocked': 'B',
+  'Achievement Unlocked 2': 'B',
+  'Apple Shooter': 'B',
+  'Basketball Legends': 'S',
+  'Bubble Shooter': 'B',
+  'Checkers': 'D',
+  'Flappy Bird': 'C',
+  'Gun Mayhem 2': 'A',
+  'Happy Wheels': 'S',
+  'Road of Fury': 'B',
+  'Run 2': 'A',
+  'Solitaire': 'D',
+  'Tank Trouble': 'A',
+  'Vex 2': 'B',
+  'Zuma': 'C',
+  'Dig Dug': 'C',
+  'Space Invaders': 'C',
+  'Galaga': 'C',
+  'Pac-man': 'C',
+  'Pokemon Emerald': 'S',
+  'Pokemon Firered': 'S',
+  'Pokemon Ruby': 'A',
+  'Donkey Kong Country': 'A',
+  'Super Mario World': 'A',
+  'Frogger': 'C',
+  'Q*bert': 'C',
+  'Mario Kart 64': 'S',
+  'Super Mario 64': 'S',
+  'Super Smash bros': 'S',
+  'Plants vs Zombies': 'A',
+  'OvO 2': 'A',
+  'Friday Night Funkin': 'S',
+  'Attack Hole': 'B',
+  'Color Water Sort 3D': 'B',
+  'Magic Tiles 3': 'B',
+  'Stacky Dash': 'B',
+  'Tall Man Run': 'B',
+  'Five Nights at Freddy\'s': 'A',
+  'Moto X3M': 'A',
+  'Paper.io 2': 'C',
+  'Slope 2': 'S',
+  'Stickman Boost': 'A',
+  'Pokemon Red': 'S',
+  'Traffic Rider': 'C',
+  'Geometry Dash': 'S',
+};
+
+export const getGameRank = (game: Game): GameTier | null => {
+  if (!game) return null;
+  return gameRankings[(game.title || '').trim()] || null;
+};
+
+export const isGenizyMathGame = (game: Game): boolean =>
+  (game?.category || '').toLowerCase() === 'genizy math';
+
+export const genizyMathGames: Game[] = games.filter(isGenizyMathGame);
