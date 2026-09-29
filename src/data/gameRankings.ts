@@ -1,7 +1,6 @@
 export const gameRankings: Record<string, string[]> = {
   S: [
     'The Legend of Zelda: Ocarina of Time',
-    '10 Minutes Till Dawn',
     'The Legend of Zelda: Ocarina of Time Master Quest',
     'Chrono Trigger',
     'Super Mario 64',
@@ -64,12 +63,7 @@ export const gameRankings: Record<string, string[]> = {
     'Star Fox 64',
     'Donkey Kong Country',
     'Donkey Kong Country 2',
-    'Donkey Kong Country 3',
-    'Pokemon Radical Red',
-    'Pokemon Unbound',
-    'Pokemon Gaia',
-    'Pokemon Inclement Emerald',
-    'Pokemon ROWE'
+    'Donkey Kong Country 3'
   ],
   A: [
     'Minecraft (Eaglercraft 1.12)',
@@ -632,5 +626,31 @@ export const gameRankings: Record<string, string[]> = {
     'The Lurking Horror',
     'Breakers',
     'Enchanter trilogy'
+  ],
+  F: [
+    'Ultrakill (buggy)',
+    'Ultrakill',
+    'R.E.P.O bad',
+    'R.E.P.O',
+    'Flappy Dunk',
+    'City Skylines copy',
+    'City Skylines',
+    'Suika Watermelon copy',
+    'Bloons TD6 copy',
+    'Also Steal A Brainrot',
+    'Another Steal a Brainrot',
+    'Also Tag',
+    'Also Geometry Dash Wave',
+    'REDUX]',
+    'Egg',
+    'DUD',
+    'BAS',
+    'GRN',
+    'Self',
+    'New York',
+    'Forever!',
+    'files. EMULATOR',
+    '[Rom Show]',
+    'Fleur de Lis'
   ]
 };
