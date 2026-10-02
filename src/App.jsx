@@ -3270,6 +3270,12 @@ export default function App() {
     if (!game) return null;
     const explicitTier = String(game?.rankTier || '').trim().toUpperCase();
     const rawTitle = String(game?.title || '');
+
+    // User requirement: The dawn series should be S tier and copy games should be S tier
+    if (/\b(dawn|copy)\b/i.test(rawTitle)) {
+      return { rank: 1, tier: 'S', canonicalTitle: game.title };
+    }
+
     const withoutParens = rawTitle.replace(/\s*\([^)]*\)/g, ' ').replace(/\s*\[[^\]]*\]/g, ' ').trim();
     const baseTitle = rawTitle.split(/[:–—\-]/)[0].trim();
     const baseTitleWithoutParens = baseTitle.replace(/\s*\([^)]*\)/g, ' ').trim();
@@ -3413,9 +3419,14 @@ export default function App() {
   // Filter games based on category sidebar, matching search query
   const normalizedSearchQuery = deferredSearchQuery.trim().toLowerCase();
   const filteredGames = games.filter(game => {
-    // When hideUnranked is active (default ON), exclude any game without a rank from the active view
-    if (hideUnranked && !getGameRankInfo(game)) {
-      return false;
+    // When hideUnranked is active, anything below D tier (F tier, unranked) should NOT appear
+    if (hideUnranked) {
+      const info = getGameRankInfo(game);
+      if (!info) return false;
+      const tier = String(info.tier || '').toUpperCase();
+      if (!['S', 'A', 'B', 'C', 'D'].includes(tier)) {
+        return false;
+      }
     }
 
     // When a search query is entered, search across every game in the active library
@@ -6876,7 +6887,7 @@ export default function App() {
                           : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
                       }`}
                     >
-                      ALL PORTALS ({hideUnranked ? `${rankedGamesList.length} ranked` : games.length})
+                      ALL PORTALS ({hideUnranked ? `${rankedGamesList.filter(g => ['S', 'A', 'B', 'C', 'D'].includes(g.rankTier)).length} ranked` : games.length})
                     </button>
 
                     {/* Slider Switch for Hide Unranked (default ON) */}
@@ -6895,7 +6906,7 @@ export default function App() {
                           ? 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] border-[var(--accent-color)]/30 hover:border-[var(--accent-color)]/60'
                           : 'bg-black/10 dark:bg-white/5 text-[var(--text-muted)] border-transparent hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
                       }`}
-                      title={hideUnranked ? "Unranked games (~2,200 entries) are hidden. Click to show all games." : "All unranked games are visible. Click to hide unranked games."}
+                      title={hideUnranked ? "Games below D tier and unranked games are hidden. Click to show all games." : "All games are visible. Click to hide entries below D tier."}
                     >
                       <span className="truncate">Hide Unranked</span>
                       <div className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out p-0.5 ${
@@ -7250,7 +7261,7 @@ export default function App() {
                         : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
                     }`}
                   >
-                    ALL PORTALS ({hideUnranked ? `${rankedGamesList.length} ranked` : games.length})
+                    ALL PORTALS ({hideUnranked ? `${rankedGamesList.filter(g => ['S', 'A', 'B', 'C', 'D'].includes(g.rankTier)).length} ranked` : games.length})
                   </button>
 
                   {/* Bottom Slider Switch for Hide Unranked */}
@@ -7269,7 +7280,7 @@ export default function App() {
                         ? 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] border-[var(--accent-color)]/30 hover:border-[var(--accent-color)]/60'
                         : 'bg-black/10 dark:bg-white/5 text-[var(--text-muted)] border-transparent hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
                     }`}
-                    title={hideUnranked ? "Unranked games are hidden. Click to show all games." : "All games are visible. Click to hide unranked games."}
+                    title={hideUnranked ? "Games below D tier and unranked games are hidden. Click to show all games." : "All games are visible. Click to hide entries below D tier."}
                   >
                     <span className="truncate">Hide Unranked</span>
                     <div className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out p-0.5 ${
