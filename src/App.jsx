@@ -93,7 +93,12 @@ const lobbyDb = getFirestore(firebaseApp, 'ai-studio-chat1-72af77fd-eebc-43fa-89
 
 function LobbyUnreadIndicator({ visible }) {
   if (!visible) return null;
-  return <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-[var(--bg-secondary)] shadow-[0_0_6px_rgba(239,68,68,0.8)]" aria-label="New lobby message" />;
+  return (
+    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 pointer-events-none z-30" aria-label="New lobby message">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-[var(--bg-secondary)] shadow-[0_0_8px_rgba(239,68,68,0.9)]"></span>
+    </span>
+  );
 }
 import { 
   School, 
@@ -1079,6 +1084,16 @@ export default function App() {
     }
   }, [filter]);
   useEffect(() => {
+    let lobbyBus;
+    try {
+      lobbyBus = new BroadcastChannel('urnperiodic_lobby_bus');
+      lobbyBus.onmessage = (event) => {
+        if (event.data?.timestamp) {
+          markLobbyUnread(event.data.timestamp);
+        }
+      };
+    } catch {}
+
     const handleLobbyMessage = (event) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type === 'lobby-chat-message') {
@@ -1086,41 +1101,51 @@ export default function App() {
       }
     };
     const handleLobbyStorage = (event) => {
-      if (event.key === 'lobby-chat-notification' && event.newValue) {
+      if ((event.key === 'lobby-chat-notification' || event.key === 'lobby-chat-latest') && event.newValue) {
         markLobbyUnread(event.newValue);
       }
     };
     window.addEventListener('message', handleLobbyMessage);
     window.addEventListener('storage', handleLobbyStorage);
     return () => {
+      if (lobbyBus) {
+        try { lobbyBus.close(); } catch {}
+      }
       window.removeEventListener('message', handleLobbyMessage);
       window.removeEventListener('storage', handleLobbyStorage);
     };
   }, []);
   useEffect(() => {
-    let unsubscribe;
+    const unsubs = [];
     let cancelled = false;
 
     const subscribeToLobby = async () => {
       try {
         await signInAnonymously(lobbyAuth);
         if (cancelled) return;
-        const messagesQuery = query(
-          collection(lobbyDb, 'channels', 'general', 'messages'),
-          orderBy('timestamp', 'desc'),
-          limit(1),
-        );
-        unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-          const latest = Number(snapshot.docs[0]?.data()?.timestamp || 0);
-          if (!latest) return;
-          const storedLastRead = safeStorage.getItem('lobby-chat-last-read');
-          if (storedLastRead === null) {
-            safeStorage.setItem('lobby-chat-last-read', String(latest));
-            return;
-          }
-          markLobbyUnread(latest);
-        }, (error) => {
-          console.warn('Lobby unread listener error:', error);
+        
+        const channelsToListen = ['general', 'temporary'];
+        channelsToListen.forEach((chanId) => {
+          try {
+            const messagesQuery = query(
+              collection(lobbyDb, 'channels', chanId, 'messages'),
+              orderBy('timestamp', 'desc'),
+              limit(1),
+            );
+            const unsub = onSnapshot(messagesQuery, (snapshot) => {
+              const latest = Number(snapshot.docs[0]?.data()?.timestamp || 0);
+              if (!latest) return;
+              const storedLastRead = safeStorage.getItem('lobby-chat-last-read');
+              if (storedLastRead === null) {
+                safeStorage.setItem('lobby-chat-last-read', String(latest));
+                return;
+              }
+              markLobbyUnread(latest);
+            }, (error) => {
+              console.warn(`Lobby unread listener error for ${chanId}:`, error);
+            });
+            unsubs.push(unsub);
+          } catch {}
         });
       } catch (error) {
         console.warn('Lobby unread auth error:', error);
@@ -1130,7 +1155,9 @@ export default function App() {
     subscribeToLobby();
     return () => {
       cancelled = true;
-      if (unsubscribe) unsubscribe();
+      unsubs.forEach(u => {
+        try { u(); } catch {}
+      });
     };
   }, []);
   const [searchQuery, setSearchQuery] = useState('');

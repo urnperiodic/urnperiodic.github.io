@@ -1237,7 +1237,7 @@ function subscribeChannel(){
 
       state.messages = msgs;
       
-      // Emit notification to parent window and localStorage
+      // Emit notification to parent window, BroadcastChannel, and localStorage
       if (msgs.length > 0) {
         const latestMsg = msgs.reduce((latest, message) => Math.max(latest, Number(message.timestamp || 0)), 0);
         if (latestMsg > latestLobbyMessageTimestamp) {
@@ -1250,6 +1250,9 @@ function subscribeChannel(){
               if (window.parent !== window) {
                 window.parent.postMessage({ type: 'lobby-chat-message', timestamp: latestMsg, channel: c.id }, '*');
               }
+              const lobbyBus = new BroadcastChannel('urnperiodic_lobby_bus');
+              lobbyBus.postMessage({ type: 'lobby-chat-message', timestamp: latestMsg, channel: c.id });
+              setTimeout(() => { try { lobbyBus.close(); } catch(e){} }, 500);
             } catch(e){}
           }
         }
