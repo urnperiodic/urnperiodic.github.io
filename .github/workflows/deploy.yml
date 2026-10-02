@@ -1,4 +1,5 @@
 name: Deploy
+
 on:
   push:
     branches: [main]
@@ -14,6 +15,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,30 +31,20 @@ jobs:
 
       - name: Ensure dev.html exists
         run: |
-          # If index.html exists but dev.html does not, create dev.html as a copy.
-          if [ -d dist ]; then
-            if [ -f dist/index.html ] && [ ! -f dist/dev.html ]; then
-              cp dist/index.html dist/dev.html
-              echo "Created dist/dev.html from dist/index.html"
-            fi
+          if [ -d dist ] && [ -f dist/index.html ] && [ ! -f dist/dev.html ]; then
+            cp dist/index.html dist/dev.html
           fi
 
       - name: Verify dist output
         run: |
-          echo "Listing dist:"
-          ls -la dist || true
-          if [ ! -d dist ]; then
-            echo "Error: dist folder not found" && exit 1
-          fi
-          if [ ! -f dist/index.html ] && [ ! -f dist/dev.html ]; then
-            echo "Error: neither dist/index.html nor dist/dev.html found" && exit 1
-          fi
+          test -d dist
+          test -f dist/index.html || test -f dist/dev.html
 
-      - uses: actions/upload-pages-artifact@v3
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
         with:
           path: dist
-          name: github-pages
-          overwrite: true
 
-      - uses: actions/deploy-pages@v4
+      - name: Deploy to GitHub Pages
         id: deployment
+        uses: actions/deploy-pages@v4
