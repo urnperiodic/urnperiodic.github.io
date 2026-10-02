@@ -1614,14 +1614,72 @@ export default function App() {
     });
   }, []);
 
+  const [disableAboutBlankPause, setDisableAboutBlankPause] = useState(() => {
+    try {
+      return safeStorage.getItem('unblocked-disable-about-blank-pause') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const turnOffAboutBlankScreen = useCallback(() => {
+    setAboutBlankActiveGame(null);
+    setExternalActiveGame(null);
+    if (selectedGame) {
+      arenaInstanceId.current = 'arena_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+      broadcastGameStarted(selectedGame.id, selectedGame.title, arenaInstanceId.current);
+      const cached = gameHtmlCache.get(selectedGame.url);
+      if (cached) {
+        setGameFrame(cached);
+      } else {
+        loadGameFrame(selectedGame.url).then((f) => {
+          setCachedGameHtml(selectedGame.url, f);
+          setGameFrame(f);
+        });
+      }
+    }
+  }, [selectedGame]);
+
+  const toggleDisableAboutBlankPause = (value) => {
+    const next = typeof value === 'boolean' ? value : !disableAboutBlankPause;
+    setDisableAboutBlankPause(next);
+    try {
+      safeStorage.setItem('unblocked-disable-about-blank-pause', String(next));
+    } catch {}
+    if (next) {
+      turnOffAboutBlankScreen();
+    }
+  };
+
+  const launchGame = (gameToLaunch) => {
+    if (!gameToLaunch) return;
+    recordRecentlyPlayed(gameToLaunch.id);
+    safeStorage.setItem('unblocked-last-game', gameToLaunch.id);
+    safeStorage.setItem('unblocked-refreshing-session', 'true');
+    safeStorage.setItem('unblocked-refresh-timestamp', String(Date.now()));
+    window.location.reload();
+  };
+
   const openGameInAboutBlank = (gameToOpen) => {
     if (!gameToOpen) return;
     recordRecentlyPlayed(gameToOpen.id);
 
-    // Unload the in-page arena frame on the main website to save memory and eliminate audio overlap
     setSelectedGame(gameToOpen);
-    setAboutBlankActiveGame(gameToOpen.id);
-    setGameFrame(null);
+    if (!disableAboutBlankPause) {
+      setAboutBlankActiveGame(gameToOpen.id);
+      setGameFrame(null);
+    } else {
+      setAboutBlankActiveGame(null);
+      const cached = gameHtmlCache.get(gameToOpen.url);
+      if (cached) {
+        setGameFrame(cached);
+      } else {
+        loadGameFrame(gameToOpen.url).then((f) => {
+          setCachedGameHtml(gameToOpen.url, f);
+          setGameFrame(f);
+        });
+      }
+    }
 
     const win = window.open("about:blank", "_blank");
     if (!win) {
@@ -3410,11 +3468,11 @@ export default function App() {
     const randomGame = candidatePool[Math.floor(Math.random() * candidatePool.length)];
     if (!randomGame) return;
 
-    setSelectedGame(randomGame);
     setFilter('all');
     setCurrentGamePage(1);
     setRandomPickerOpen(false);
-  }, [activeRandomRankingPool, excludedRandomTiers, gameTierOrder, games, getGameTier, isEmulatedGame, selectedGame]);
+    launchGame(randomGame);
+  }, [activeRandomRankingPool, excludedRandomTiers, gameTierOrder, games, getGameTier, isEmulatedGame, selectedGame, launchGame]);
 
   // Filter games based on category sidebar, matching search query
   const normalizedSearchQuery = deferredSearchQuery.trim().toLowerCase();
@@ -6746,8 +6804,7 @@ export default function App() {
                     onClose={() => setFilter('all')} 
                     games={games}
                     onPlayGame={(game) => {
-                      setSelectedGame(game);
-                      setFilter('all');
+                      launchGame(game);
                     }}
                     onGoToFeatured={() => {
                       setFilter('featured');
@@ -6989,9 +7046,7 @@ export default function App() {
                         whileHover={animationsEnabled ? { scale: 1.03, y: -4, transition: { duration: 0.2 } } : undefined}
                         whileTap={animationsEnabled ? { scale: 0.98 } : undefined}
                         onClick={() => {
-                          recordRecentlyPlayed(game.id);
-                          setSelectedGame(game);
-                          setZoom(1);
+                          launchGame(game);
                         }}
                         className={`custom-card flex flex-col rounded-xl overflow-hidden cursor-pointer h-full ${
                           animationsEnabled ? 'transition-all duration-300' : ''
@@ -7144,9 +7199,7 @@ export default function App() {
                             {game.featured ? (
                               <button
                                 onClick={() => {
-                                  recordRecentlyPlayed(game.id);
-                                  setSelectedGame(game);
-                                  setZoom(1);
+                                  launchGame(game);
                                 }}
                                 className={`flex-1 border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500 hover:text-black hover:font-bold hover:shadow-[0_4px_14px_rgba(245,158,11,0.35)] font-semibold tracking-wider text-amber-500 dark:text-amber-400 rounded-lg flex items-center justify-center gap-1 transition-all duration-200 uppercase cursor-pointer ${
                                   isCompactLayout ? 'py-1.5 px-2 text-[10px]' : 'py-2 px-3 text-[11px]'
@@ -7158,9 +7211,7 @@ export default function App() {
                             ) : (
                               <button
                                 onClick={() => {
-                                  recordRecentlyPlayed(game.id);
-                                  setSelectedGame(game);
-                                  setZoom(1);
+                                  launchGame(game);
                                 }}
                                 className={`flex-1 border border-[var(--card-border)] bg-[var(--accent-color)]/5 hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] hover:font-bold hover:shadow-[0_4px_14px_var(--accent-shadow)] font-semibold tracking-wider text-[var(--text-primary)] rounded-lg flex items-center justify-center gap-1 transition-all duration-200 uppercase cursor-pointer ${
                                   isCompactLayout ? 'py-1.5 px-2 text-[10px]' : 'py-2 px-3 text-[11px]'
@@ -7505,8 +7556,11 @@ export default function App() {
 
                   {/* Lobby Chat (Slideout Chat) Toggle Button */}
                   <button
-                    onClick={() => setDockedChatCollapsed(!dockedChatCollapsed)}
-                    className={`flex items-center gap-1.5 border py-1.5 px-2.5 sm:px-3 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
+                    onClick={() => {
+                      setDockedChatCollapsed(!dockedChatCollapsed);
+                      if (dockedChatCollapsed) setHasUnreadLobby(false);
+                    }}
+                    className={`relative flex items-center gap-1.5 border py-1.5 px-2.5 sm:px-3 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
                       !dockedChatCollapsed 
                         ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)] font-bold shadow-[0_0_8px_rgba(0,229,176,0.15)]' 
                         : 'border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)]'
@@ -7514,6 +7568,7 @@ export default function App() {
                     title="Toggle Slideout Chat inside Portal Arena"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
+                    <LobbyUnreadIndicator visible={hasUnreadLobby} />
                     <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Slideout Chat</span>
                   </button>
 
@@ -7576,8 +7631,17 @@ export default function App() {
                     ) : externalActiveGame ? (
                       <div className="flex flex-col items-center justify-center w-full h-full text-center p-4 bg-[#080b12] text-white select-none">
                         {/* Compact Dark Card matching popout design */}
-                        <div className="max-w-[380px] w-full bg-[#0b1019] border border-[#1b2636] shadow-2xl rounded-2xl p-6 flex flex-col items-center text-center">
+                        <div className="relative max-w-[400px] w-full bg-[#0b1019] border border-[#1b2636] shadow-2xl rounded-2xl p-6 flex flex-col items-center text-center">
                           
+                          {/* Close / Turn Off Button */}
+                          <button
+                            onClick={turnOffAboutBlankScreen}
+                            className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                            title="Turn off this screen & load game here"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+
                           {/* Top Square Green/Amber Icon Badge */}
                           <div className="w-11 h-11 rounded-xl bg-[#0a231b] border border-[#00c875]/40 flex items-center justify-center text-[#00c875] mb-3.5 shadow-sm">
                             <ExternalLink className="w-5 h-5 text-[#00c875]" />
@@ -7589,48 +7653,55 @@ export default function App() {
                           </h3>
 
                           {/* Subtitle Description */}
-                          <p className="text-slate-400 text-xs sm:text-sm leading-normal mb-5 font-sans max-w-[300px]">
-                            In-arena frame is paused to avoid lag and duplicate audio.
+                          <p className="text-slate-400 text-xs sm:text-sm leading-normal mb-4 font-sans max-w-[320px]">
+                            In-arena frame is paused. You can turn off this screen to resume playing right here.
                           </p>
 
                           {/* Side-by-Side Action Buttons */}
-                          <div className="flex flex-row items-center gap-2.5 w-full">
+                          <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full">
                             <button
-                              onClick={() => {
-                                setExternalActiveGame(null);
-                                arenaInstanceId.current = 'arena_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
-                                broadcastGameStarted(selectedGame.id, selectedGame.title, arenaInstanceId.current);
-                                const cached = gameHtmlCache.get(selectedGame.url);
-                                if (cached) {
-                                  setGameFrame(cached);
-                                } else {
-                                  loadGameFrame(selectedGame.url).then((f) => {
-                                    setCachedGameHtml(selectedGame.url, f);
-                                    setGameFrame(f);
-                                  });
-                                }
-                              }}
-                              className="flex-1 py-2 px-3 rounded-xl bg-[#00c875] hover:bg-[#00b268] text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-[#00c875]/20 active:scale-[0.98]"
+                              onClick={turnOffAboutBlankScreen}
+                              className="w-full sm:flex-1 py-2.5 px-3 rounded-xl bg-[#00c875] hover:bg-[#00b268] text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-[#00c875]/20 active:scale-[0.98]"
                             >
                               <RotateCcw className="w-3.5 h-3.5 text-slate-950" />
-                              <span>Resume Here</span>
+                              <span>Turn Off & Play Here</span>
                             </button>
                             <button
                               onClick={() => openGameInAboutBlank(selectedGame)}
-                              className="flex-1 py-2 px-3 rounded-xl bg-[#242f40] hover:bg-[#2c3a4f] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-white/5 active:scale-[0.98]"
+                              className="w-full sm:flex-1 py-2.5 px-3 rounded-xl bg-[#242f40] hover:bg-[#2c3a4f] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-white/5 active:scale-[0.98]"
                             >
                               <ExternalLink className="w-3.5 h-3.5 text-slate-300" />
                               <span>Re-open Tab</span>
                             </button>
                           </div>
 
+                          {/* Always Disable Toggle */}
+                          <label className="mt-4 flex items-center gap-2 text-[11px] text-slate-400 hover:text-slate-200 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={disableAboutBlankPause}
+                              onChange={(e) => toggleDisableAboutBlankPause(e.target.checked)}
+                              className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                            />
+                            <span>Never show this pause screen again</span>
+                          </label>
+
                         </div>
                       </div>
                     ) : aboutBlankActiveGame === selectedGame.id ? (
                       <div className="flex flex-col items-center justify-center w-full h-full text-center p-4 bg-[#080b12] text-white select-none">
                         {/* Compact Dark Card matching popout design */}
-                        <div className="max-w-[380px] w-full bg-[#0b1019] border border-[#1b2636] shadow-2xl rounded-2xl p-6 flex flex-col items-center text-center">
+                        <div className="relative max-w-[400px] w-full bg-[#0b1019] border border-[#1b2636] shadow-2xl rounded-2xl p-6 flex flex-col items-center text-center">
                           
+                          {/* Close / Turn Off Button */}
+                          <button
+                            onClick={turnOffAboutBlankScreen}
+                            className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                            title="Turn off this screen & load game here"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+
                           {/* Top Square Green Icon Badge */}
                           <div className="w-11 h-11 rounded-xl bg-[#0a231b] border border-[#00c875]/40 flex items-center justify-center text-[#00c875] mb-3.5 shadow-sm">
                             <ExternalLink className="w-5 h-5 text-[#00c875]" />
@@ -7642,38 +7713,38 @@ export default function App() {
                           </h3>
 
                           {/* Subtitle Description */}
-                          <p className="text-slate-400 text-xs sm:text-sm leading-normal mb-5 font-sans max-w-[300px]">
-                            In-arena frame is paused to avoid lag and duplicate audio.
+                          <p className="text-slate-400 text-xs sm:text-sm leading-normal mb-4 font-sans max-w-[320px]">
+                            In-arena frame is paused. You can turn off this screen anytime to resume playing here.
                           </p>
 
                           {/* Side-by-Side Action Buttons */}
-                          <div className="flex flex-row items-center gap-2.5 w-full">
+                          <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full">
                             <button
-                              onClick={() => {
-                                setAboutBlankActiveGame(null);
-                                const cached = gameHtmlCache.get(selectedGame.url);
-                                if (cached) {
-                                  setGameFrame(cached);
-                                } else {
-                                  loadGameFrame(selectedGame.url).then((f) => {
-                                    setCachedGameHtml(selectedGame.url, f);
-                                    setGameFrame(f);
-                                  });
-                                }
-                              }}
-                              className="flex-1 py-2 px-3 rounded-xl bg-[#00c875] hover:bg-[#00b268] text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-[#00c875]/20 active:scale-[0.98]"
+                              onClick={turnOffAboutBlankScreen}
+                              className="w-full sm:flex-1 py-2.5 px-3 rounded-xl bg-[#00c875] hover:bg-[#00b268] text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-[#00c875]/20 active:scale-[0.98]"
                             >
                               <RotateCcw className="w-3.5 h-3.5 text-slate-950" />
-                              <span>Resume Here</span>
+                              <span>Turn Off & Play Here</span>
                             </button>
                             <button
                               onClick={() => openGameInAboutBlank(selectedGame)}
-                              className="flex-1 py-2 px-3 rounded-xl bg-[#242f40] hover:bg-[#2c3a4f] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-white/5 active:scale-[0.98]"
+                              className="w-full sm:flex-1 py-2.5 px-3 rounded-xl bg-[#242f40] hover:bg-[#2c3a4f] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-white/5 active:scale-[0.98]"
                             >
                               <ExternalLink className="w-3.5 h-3.5 text-slate-300" />
                               <span>Re-open Tab</span>
                             </button>
                           </div>
+
+                          {/* Always Disable Toggle */}
+                          <label className="mt-4 flex items-center gap-2 text-[11px] text-slate-400 hover:text-slate-200 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={disableAboutBlankPause}
+                              onChange={(e) => toggleDisableAboutBlankPause(e.target.checked)}
+                              className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                            />
+                            <span>Never show this pause screen again</span>
+                          </label>
 
                         </div>
                       </div>

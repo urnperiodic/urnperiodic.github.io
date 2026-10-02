@@ -113,11 +113,7 @@
         <div class="flex items-center gap-2 min-w-0">
           <span class="txt-mute font-extrabold text-[11px] hidden md:inline">#</span>
           <h1 id="active-channel-name" class="text-[11px] font-black txt tracking-tight flex items-center gap-1 uppercase truncate"></h1>
-          <!-- 1-Hour Auto-Delete Badge -->
-          <span class="inline-flex items-center gap-1 text-[9px] font-mono txt-mute bg-white/5 border bd px-1.5 py-0.5 rounded shrink-0 opacity-70 hover:opacity-100 transition-opacity" title="Messages are automatically deleted 1 hour after sending">
-            <i data-lucide="clock" class="w-2.5 h-2.5 txt-mute"></i>
-            <span class="hidden sm:inline">1h auto-delete</span>
-          </span>
+          <div id="channel-badge-container"></div>
         </div>
 
         <div class="hidden sm:flex items-center gap-2 shrink-0">
@@ -159,6 +155,21 @@
             class="surface-deep text-[11px] px-2.5 py-1 rounded-lg outline-none border bd focus:accent-bd text-right max-w-[120px] font-extrabold txt placeholder-mute" />
           <button id="nickname-save-btn" type="button" class="accent-bg text-[10px] font-extrabold px-2.5 py-1 rounded-lg transition-all active:scale-95 cursor-pointer">OK</button>
         </div>
+      </div>
+
+      <!-- DELETE / EPHEMERAL NOTICE BANNER -->
+      <div id="section-tip-banner" class="flex items-center justify-between p-2 px-3 border-b bd bg-blue-500/10 border-blue-500/20 shrink-0 text-left transition-all">
+        <div class="flex items-center gap-2 min-w-0 flex-1">
+          <div class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+            <i data-lucide="info" class="w-3.5 h-3.5"></i>
+          </div>
+          <p class="text-[10px] sm:text-[11px] text-slate-200 leading-tight">
+            <strong class="text-blue-300 font-bold">Want messages deleted?</strong> #general is permanent. Switch to <button id="tip-switch-ephemeral" type="button" class="text-rose-400 font-bold underline hover:text-rose-300 cursor-pointer">#1h-ephemeral (Auto-Delete Section)</button> or click 🗑️ on any message.
+          </p>
+        </div>
+        <button id="tip-banner-close" type="button" class="p-1 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg shrink-0 ml-2 cursor-pointer" title="Dismiss notice">
+          <i data-lucide="x" class="w-3.5 h-3.5"></i>
+        </button>
       </div>
 
       <!-- UNLOCK GATE -->
@@ -394,8 +405,14 @@ function renderBlockedWordsList(){}
 
 /* ---------- Channels ---------- */
 const CHANNELS = [
-  { id:'general', name:'general', description:'Main chat lobby connected with site network' }
+  { id:'general', name:'general', description:'Default section — messages are permanently saved (no 1-hour deletion)', isPermanent: true },
+  { id:'temporary', name:'1h-ephemeral', description:'Temporary public room (messages auto-delete after 1 hour)', isPermanent: false }
 ];
+
+function isPermanentChannel(chId) {
+  const ch = allChannels().find(c => c.id === chId) || state.activeChannel;
+  return ch?.isPermanent || ch?.id === 'general';
+}
 
 const ROOM_TTL_MS = 60 * 60 * 1000; // 1 Hour Room TTL for custom user rooms
 const DISALLOWED_ROOM_NAMES = ['gaming-hub','cinema-club','memes','gaming','cinema'];
@@ -836,6 +853,8 @@ function checkInviteUrl() {
 function renderHeader(){
   const c = currentChannel();
   const prefix = c.isDirectMessage ? '' : '#';
+  const isPermanent = isPermanentChannel(c.id);
+
   const inviteBtnHtml = !c.isDirectMessage ? `
     <button id="invite-channel-btn" type="button" title="Share invite link (bypasses password)"
       class="ml-2 px-2 py-0.5 rounded-lg accent-bg text-[9px] font-bold flex items-center gap-1 shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0">
@@ -850,6 +869,25 @@ function renderHeader(){
     `<span class="truncate">${prefix}${esc(c.name)}</span>` +
     inviteBtnHtml;
 
+  const badgeContainer = $('channel-badge-container');
+  if (badgeContainer) {
+    if (isPermanent) {
+      badgeContainer.innerHTML = `
+        <span class="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded shrink-0" title="Default section: Messages are saved and never deleted">
+          <i data-lucide="shield-check" class="w-2.5 h-2.5 text-emerald-400"></i>
+          <span class="hidden sm:inline">Saved (No 1h delete)</span>
+        </span>
+      `;
+    } else {
+      badgeContainer.innerHTML = `
+        <span class="inline-flex items-center gap-1 text-[9px] font-mono text-rose-400 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded shrink-0" title="Messages are automatically deleted 1 hour after sending">
+          <i data-lucide="clock" class="w-2.5 h-2.5 text-rose-400"></i>
+          <span class="hidden sm:inline">1h auto-delete</span>
+        </span>
+      `;
+    }
+  }
+
   const inviteBtn = $('invite-channel-btn');
   if (inviteBtn) {
     inviteBtn.addEventListener('click', (e) => {
@@ -862,8 +900,25 @@ function renderHeader(){
 }
 
 /* ============================================================
-   REPLY HELPERS
+   REPLY & DELETE HELPERS
    ============================================================ */
+async function deleteMessage(msgId) {
+  if (!msgId) return;
+  const c = currentChannel();
+  try {
+    if (db) {
+      await deleteDoc(doc(db, 'channels', c.id, 'messages', String(msgId)));
+    }
+  } catch(err) {
+    console.warn('Firestore message deletion note:', err);
+  }
+  state.messages = state.messages.filter(m => String(m.id) !== String(msgId) && String(m.key) !== String(msgId));
+  const locals = getLocalMessages(c.id).filter(m => String(m.id) !== String(msgId) && String(m.key) !== String(msgId));
+  localStorage.setItem(`local_messages_${c.id}`, JSON.stringify(locals));
+  renderMessages();
+  toast('🗑️ Message deleted');
+}
+
 function getReplyInfo(m) {
   if (m.replyTo && m.replyTo.name) {
     return {
@@ -939,8 +994,14 @@ function syncReplyPreviewBar() {
    ============================================================ */
 function displayedMessages(){
   const now = Date.now();
-  // Filter out any messages older than 1 hour (3,600,000 ms)
-  const validMsgs = state.messages.filter(m => (now - (m.timestamp || now)) < MESSAGE_TTL_MS);
+  const c = currentChannel();
+  const isPermanent = isPermanentChannel(c.id);
+
+  // For non-permanent channels, filter out messages older than 1 hour (3,600,000 ms)
+  // For default/permanent channel (general), keep all messages
+  const validMsgs = isPermanent 
+    ? state.messages 
+    : state.messages.filter(m => (now - (m.timestamp || now)) < MESSAGE_TTL_MS);
 
   const q = state.searchFilter.trim().toLowerCase();
   if(!q) return validMsgs;
@@ -968,9 +1029,10 @@ function renderMessages(){
   panel.classList.remove('hidden');
   composer.classList.remove('hidden');
 
+  const c = currentChannel();
+  const isPermanent = isPermanentChannel(c.id);
   const msgs = displayedMessages();
   if(msgs.length===0){
-    const c = currentChannel();
     panel.innerHTML = `
       <div class="h-full flex flex-col items-center justify-center text-center p-6 select-none max-w-sm mx-auto animate-fade-in">
         <div class="w-12 h-12 rounded-2xl surface-elev border bd flex items-center justify-center mb-3 shadow-sm">
@@ -980,7 +1042,7 @@ function renderMessages(){
           ${state.searchFilter ? 'No Messages Found' : (c.isDirectMessage ? esc(c.name) : `#${esc(c.name)}`)}
         </h3>
         <p class="text-[11px] txt-dim mt-1.5 leading-relaxed">
-          ${state.searchFilter ? 'Try searching for a different keyword or clear the search filter.' : 'All messages are temporary and automatically delete 1 hour after being sent.'}
+          ${state.searchFilter ? 'Try searching for a different keyword or clear the search filter.' : (isPermanent ? 'Messages in this default section are permanently saved.' : 'Messages in this room are temporary and automatically delete 1 hour after being sent.')}
         </p>
       </div>`;
     refreshIcons();
@@ -1001,10 +1063,19 @@ function renderMessages(){
     const hue = getUsernameHue(m.name);
     const color = `hsl(${hue}, 70%, 65%)`;
 
-    const elapsed = now - (m.timestamp || now);
-    const remainingMs = Math.max(0, MESSAGE_TTL_MS - elapsed);
-    const remainingMins = Math.max(0, Math.ceil(remainingMs / 60000));
-    const timeRemainingStr = remainingMins <= 1 ? '<1m' : `${remainingMins}m`;
+    let timeRemainingBadge = '';
+    if (!isPermanent) {
+      const elapsed = now - (m.timestamp || now);
+      const remainingMs = Math.max(0, MESSAGE_TTL_MS - elapsed);
+      const remainingMins = Math.max(0, Math.ceil(remainingMs / 60000));
+      const timeRemainingStr = remainingMins <= 1 ? '<1m' : `${remainingMins}m`;
+      timeRemainingBadge = `
+        <span class="inline-flex items-center gap-1 text-[8px] font-mono txt-mute" title="Message auto-deletes in ${timeRemainingStr}">
+          <i data-lucide="clock" class="w-2.5 h-2.5 opacity-60"></i>
+          <span>${timeRemainingStr}</span>
+        </span>
+      `;
+    }
 
     const replyInfo = getReplyInfo(m);
     const bodyText = replyInfo ? replyInfo.cleanBody : (m.text || '');
@@ -1025,7 +1096,7 @@ function renderMessages(){
 
     html += `
       <div class="relative flex flex-col gap-0.5 hover:bg-white/[0.03] px-2.5 py-1.5 rounded-xl transition-all group">
-        <!-- Message Hover Action Menu -->
+        <!-- Message Hover Action Menu (Reply + Delete) -->
         <div class="absolute right-2 -top-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-1 surface-elev border bd rounded-lg px-1.5 py-0.5 shadow-md z-10 transition-opacity backdrop-blur-xs">
           <button type="button" class="reply-msg-btn flex items-center gap-1 text-[9px] font-bold txt-dim hover:accent hover:bg-white/10 px-1.5 py-0.5 rounded transition-all cursor-pointer"
             data-sender="${esc(m.name||'anonymous')}"
@@ -1034,16 +1105,19 @@ function renderMessages(){
             <i data-lucide="reply" class="w-3 h-3 accent"></i>
             <span>Reply</span>
           </button>
+          <button type="button" class="delete-msg-btn flex items-center gap-1 text-[9px] font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 px-1.5 py-0.5 rounded transition-all cursor-pointer"
+            data-msg-id="${esc(m.id || m.key)}"
+            title="Delete this message">
+            <i data-lucide="trash-2" class="w-3 h-3 text-rose-400"></i>
+            <span>Delete</span>
+          </button>
         </div>
 
         <div class="flex items-center gap-1.5 flex-wrap">
           <span class="text-[11px] font-extrabold font-mono tracking-tight" style="color:${color}">
             ${esc(m.name||'anonymous')}
           </span>
-          <span class="inline-flex items-center gap-1 text-[8px] font-mono txt-mute" title="Message auto-deletes in ${timeRemainingStr}">
-            <i data-lucide="clock" class="w-2.5 h-2.5 opacity-60"></i>
-            <span>${timeRemainingStr}</span>
-          </span>
+          ${timeRemainingBadge}
           <span class="text-[8px] txt-mute font-mono ml-auto">${formatTime(m.timestamp||now)}</span>
         </div>
         ${replyHeaderHtml}
@@ -1054,10 +1128,18 @@ function renderMessages(){
   panel.innerHTML = html;
   panel.scrollTop = panel.scrollHeight;
 
-  // Wire up Reply button clicks
+  // Wire up Reply & Delete button clicks
   panel.querySelectorAll('.reply-msg-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       setReplyTarget(btn.dataset.sender || 'User', btn.dataset.content || '');
+    });
+  });
+
+  panel.querySelectorAll('.delete-msg-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteMessage(btn.dataset.msgId);
     });
   });
 
@@ -1078,6 +1160,7 @@ function subscribeChannel(){
   state.messages = [];
 
   const c = currentChannel();
+  const isPermanent = isPermanentChannel(c.id);
   renderHeader();
   renderChannels();
 
@@ -1089,7 +1172,9 @@ function subscribeChannel(){
   // Load local cache & decrypt non-expired
   const rawLocals = getLocalMessages(c.id);
   const now = Date.now();
-  const validLocals = rawLocals.filter(m => (now - (m.timestamp || now)) < MESSAGE_TTL_MS);
+  const validLocals = isPermanent 
+    ? rawLocals 
+    : rawLocals.filter(m => (now - (m.timestamp || now)) < MESSAGE_TTL_MS);
 
   Promise.all(validLocals.map(async m => {
     const decText = await decryptPayload(m.text || '', c.id);
@@ -1109,7 +1194,7 @@ function subscribeChannel(){
 
   try {
     const colRef = collection(db, 'channels', c.id, 'messages');
-    const q = query(colRef, orderBy('timestamp', 'asc'), limitToLast(100));
+    const q = query(colRef, orderBy('timestamp', 'asc'), limitToLast(150));
     unsubscribeMessages = onSnapshot(q, async (snapshot) => {
       const msgs = [];
       const currentNow = Date.now();
@@ -1119,8 +1204,8 @@ function subscribeChannel(){
         const data = docSnap.data();
         const ts = data.timestamp || currentNow;
 
-        // Auto-delete check for messages older than 1 hour (3,600,000 ms)
-        if (currentNow - ts >= MESSAGE_TTL_MS) {
+        // Auto-delete check for non-permanent channels only
+        if (!isPermanent && (currentNow - ts >= MESSAGE_TTL_MS)) {
           expiredDocIds.push(docSnap.id);
           continue;
         }
@@ -1141,24 +1226,35 @@ function subscribeChannel(){
         });
       }
 
-      // Execute actual deletion from Firestore
-      expiredDocIds.forEach(expiredId => {
-        try {
-          deleteDoc(doc(db, 'channels', c.id, 'messages', expiredId)).catch(e => {});
-        } catch(e){}
-      });
+      // Execute actual deletion from Firestore for non-permanent channels
+      if (!isPermanent && expiredDocIds.length > 0) {
+        expiredDocIds.forEach(expiredId => {
+          try {
+            deleteDoc(doc(db, 'channels', c.id, 'messages', expiredId)).catch(e => {});
+          } catch(e){}
+        });
+      }
 
       state.messages = msgs;
-      if (c.id === 'general') {
-        const latestLobbyMessage = msgs.reduce((latest, message) => Math.max(latest, Number(message.timestamp || 0)), 0);
-        if (latestLobbyMessage > latestLobbyMessageTimestamp) {
+      
+      // Emit notification to parent window and localStorage
+      if (msgs.length > 0) {
+        const latestMsg = msgs.reduce((latest, message) => Math.max(latest, Number(message.timestamp || 0)), 0);
+        if (latestMsg > latestLobbyMessageTimestamp) {
           const wasInitialized = latestLobbyMessageTimestamp > 0;
-          latestLobbyMessageTimestamp = latestLobbyMessage;
-          if (wasInitialized && window.parent !== window) {
-            window.parent.postMessage({ type: 'lobby-chat-message', timestamp: latestLobbyMessage }, window.location.origin);
+          latestLobbyMessageTimestamp = latestMsg;
+          if (wasInitialized) {
+            try {
+              localStorage.setItem('lobby-chat-latest', String(latestMsg));
+              localStorage.setItem('lobby-chat-notification', String(latestMsg));
+              if (window.parent !== window) {
+                window.parent.postMessage({ type: 'lobby-chat-message', timestamp: latestMsg, channel: c.id }, '*');
+              }
+            } catch(e){}
           }
         }
       }
+
       renderMessages();
     }, (err) => {
       console.warn('Firestore messages subscription error:', err);
@@ -1219,19 +1315,22 @@ try {
 setInterval(() => {
   const now = Date.now();
   const c = currentChannel();
+  const isPermanent = isPermanentChannel(c.id);
 
-  // Purge expired messages from current state
-  const prevCount = state.messages.length;
-  state.messages = state.messages.filter(m => (now - (m.timestamp || now)) < MESSAGE_TTL_MS);
-  if (state.messages.length !== prevCount) {
-    renderMessages();
-  }
+  // Purge expired messages from current state (only for non-permanent rooms)
+  if (!isPermanent) {
+    const prevCount = state.messages.length;
+    state.messages = state.messages.filter(m => (now - (m.timestamp || now)) < MESSAGE_TTL_MS);
+    if (state.messages.length !== prevCount) {
+      renderMessages();
+    }
 
-  // Purge expired local storage entries
-  const locals = getLocalMessages(c.id);
-  const validLocals = locals.filter(m => (now - (m.timestamp || now)) < MESSAGE_TTL_MS);
-  if (validLocals.length !== locals.length) {
-    localStorage.setItem(`local_messages_${c.id}`, JSON.stringify(validLocals));
+    // Purge expired local storage entries
+    const locals = getLocalMessages(c.id);
+    const validLocals = locals.filter(m => (now - (m.timestamp || now)) < MESSAGE_TTL_MS);
+    if (validLocals.length !== locals.length) {
+      localStorage.setItem(`local_messages_${c.id}`, JSON.stringify(validLocals));
+    }
   }
 
   // Purge expired user-created rooms
@@ -1602,6 +1701,21 @@ function init(){
     const el = $(id);
     if(el) el.addEventListener('click', (e)=>{ if(e.target.id===id) el.classList.add('hidden'); });
   });
+
+  // Delete Section Notification Banner
+  safeOn('tip-switch-ephemeral', 'click', () => {
+    switchChannel('temporary');
+    toast('Switched to #1h-ephemeral (Auto-Delete Section)');
+  });
+  safeOn('tip-banner-close', 'click', () => {
+    const banner = $('section-tip-banner');
+    if (banner) banner.classList.add('hidden');
+    localStorage.setItem('chat_tip_dismissed', 'true');
+  });
+  if (localStorage.getItem('chat_tip_dismissed') === 'true') {
+    const banner = $('section-tip-banner');
+    if (banner) banner.classList.add('hidden');
+  }
 
   // Periodically update countdown timers and prune expired messages
   setInterval(() => {
