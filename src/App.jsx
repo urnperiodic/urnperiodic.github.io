@@ -2015,6 +2015,89 @@ export default function App() {
   const [isShake, setIsShake] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
   const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [adminError, setAdminError] = useState('');
+
+  useEffect(() => {
+    try {
+      safeSessionStorage.removeItem('admin-panel-unlocked');
+    } catch {}
+  }, []);
+
+  const handleAdminPasswordSubmit = (e) => {
+    if (e) e.preventDefault();
+    const val = adminPasswordInput.trim();
+    if (val === 'password1') {
+      setIsAdminUnlocked(true);
+      setAdminError('');
+      setAdminPasswordInput('');
+      setFilter('chat');
+      setSelectedGame(null);
+      setIsAdminPanelOpen(false);
+    } else if (val === 'lock') {
+      handleAdminLock();
+      setIsAdminPanelOpen(false);
+    } else if (isAdminUnlocked && !val) {
+      setFilter('chat');
+      setSelectedGame(null);
+      setIsAdminPanelOpen(false);
+    } else {
+      setAdminError('Incorrect password');
+      setAdminPasswordInput('');
+    }
+  };
+
+  const handleAdminLock = () => {
+    setIsAdminUnlocked(false);
+    setAdminPasswordInput('');
+    setAdminError('');
+    if (filter === 'chat') {
+      setFilter('all');
+    }
+  };
+
+  const renderAdminPanelPopover = () => {
+    if (!isAdminPanelOpen) return null;
+    return (
+      <>
+        <div 
+          className="fixed inset-0 z-[99998] cursor-default" 
+          onClick={() => {
+            setIsAdminPanelOpen(false);
+            setAdminError('');
+          }} 
+        />
+        <div className="absolute top-full right-0 mt-2 z-[99999]">
+          <form onSubmit={handleAdminPasswordSubmit}>
+            <input
+              type="password"
+              value={adminPasswordInput}
+              onChange={(e) => {
+                setAdminPasswordInput(e.target.value);
+                if (adminError) setAdminError('');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setIsAdminPanelOpen(false);
+                  setAdminPasswordInput('');
+                  setAdminError('');
+                }
+              }}
+              placeholder={adminError || "Enter password..."}
+              autoFocus
+              className={`w-52 bg-[#0f0e17] border rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-400 shadow-2xl outline-none transition-all font-mono ${
+                adminError 
+                  ? 'border-red-500 placeholder-red-400 shadow-[0_0_12px_rgba(239,68,68,0.5)]' 
+                  : 'border-white/20 focus:border-[var(--accent-color)] shadow-[0_4px_24px_rgba(0,0,0,0.7)]'
+              }`}
+            />
+          </form>
+        </div>
+      </>
+    );
+  };
   // Animations state: disabled by default at start for Chromebook performance
   const [animationsEnabled, setAnimationsEnabled] = useState(() => {
     try {
@@ -2131,7 +2214,7 @@ export default function App() {
     const inputPass = (customPass !== undefined ? customPass : passcode).trim().toLowerCase();
     if (!inputPass) return;
 
-    if (inputPass === 'ttt1234' || inputPass === 'ttt0609') {
+    if (inputPass === 'ttt1234') {
       const win = window.open("about:blank", "_blank");
       if (win) {
         // Automatically save that we are unlocked so the iframe can read it
@@ -2297,14 +2380,9 @@ export default function App() {
         alert("Popup blocked! Please allow popups to open the portals in a cloaked tab.");
       }
       setPasscode('');
-    } else if (inputPass === 'tungtung' || inputPass === 'tt0609' || inputPass === '1378') {
+    } else if (inputPass === 'tungtung' || inputPass === '1378') {
       setTimeout(() => {
         setViewModeAndSave('games');
-        setPasscode('');
-      }, 150);
-    } else if (inputPass === '0609') {
-      setTimeout(() => {
-        setViewModeAndSave('articles');
         setPasscode('');
       }, 150);
     } else if (
@@ -2333,13 +2411,13 @@ export default function App() {
     const nextPasscode = passcode + digit;
     setPasscode(nextPasscode);
 
-    // Instant matching for rapid-pins (2026, 0609, 1212, 1111)
+    // Instant matching for rapid-pins (2026, 1212, 1111)
     if (nextPasscode === '2026') {
       setTimeout(() => {
         setViewModeAndSave('games');
         setPasscode('');
       }, 150);
-    } else if (nextPasscode === '0609' || nextPasscode === '1212' || nextPasscode === '1111') {
+    } else if (nextPasscode === '1212' || nextPasscode === '1111') {
       setTimeout(() => {
         setViewModeAndSave('articles');
         setPasscode('');
@@ -2386,14 +2464,11 @@ export default function App() {
   // Automated trigger checks for passwords within the article search tab
   useEffect(() => {
     const q = articleSearch.trim().toLowerCase();
-    if (q === 'ttt1234' || q === 'ttt0609') {
+    if (q === 'ttt1234') {
       setArticleSearch('');
       handlePasswordSubmit(q);
-    } else if (q === 'tungtung' || q === '2026' || q === 'tt0609') {
+    } else if (q === 'tungtung' || q === '2026') {
       setViewModeAndSave('games');
-      setArticleSearch('');
-    } else if (q === '0609') {
-      setViewModeAndSave('locked');
       setArticleSearch('');
     }
   }, [articleSearch]);
@@ -2412,11 +2487,7 @@ export default function App() {
           sequenceBuffer = sequenceBuffer.slice(-4);
         }
         
-        if (sequenceBuffer === '0609') {
-          setViewModeAndSave('locked');
-          setPasscode('');
-          sequenceBuffer = '';
-        } else if (sequenceBuffer === '2026') {
+        if (sequenceBuffer === '2026') {
           setViewModeAndSave('games');
           setPasscode('');
           sequenceBuffer = '';
@@ -4618,19 +4689,21 @@ export default function App() {
                 <Tv className="w-3.5 h-3.5" />
               </button>
 
-              <button
-                onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
-                className={`p-1 px-1.5 rounded-md text-xs font-sans font-black transition-all duration-200 flex items-center justify-center ${
-                  filter === 'chat'
-                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)]'
-                    : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
-                }`}
-                title="Gemini AI Chat"
-              >
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z" fill="currentColor" />
-                </svg>
-              </button>
+              {isAdminUnlocked && (
+                <button
+                  onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
+                  className={`p-1 px-1.5 rounded-md text-xs font-sans font-black transition-all duration-200 flex items-center justify-center ${
+                    filter === 'chat'
+                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)]'
+                      : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
+                  }`}
+                  title="Gemini AI Chat (Admin)"
+                >
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z" fill="currentColor" />
+                  </svg>
+                </button>
+              )}
 
               <button
                 onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); }}
@@ -4819,20 +4892,22 @@ export default function App() {
                 )}
               </div>
 
-              {/* Socratic Tutor Button */}
-              <button
-                onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
-                className={`p-1.5 px-2.5 rounded-lg border text-xs font-sans font-black flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                  filter === 'chat'
-                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
-                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
-                }`}
-                title="Gemini AI Chat Tutor"
-              >
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z" fill="currentColor" />
-                </svg>
-              </button>
+              {/* Socratic Tutor Button (Admin Only) */}
+              {isAdminUnlocked && (
+                <button
+                  onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
+                  className={`p-1.5 px-2.5 rounded-lg border text-xs font-sans font-black flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                    filter === 'chat'
+                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                      : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
+                  }`}
+                  title="Gemini AI Chat Tutor (Admin)"
+                >
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z" fill="currentColor" />
+                  </svg>
+                </button>
+              )}
 
               {/* Lobby Chat Button */}
               <button
@@ -5145,9 +5220,52 @@ export default function App() {
               {/* Subtle divider */}
               <div className="w-px h-3.5 bg-[var(--card-border)]/60" />
 
+              {/* Admin Panel Button */}
+              <button
+                onClick={() => {
+                  setIsAdminPanelOpen(prev => !prev);
+                  setIsGlobalSettingsOpen(false);
+                }}
+                className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                  isAdminPanelOpen
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)]'
+                    : mode === 'light' 
+                      ? 'text-black hover:text-black hover:bg-black/5' 
+                      : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
+                }`}
+                title="Admin Panel"
+                aria-label="Admin Panel"
+              >
+                <Lock className="w-3 h-3" style={{ color: !isAdminPanelOpen && mode === 'light' ? '#000000' : undefined }} />
+              </button>
+
+              {/* AI Button near Settings (Only visible after pass is entered) */}
+              {isAdminUnlocked && (
+                <button
+                  onClick={() => {
+                    setFilter(filter === 'chat' ? 'all' : 'chat');
+                    setSelectedGame(null);
+                  }}
+                  className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                    filter === 'chat'
+                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)]'
+                      : mode === 'light'
+                        ? 'text-black hover:text-black hover:bg-black/5'
+                        : 'text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
+                  }`}
+                  title="AI Chat"
+                  aria-label="AI Chat"
+                >
+                  <Sparkles className="w-3 h-3" />
+                </button>
+              )}
+
               {/* Settings Gear Button */}
               <button
-                onClick={() => setIsGlobalSettingsOpen(!isGlobalSettingsOpen)}
+                onClick={() => {
+                  setIsGlobalSettingsOpen(!isGlobalSettingsOpen);
+                  setIsAdminPanelOpen(false);
+                }}
                 className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                   mode === 'light' 
                     ? 'text-black hover:text-black hover:bg-black/5' 
@@ -5242,6 +5360,7 @@ export default function App() {
                 )}
               </div>
 
+              {renderAdminPanelPopover()}
               {isGlobalSettingsOpen && (
                 <div className="absolute top-full right-0 mt-2 w-72 max-h-[85vh] overflow-y-auto bg-[#12121a] border border-white/10 rounded-xl p-4 shadow-2xl z-[99999] select-none text-left animate-fade-in no-scrollbar">
                   <div className="flex flex-col gap-3">
@@ -5606,9 +5725,52 @@ export default function App() {
               </div>
             </div>{/* Unified Settings, Colors & Sign Out Group */}
             <div className="relative flex items-center gap-2 border border-[var(--card-border)] bg-[var(--bg-secondary)] p-1 rounded-full shadow-sm">
+              {/* Admin Panel Button */}
+              <button
+                onClick={() => {
+                  setIsAdminPanelOpen(prev => !prev);
+                  setIsGlobalSettingsOpen(false);
+                }}
+                className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                  isAdminPanelOpen
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)]'
+                    : mode === 'light'
+                      ? 'text-black hover:text-black hover:bg-black/5'
+                      : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
+                }`}
+                title="Admin Panel"
+                aria-label="Admin Panel"
+              >
+                <Lock className="w-3.5 h-3.5" style={{ color: !isAdminPanelOpen && mode === 'light' ? '#000000' : undefined }} />
+              </button>
+
+              {/* AI Button near Settings (Only visible after pass is entered) */}
+              {isAdminUnlocked && (
+                <button
+                  onClick={() => {
+                    setFilter(filter === 'chat' ? 'all' : 'chat');
+                    setSelectedGame(null);
+                  }}
+                  className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                    filter === 'chat'
+                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)]'
+                      : mode === 'light'
+                        ? 'text-black hover:text-black hover:bg-black/5'
+                        : 'text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
+                  }`}
+                  title="AI Chat"
+                  aria-label="AI Chat"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                </button>
+              )}
+
               {/* Settings Gear Button (opens System Settings Dropdown) */}
               <button
-                onClick={() => setIsGlobalSettingsOpen(!isGlobalSettingsOpen)}
+                onClick={() => {
+                  setIsGlobalSettingsOpen(!isGlobalSettingsOpen);
+                  setIsAdminPanelOpen(false);
+                }}
                 className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                   mode === 'light'
                     ? 'text-black hover:text-black hover:bg-black/5'
@@ -5635,6 +5797,7 @@ export default function App() {
                 </button>
               </div>
 
+              {renderAdminPanelPopover()}
               {isGlobalSettingsOpen && (
                 <div className="absolute top-full right-0 mt-2 w-72 max-h-[85vh] overflow-y-auto bg-[#12121a] border border-white/10 rounded-xl p-4 shadow-2xl z-[99999] select-none text-left animate-fade-in no-scrollbar">
                   <div className="flex flex-col gap-3">
@@ -6524,7 +6687,29 @@ export default function App() {
                   transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
                   className={`flex flex-col w-full min-h-[550px] bg-[var(--bg-secondary)] ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}
                 >
-                  <AiChatWorkspace onClose={() => setFilter('all')} />
+                  {isAdminUnlocked ? (
+                    <AiChatWorkspace onClose={() => setFilter('all')} />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full min-h-[450px] p-6 text-center select-none">
+                      <form onSubmit={handleAdminPasswordSubmit}>
+                        <input
+                          type="password"
+                          value={adminPasswordInput}
+                          onChange={(e) => {
+                            setAdminPasswordInput(e.target.value);
+                            if (adminError) setAdminError('');
+                          }}
+                          placeholder={adminError || "Enter password..."}
+                          autoFocus
+                          className={`w-56 bg-[#0f0e17] border rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-400 shadow-2xl outline-none transition-all font-mono text-center ${
+                            adminError 
+                              ? 'border-red-500 placeholder-red-400 shadow-[0_0_12px_rgba(239,68,68,0.5)]' 
+                              : 'border-white/20 focus:border-[var(--accent-color)] shadow-[0_4px_24px_rgba(0,0,0,0.7)]'
+                          }`}
+                        />
+                      </form>
+                    </div>
+                  )}
                 </motion.div>
               ) : filter === 'lobbychat' ? (
                 <motion.div 
