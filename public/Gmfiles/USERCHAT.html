@@ -900,11 +900,71 @@ function renderHeader(){
 }
 
 /* ============================================================
-   REPLY & DELETE HELPERS
+   REPLY & DELETE HELPERS & MESSAGE OWNERSHIP
    ============================================================ */
+function getClientId() {
+  let cid = localStorage.getItem('chat_client_id');
+  if (!cid) {
+    cid = 'c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+    localStorage.setItem('chat_client_id', cid);
+  }
+  return cid;
+}
+
+function getMySentMessageIds() {
+  try {
+    const stored = localStorage.getItem('my_sent_message_ids');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function recordMySentMessage(msgIdOrKey) {
+  if (!msgIdOrKey) return;
+  try {
+    const list = getMySentMessageIds();
+    const strId = String(msgIdOrKey);
+    if (!list.includes(strId)) {
+      list.push(strId);
+      localStorage.setItem('my_sent_message_ids', JSON.stringify(list.slice(-500)));
+    }
+  } catch {}
+}
+
+function isMyMessage(m) {
+  if (!m) return false;
+  const myClientId = getClientId();
+  const myAuthUid = auth.currentUser?.uid;
+  const mySentIds = getMySentMessageIds();
+
+  // 1. Direct ID or Key match in recorded local sent list
+  if (m.id && mySentIds.includes(String(m.id))) return true;
+  if (m.key && mySentIds.includes(String(m.key))) return true;
+
+  // 2. Sender Client ID match
+  if (m.senderId && String(m.senderId) === String(myClientId)) return true;
+
+  // 3. Auth UID match
+  if (myAuthUid && m.userId && String(m.userId) === String(myAuthUid)) return true;
+
+  // 4. Fallback for locally generated temp messages
+  if (m.isLocalTemp) return true;
+
+  return false;
+}
+
 async function deleteMessage(msgId) {
   if (!msgId) return;
   const c = currentChannel();
+  const targetMsg = state.messages.find(m => String(m.id) === String(msgId) || String(m.key) === String(msgId));
+
+  // Security check: Only allow deleting your own message
+  if (targetMsg && !isMyMessage(targetMsg)) {
+    toast('⚠️ You can only delete your own messages!');
+    return;
+  }
+
   try {
     if (db) {
       await deleteDoc(doc(db, 'channels', c.id, 'messages', String(msgId)));
@@ -1079,6 +1139,7 @@ function renderMessages(){
 
     const replyInfo = getReplyInfo(m);
     const bodyText = replyInfo ? replyInfo.cleanBody : (m.text || '');
+    const isOwner = isMyMessage(m);
 
     let replyHeaderHtml = '';
     if (replyInfo && replyInfo.replyToName) {
@@ -1094,9 +1155,18 @@ function renderMessages(){
 
     const textContentHtml = bodyText ? `<div class="msg-text text-[12px] leading-normal break-words" style="color:var(--text)">${esc(bodyText)}</div>` : '';
 
+    const deleteBtnHtml = isOwner ? `
+      <button type="button" class="delete-msg-btn flex items-center gap-1 text-[9px] font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 px-1.5 py-0.5 rounded transition-all cursor-pointer"
+        data-msg-id="${esc(m.id || m.key)}"
+        title="Delete your message">
+        <i data-lucide="trash-2" class="w-3 h-3 text-rose-400"></i>
+        <span>Delete</span>
+      </button>
+    ` : '';
+
     html += `
       <div class="relative flex flex-col gap-0.5 hover:bg-white/[0.03] px-2.5 py-1.5 rounded-xl transition-all group">
-        <!-- Message Hover Action Menu (Reply + Delete) -->
+        <!-- Message Hover Action Menu (Reply + Delete own) -->
         <div class="absolute right-2 -top-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-1 surface-elev border bd rounded-lg px-1.5 py-0.5 shadow-md z-10 transition-opacity backdrop-blur-xs">
           <button type="button" class="reply-msg-btn flex items-center gap-1 text-[9px] font-bold txt-dim hover:accent hover:bg-white/10 px-1.5 py-0.5 rounded transition-all cursor-pointer"
             data-sender="${esc(m.name||'anonymous')}"
@@ -1105,12 +1175,7 @@ function renderMessages(){
             <i data-lucide="reply" class="w-3 h-3 accent"></i>
             <span>Reply</span>
           </button>
-          <button type="button" class="delete-msg-btn flex items-center gap-1 text-[9px] font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 px-1.5 py-0.5 rounded transition-all cursor-pointer"
-            data-msg-id="${esc(m.id || m.key)}"
-            title="Delete this message">
-            <i data-lucide="trash-2" class="w-3 h-3 text-rose-400"></i>
-            <span>Delete</span>
-          </button>
+          ${deleteBtnHtml}
         </div>
 
         <div class="flex items-center gap-1.5 flex-wrap">
@@ -1218,11 +1283,13 @@ function subscribeChannel(){
           key: docSnap.id,
           name: data.name || 'anonymous',
           userId: data.userId || null,
+          senderId: data.senderId || null,
           isRegistered: !!data.isRegistered,
           text: decTextObj.text,
           isEncrypted: decTextObj.encrypted,
           imageUrl: decImgObj.text,
-          timestamp: ts
+          timestamp: ts,
+          replyTo: data.replyTo || null
         });
       }
 
@@ -1432,17 +1499,24 @@ async function sendMessage(){
   // Always encrypt payload client-side before dispatching
   const encryptedText = await encryptPayload(text, c.id);
 
+  const myClientId = getClientId();
+  const myAuthUid = auth.currentUser?.uid || myClientId;
+  const localKey = `local_${ts}_${Math.random().toString(36).substring(2, 9)}`;
+
   const msgData = {
     name: currentName,
-    userId: 'guest',
+    userId: myAuthUid,
+    senderId: myClientId,
     isRegistered: false,
     text: text,
     replyTo: replyTarget,
     isEncrypted: true,
     timestamp: ts,
     isLocalTemp: true,
-    key: `local_${ts}_${Math.random()}`
+    key: localKey
   };
+
+  recordMySentMessage(localKey);
 
   // Cache locally with encrypted payload
   const localEncryptedMsg = {
@@ -1470,9 +1544,10 @@ async function sendMessage(){
   // Persist encrypted payload in Firestore
   try {
     const msgsCol = collection(db, 'channels', c.id, 'messages');
-    await addDoc(msgsCol, {
+    const docRef = await addDoc(msgsCol, {
       name: msgData.name,
       userId: msgData.userId,
+      senderId: msgData.senderId,
       isRegistered: false,
       text: encryptedText,
       replyTo: replyTarget,
@@ -1480,6 +1555,10 @@ async function sendMessage(){
       timestamp: ts,
       channelId: c.id
     });
+    if (docRef && docRef.id) {
+      recordMySentMessage(docRef.id);
+      msgData.id = docRef.id;
+    }
   } catch(err) {
     console.warn('Firestore send failed (local kept):', err);
   }
