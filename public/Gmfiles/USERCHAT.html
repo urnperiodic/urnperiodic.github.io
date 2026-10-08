@@ -75,6 +75,16 @@
 
   ::selection{ background:var(--accent-soft); }
 
+  /* Message text copy and selection support */
+  #messages-panel, .msg-text, .selectable-text {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+  }
+  #messages-panel button, #messages-panel .no-select {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
+
   /* Light scheme readability tweaks */
   [data-scheme="light"] .msg-text{ color:#1f2733; }
   [data-scheme="light"] .placeholder-mute::placeholder{ color:#94a3b8; }
@@ -131,7 +141,16 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-1 shrink-0">
+        <div class="flex items-center gap-1.5 shrink-0">
+          <!-- Delete All My Messages Button -->
+          <button id="delete-my-messages-btn" type="button"
+            class="surface-elev border border-rose-500/30 hover:border-rose-500/60 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 py-1 px-2 sm:px-2.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
+            title="Delete all messages you have sent">
+            <i data-lucide="trash-2" class="w-3 h-3 text-rose-400 shrink-0"></i>
+            <span class="hidden sm:inline">Delete My Messages</span>
+            <span class="sm:hidden">Delete Mine</span>
+          </button>
+
           <div id="custom-channel-dropdown" class="md:hidden relative shrink-0">
             <button id="channel-dropdown-btn" type="button"
               class="surface-elev border bd py-1 px-2.5 rounded-lg text-[10px] font-extrabold uppercase outline-none accent flex items-center gap-1.5 cursor-pointer hover:bg-white/5 active:scale-95 transition-all shadow-sm">
@@ -164,7 +183,7 @@
             <i data-lucide="info" class="w-3.5 h-3.5"></i>
           </div>
           <p class="text-[10px] sm:text-[11px] text-slate-200 leading-tight">
-            <strong class="text-blue-300 font-bold">Want messages deleted?</strong> #general is permanent. Switch to <button id="tip-switch-ephemeral" type="button" class="text-rose-400 font-bold underline hover:text-rose-300 cursor-pointer">#1h-ephemeral (Auto-Delete Section)</button> or click 🗑️ on any message.
+            <strong class="text-blue-300 font-bold">Want messages deleted?</strong> #general is permanent. Switch to <button id="tip-switch-ephemeral" type="button" class="text-rose-400 font-bold underline hover:text-rose-300 cursor-pointer">#1h-ephemeral (Auto-Delete Section)</button>, click 🗑️ on any message, or <button id="tip-delete-all-mine" type="button" class="text-rose-400 font-bold underline hover:text-rose-300 cursor-pointer">delete all your messages</button>.
           </p>
         </div>
         <button id="tip-banner-close" type="button" class="p-1 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg shrink-0 ml-2 cursor-pointer" title="Dismiss notice">
@@ -304,6 +323,52 @@
 
         <!-- Swatch grid (matches 1st reference image) -->
         <div id="theme-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5"></div>
+      </div>
+    </div>
+
+    <!-- ============ DELETE ALL MY MESSAGES MODAL ============ -->
+    <div id="delete-all-modal" class="hidden absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-[70] animate-fade-in backdrop-blur-sm">
+      <div class="surface border bd2 rounded-2xl w-full max-w-sm p-5 shadow-2xl flex flex-col gap-4 text-left animate-pop">
+        <div class="flex items-center justify-between border-b bd pb-2.5">
+          <h2 class="text-xs font-black uppercase text-rose-400 tracking-wider flex items-center gap-1.5">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-400"></i> Delete All My Messages
+          </h2>
+          <button id="delete-all-close" class="txt-mute hover:txt p-0.5 rounded hover:bg-white/5 transition-all cursor-pointer">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <p class="text-xs txt-dim leading-relaxed">
+            Are you sure you want to delete all messages you've sent? They will be permanently removed for everyone.
+          </p>
+
+          <div class="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-1.5 text-xs">
+            <div class="flex items-center justify-between text-slate-300 font-mono text-[11px]">
+              <span>Active Channel:</span>
+              <span id="delete-modal-channel-name" class="font-bold text-white">#general</span>
+            </div>
+            <div class="flex items-center justify-between text-slate-300 font-mono text-[11px]">
+              <span>Your Messages in Channel:</span>
+              <span id="delete-modal-msg-count" class="font-bold text-rose-400">0 messages</span>
+            </div>
+          </div>
+
+          <label class="flex items-start gap-2.5 p-2 rounded-lg hover:bg-white/5 cursor-pointer text-xs select-none">
+            <input id="delete-all-channels-check" type="checkbox" class="mt-0.5 rounded border bd accent-bg text-rose-500 focus:ring-rose-500" />
+            <span class="txt-dim text-[11px] leading-tight">
+              Also delete all my sent messages across <strong class="txt font-bold">all channels</strong> (not just this one)
+            </span>
+          </label>
+        </div>
+
+        <div class="flex gap-2 pt-2 border-t bd">
+          <button type="button" id="delete-all-cancel" class="flex-1 bg-white/5 hover:bg-white/10 txt text-[10px] font-black uppercase py-2.5 rounded-xl transition-all cursor-pointer">Cancel</button>
+          <button type="button" id="delete-all-confirm" class="flex-1 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-[10px] font-black uppercase py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            <span>Delete Messages</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -979,6 +1044,197 @@ async function deleteMessage(msgId) {
   toast('🗑️ Message deleted');
 }
 
+/* ============================================================
+   CLIPBOARD & COPY MESSAGE
+   ============================================================ */
+async function copyToClipboard(text) {
+  if (!text) return false;
+  // Modern Clipboard API
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch(err) {
+      console.warn('Clipboard writeText failed, trying execCommand fallback', err);
+    }
+  }
+
+  // Fallback via textarea execCommand
+  try {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.setAttribute('readonly', '');
+    el.style.position = 'fixed';
+    el.style.left = '-9999px';
+    el.style.top = '-9999px';
+    el.style.opacity = '0';
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    const success = document.execCommand('copy');
+    document.body.removeChild(el);
+    return success;
+  } catch(e) {
+    console.warn('Fallback copy error', e);
+    return false;
+  }
+}
+
+async function handleCopyMessage(btn, text) {
+  if (!text) {
+    toast('Nothing to copy in this message');
+    return;
+  }
+  const ok = await copyToClipboard(text);
+  if (ok) {
+    toast('📋 Message copied to clipboard!');
+    if (btn) {
+      const origHtml = btn.innerHTML;
+      btn.innerHTML = `<i data-lucide="check" class="w-3 h-3 text-emerald-400"></i><span class="text-emerald-400">Copied!</span>`;
+      refreshIcons();
+      setTimeout(() => {
+        btn.innerHTML = origHtml;
+        refreshIcons();
+      }, 1500);
+    }
+  } else {
+    // Fallback if permission blocked
+    window.prompt('Copy message text:', text);
+  }
+}
+
+/* ============================================================
+   DELETE ALL MY MESSAGES
+   ============================================================ */
+function getMyMessagesInChannel(chId) {
+  const isTargetActive = chId === state.activeChannel.id;
+  const msgsToCheck = isTargetActive ? state.messages : getLocalMessages(chId);
+  return msgsToCheck.filter(m => isMyMessage(m));
+}
+
+function openDeleteAllModal() {
+  const c = currentChannel();
+  const nameEl = $('delete-modal-channel-name');
+  if (nameEl) nameEl.textContent = `#${c.name}`;
+
+  const myMsgs = getMyMessagesInChannel(c.id);
+  const countEl = $('delete-modal-msg-count');
+  if (countEl) countEl.textContent = myMsgs.length === 1 ? '1 message' : `${myMsgs.length} messages`;
+
+  const checkEl = $('delete-all-channels-check');
+  if (checkEl) checkEl.checked = false;
+
+  const modal = $('delete-all-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    refreshIcons();
+  }
+}
+
+function closeDeleteAllModal() {
+  const modal = $('delete-all-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function executeDeleteAllMyMessages() {
+  const confirmBtn = $('delete-all-confirm');
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = `<span class="animate-pulse">Deleting...</span>`;
+  }
+
+  const allChannelsChecked = $('delete-all-channels-check')?.checked || false;
+  const targetChannels = allChannelsChecked ? allChannels() : [currentChannel()];
+  let totalDeleted = 0;
+
+  const myClientId = getClientId();
+  const myAuthUid = auth.currentUser?.uid;
+  const mySentIds = getMySentMessageIds();
+
+  for (const ch of targetChannels) {
+    const chId = ch.id;
+    const isTargetActive = chId === state.activeChannel.id;
+    const msgsInScope = isTargetActive ? [...state.messages] : getLocalMessages(chId);
+
+    const docIdsToDelete = new Set();
+
+    // 1. Check in-memory / local messages identified as mine
+    msgsInScope.forEach(m => {
+      if (isMyMessage(m)) {
+        if (m.id) docIdsToDelete.add(String(m.id));
+        if (m.key) docIdsToDelete.add(String(m.key));
+      }
+    });
+
+    // 2. Add recorded sent message IDs
+    mySentIds.forEach(id => {
+      if (id && !id.startsWith('local_')) {
+        docIdsToDelete.add(String(id));
+      }
+    });
+
+    // 3. Query Firestore for this channel
+    if (db) {
+      try {
+        if (myClientId) {
+          const qSender = query(collection(db, 'channels', chId, 'messages'), where('senderId', '==', myClientId));
+          const snapSender = await getDocs(qSender);
+          snapSender.forEach(d => docIdsToDelete.add(d.id));
+        }
+      } catch(e) {}
+
+      try {
+        if (myAuthUid) {
+          const qUser = query(collection(db, 'channels', chId, 'messages'), where('userId', '==', myAuthUid));
+          const snapUser = await getDocs(qUser);
+          snapUser.forEach(d => docIdsToDelete.add(d.id));
+        }
+      } catch(e) {}
+
+      // Delete each document from Firestore
+      for (const docId of docIdsToDelete) {
+        try {
+          await deleteDoc(doc(db, 'channels', chId, 'messages', docId));
+          totalDeleted++;
+        } catch(e) {}
+      }
+    }
+
+    // 4. Update in-memory state if this is the active channel
+    if (isTargetActive) {
+      const beforeCount = state.messages.length;
+      state.messages = state.messages.filter(m => !isMyMessage(m) && !docIdsToDelete.has(String(m.id)) && !docIdsToDelete.has(String(m.key)));
+      const stateDeleted = beforeCount - state.messages.length;
+      if (totalDeleted === 0) totalDeleted = stateDeleted;
+    }
+
+    // 5. Update local cache for this channel
+    const locals = getLocalMessages(chId);
+    const updatedLocals = locals.filter(m => !isMyMessage(m) && !docIdsToDelete.has(String(m.id)) && !docIdsToDelete.has(String(m.key)));
+    localStorage.setItem(`local_messages_${chId}`, JSON.stringify(updatedLocals));
+  }
+
+  // Clear or prune sent IDs in localStorage
+  if (allChannelsChecked) {
+    localStorage.setItem('my_sent_message_ids', JSON.stringify([]));
+  }
+
+  renderMessages();
+  closeDeleteAllModal();
+
+  if (confirmBtn) {
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = `<i data-lucide="trash-2" class="w-3.5 h-3.5"></i><span>Delete Messages</span>`;
+  }
+  refreshIcons();
+
+  if (totalDeleted > 0) {
+    toast(`🗑️ Successfully deleted ${totalDeleted} of your messages!`);
+  } else {
+    toast('No sent messages found to delete.');
+  }
+}
+
 function getReplyInfo(m) {
   if (m.replyTo && m.replyTo.name) {
     return {
@@ -1164,10 +1420,18 @@ function renderMessages(){
       </button>
     ` : '';
 
+    const copyContent = bodyText ? (m.imageUrl ? `${bodyText}\n${m.imageUrl}` : bodyText) : (m.imageUrl || '');
+
     html += `
       <div class="relative flex flex-col gap-0.5 hover:bg-white/[0.03] px-2.5 py-1.5 rounded-xl transition-all group">
-        <!-- Message Hover Action Menu (Reply + Delete own) -->
-        <div class="absolute right-2 -top-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-1 surface-elev border bd rounded-lg px-1.5 py-0.5 shadow-md z-10 transition-opacity backdrop-blur-xs">
+        <!-- Message Action Menu (Copy + Reply + Delete own) -->
+        <div class="absolute right-2 -top-2 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-1 surface-elev border bd rounded-lg px-1.5 py-0.5 shadow-md z-10 transition-opacity backdrop-blur-xs">
+          <button type="button" class="copy-msg-btn flex items-center gap-1 text-[9px] font-bold txt-dim hover:accent hover:bg-white/10 px-1.5 py-0.5 rounded transition-all cursor-pointer"
+            data-copy-text="${esc(copyContent)}"
+            title="Copy message">
+            <i data-lucide="copy" class="w-3 h-3 text-sky-400"></i>
+            <span>Copy</span>
+          </button>
           <button type="button" class="reply-msg-btn flex items-center gap-1 text-[9px] font-bold txt-dim hover:accent hover:bg-white/10 px-1.5 py-0.5 rounded transition-all cursor-pointer"
             data-sender="${esc(m.name||'anonymous')}"
             data-content="${esc(bodyText)}"
@@ -1193,7 +1457,14 @@ function renderMessages(){
   panel.innerHTML = html;
   panel.scrollTop = panel.scrollHeight;
 
-  // Wire up Reply & Delete button clicks
+  // Wire up Copy, Reply & Delete button clicks
+  panel.querySelectorAll('.copy-msg-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleCopyMessage(btn, btn.dataset.copyText || '');
+    });
+  });
+
   panel.querySelectorAll('.reply-msg-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1778,8 +2049,15 @@ function init(){
   safeOn('theme-trigger-mobile', 'click', ()=>{ $('theme-modal').classList.remove('hidden'); refreshIcons(); });
   safeOn('theme-close', 'click', ()=> $('theme-modal').classList.add('hidden'));
 
+  // Delete All My Messages modal triggers
+  safeOn('delete-my-messages-btn', 'click', openDeleteAllModal);
+  safeOn('tip-delete-all-mine', 'click', openDeleteAllModal);
+  safeOn('delete-all-close', 'click', closeDeleteAllModal);
+  safeOn('delete-all-cancel', 'click', closeDeleteAllModal);
+  safeOn('delete-all-confirm', 'click', executeDeleteAllMyMessages);
+
   // Close modals on backdrop click
-  ['create-modal','theme-modal'].forEach(id=>{
+  ['create-modal','theme-modal','delete-all-modal'].forEach(id=>{
     const el = $(id);
     if(el) el.addEventListener('click', (e)=>{ if(e.target.id===id) el.classList.add('hidden'); });
   });
