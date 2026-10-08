@@ -5,6 +5,7 @@ import { getAuth, signInAnonymously } from 'firebase/auth';
 import { collection, getFirestore, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { PUBLIC_GAMES_BASE_URL } from './data/gameSource';
 import { gameRankings } from './data/gameRankings';
+import { WHATS_NEW_SENTENCE, WHATS_NEW_CHANGES, WHATS_NEW_VERSION } from './whatsNewData';
 import defaultThumbnail from './assets/images/defaultthumbnail.png';
 const GAMES_PER_PAGE = 36;
 const MAX_CACHED_GAMES = 2; // Strict LRU cap to keep memory low on low-spec hardware
@@ -160,7 +161,8 @@ import {
   Crown,
   Trophy,
   Medal,
-  Calculator
+  Calculator,
+  Palette
 } from 'lucide-react';
 
 // Safe storage helper to prevent SecurityError crash in sandboxed iframes
@@ -253,6 +255,102 @@ const copyTextToClipboard = async (text) => {
     console.error('Failed to copy text:', error);
   }
 };
+
+const THEME_OPTIONS = [
+  { key: 'cyborg', name: 'Cyborg', color: 'bg-green-500 border-green-300 shadow-[0_0_8px_rgba(34,197,94,0.65)]', tooltip: 'Cyborg (Green Glow)' },
+  { key: 'sunset', name: 'Sunset', color: 'bg-amber-500 border-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.6)]', tooltip: 'Sunset (Warm Amber)' },
+  { key: 'midnight', name: 'Midnight', color: 'bg-indigo-600 border-indigo-400 shadow-[0_0_8px_rgba(79,70,229,0.6)]', tooltip: 'Midnight (Deep Blue)' },
+  { key: 'forest', name: 'Forest', color: 'bg-emerald-500 border-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.6)]', tooltip: 'Forest (Emerald Mint)' },
+  { key: 'violet', name: 'Violet', color: 'bg-purple-500 border-purple-300 shadow-[0_0_8px_rgba(168,85,247,0.6)]', tooltip: 'Violet (Purple)' },
+  { key: 'ice', name: 'Glacier', color: 'bg-sky-400 border-sky-200 shadow-[0_0_8px_rgba(56,189,248,0.6)]', tooltip: 'Glacier (Ice Blue)' },
+  { key: 'rose-pine', name: 'Rose Pine', color: 'bg-rose-400 border-rose-200 shadow-[0_0_8px_rgba(251,113,133,0.6)]', tooltip: 'Rose Pine (Pastel Pink)' },
+  { key: 'none', name: 'Monochrome', color: 'bg-neutral-300 border-neutral-400 shadow-[0_0_6px_rgba(212,212,212,0.4)]', tooltip: 'Monochrome (Black & White)' }
+];
+
+function ThemeDropdown({ theme, setTheme, mode }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const activeTheme = THEME_OPTIONS.find(t => t.key === theme) || THEME_OPTIONS[0];
+
+  return (
+    <div className="relative inline-flex items-center shrink-0" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(prev => !prev)}
+        className={`p-1.5 rounded-full border border-[var(--card-border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-color)] text-[var(--accent-color)] hover:bg-[var(--accent-color)]/10 transition-all duration-200 cursor-pointer shadow-sm active:scale-95 flex items-center justify-center shrink-0 select-none ${
+          isOpen ? 'ring-2 ring-[var(--accent-color)]/30 border-[var(--accent-color)] bg-[var(--accent-color)]/10' : ''
+        }`}
+        title={`Change Theme Color (Current: ${activeTheme.name})`}
+        aria-label="Change Theme Color"
+      >
+        <Palette className="w-3.5 h-3.5 text-[var(--accent-color)] transition-transform duration-200 group-hover:rotate-12" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--card-border)] shadow-2xl p-1.5 z-[99999] animate-fade-in backdrop-blur-xl">
+          <div className="px-3 py-2 border-b border-[var(--card-border)]/70 flex items-center justify-between mb-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+              <span>Theme Style</span>
+            </span>
+            <span className="text-[9.5px] font-mono text-[var(--accent-color)] font-extrabold uppercase">
+              {activeTheme.name}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1 max-h-64 overflow-y-auto scrollbar-thin py-0.5">
+            {THEME_OPTIONS.map((themeOpt) => {
+              const isSelected = theme === themeOpt.key;
+              return (
+                <button
+                  key={themeOpt.key}
+                  type="button"
+                  onClick={() => {
+                    setTheme(themeOpt.key);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition-all duration-150 cursor-pointer group ${
+                    isSelected
+                      ? 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] font-bold shadow-xs'
+                      : 'hover:bg-white/5 text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className={`w-3.5 h-3.5 rounded-full ${themeOpt.color} border border-white/20 shrink-0 group-hover:scale-110 transition-transform`} />
+                    <span className="text-[11.5px] font-medium">{themeOpt.name}</span>
+                  </div>
+                  {isSelected && (
+                    <Check className="w-3.5 h-3.5 text-[var(--accent-color)] shrink-0" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const decoyOptions = [
   { value: 'classroom', label: 'Classroom', labelLong: 'Google Classroom', icon: 'https://ssl.gstatic.com/classroom/favicon.png' },
@@ -357,6 +455,64 @@ function GoGuardianDecoyNotice({
         className="text-[var(--text-primary)] font-bold text-center leading-relaxed"
       >
         GoGuardian sees whatever theme you are on, and if you are using Classroom/Drive/Docs/Slides/clever.com decoys, the mode automatically changes to white. These platforms do not have dark mode. So to stay hidden, please use white mode when GoGuardian is on. If GoGuardian is not on, you can just swap to dark mode.
+      </p>
+    </motion.div>
+  );
+}
+
+function WhatsNewNotificationDrop({
+  onClose,
+  onOpenModal,
+  positionClass = "absolute top-full right-0 mt-2 w-[320px] sm:w-[420px] md:w-[480px] max-w-[calc(100vw-1.5rem)]"
+}) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Auto-dismiss after 7 seconds like the GoGuardian shield notice, pause when hovering
+  useEffect(() => {
+    if (isHovered) return;
+    const timer = setTimeout(() => {
+      onClose();
+    }, 7000);
+    return () => clearTimeout(timer);
+  }, [onClose, isHovered]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -6, scale: 0.96 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`${positionClass} z-[99999] rounded-xl bg-[var(--card-bg)] border-2 border-[var(--accent-color)] shadow-2xl shadow-[var(--accent-color)]/20 px-3 py-2 text-left select-none backdrop-blur-xl flex flex-col gap-1 transition-all hover:border-[var(--accent-color)] group`}
+      role="dialog"
+      aria-label="What's New Notification"
+    >
+      {/* Top Header Bar with Shield Badge */}
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--card-border)] pb-1">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <div className="p-0.5 rounded bg-[var(--accent-color)] text-[var(--bg-color)] shadow-sm flex items-center justify-center shrink-0">
+            <Shield className="w-3 h-3" />
+          </div>
+          <span className="text-[9.5px] sm:text-[10px] font-black tracking-wider uppercase text-[var(--text-primary)] font-mono truncate">
+            WHAT'S NEW
+          </span>
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--accent-color)] animate-ping shrink-0" />
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-0.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer shrink-0"
+          title="Close notification"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      </div>
+
+      {/* Single Sentence Notification Text */}
+      <p className="text-[9.5px] sm:text-[10px] text-[var(--text-primary)] font-medium leading-snug">
+        {WHATS_NEW_SENTENCE}
       </p>
     </motion.div>
   );
@@ -915,10 +1071,11 @@ export default function App() {
     return !hasShownBefore && isWhiteDecoy && initialViewMode !== 'games';
   });
 
-  // Ensure notice does not automatically pop open when in the portals secured area
+  // Ensure notice does not automatically pop open when in the portals secured area, but trigger Whats New drop on portals
   useEffect(() => {
     if (viewMode === 'games') {
       setShowGoGuardianNotice(false);
+      setShowWhatsNewDrop(true);
     }
   }, [viewMode]);
 
@@ -1183,6 +1340,9 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
   const [gameFrame, setGameFrame] = useState(null);
+  const [showWhatsNewModal, setShowWhatsNewModal] = useState(false);
+  const [showWhatsNewDrop, setShowWhatsNewDrop] = useState(true);
+  const [hasUnreadWhatsNew, setHasUnreadWhatsNew] = useState(true);
   const restoredSavedGame = useRef(false);
 
   // Single game coordination across arena, about:blank, and other tabs/windows
@@ -1682,6 +1842,7 @@ export default function App() {
     if (!gameToLaunch) return;
     recordRecentlyPlayed(gameToLaunch.id);
     safeStorage.setItem('unblocked-last-game', gameToLaunch.id);
+    setGameFrame({ src: gameToLaunch.url });
     setSelectedGame(gameToLaunch);
   };
 
@@ -4188,30 +4349,8 @@ export default function App() {
         {/* Floating Controls inside Lock Screen */}
         <div className="absolute top-4 right-4 flex items-center gap-3">
           
-          {/* Theme custom capsule */}
-          <div className="border border-[var(--card-border)] bg-[var(--bg-secondary)] px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm">
-            <div className="flex items-center gap-1.5">
-              {[
-                { key: 'cyborg', color: 'bg-green-500 border-green-300 shadow-[0_0_5px_green]', tooltip: 'Cyborg Theme' },
-                { key: 'sunset', color: 'bg-amber-500 border-amber-300', tooltip: 'Sunset Theme' },
-                { key: 'midnight', color: 'bg-indigo-600 border-indigo-400', tooltip: 'Midnight Theme' },
-                { key: 'forest', color: 'bg-emerald-500 border-emerald-300', tooltip: 'Forest Theme' },
-                { key: 'violet', color: 'bg-indigo-600 border-indigo-400', tooltip: 'Violet Theme' },
-                { key: 'ice', color: 'bg-sky-400 border-sky-300', tooltip: 'Glacier Theme' },
-                { key: 'rose-pine', color: 'bg-rose-300 border-rose-200', tooltip: 'Rose Pine Theme' },
-                { key: 'none', color: 'bg-gradient-to-br from-neutral-300 to-neutral-700 border-neutral-400', tooltip: 'No Theme (Monochrome)' }
-              ].map((themeOpt) => (
-                <button
-                  key={themeOpt.key}
-                  title={themeOpt.tooltip}
-                  onClick={() => setTheme(themeOpt.key)}
-                  className={`w-3.5 h-3.5 rounded-full ${themeOpt.color} border transition-all duration-200 hover:scale-130 cursor-pointer ${
-                    theme === themeOpt.key ? 'ring-2 ring-offset-2 ring-[var(--accent-color)]' : 'opacity-80'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
+          {/* Theme Dropdown */}
+          <ThemeDropdown theme={theme} setTheme={setTheme} mode={mode} />
 
           {/* Light/Dark Slider */}
           <div className="relative flex items-center gap-1.5 border border-[var(--card-border)] bg-[var(--bg-secondary)] py-1.5 px-2.5 rounded-full shadow-sm">
@@ -5619,28 +5758,8 @@ export default function App() {
 
               <div className="w-[1px] h-3 bg-[var(--card-border)]/80" />
 
-              {/* Colors picker dots */}
-              <div className="flex items-center gap-1 px-0.5">
-                {[
-                  { key: 'cyborg', color: 'bg-green-500 border-green-300 shadow-[0_0_5px_green]', tooltip: 'Cyborg Theme' },
-                  { key: 'sunset', color: 'bg-amber-500 border-amber-300', tooltip: 'Sunset Theme' },
-                  { key: 'midnight', color: 'bg-indigo-600 border-indigo-400', tooltip: 'Midnight Theme' },
-                  { key: 'forest', color: 'bg-emerald-500 border-emerald-300', tooltip: 'Forest Theme' },
-                  { key: 'violet', color: 'bg-indigo-600 border-indigo-400', tooltip: 'Violet Theme' },
-                  { key: 'ice', color: 'bg-sky-400 border-sky-300', tooltip: 'Glacier Theme' },
-                  { key: 'rose-pine', color: 'bg-rose-300 border-rose-200', tooltip: 'Rose Pine Theme' },
-                  { key: 'none', color: 'bg-gradient-to-br from-neutral-300 to-neutral-700 border-neutral-400', tooltip: 'No Theme (Monochrome)' }
-                ].map((themeOpt) => (
-                  <button
-                    key={themeOpt.key}
-                    title={themeOpt.tooltip}
-                    onClick={() => setTheme(themeOpt.key)}
-                    className={`w-2 h-2 rounded-full ${themeOpt.color} border border-transparent transition-all duration-200 hover:scale-125 cursor-pointer ${
-                      theme === themeOpt.key ? 'ring-1 ring-offset-1 ring-[var(--accent-color)]' : 'opacity-60 hover:opacity-100'
-                    }`}
-                  />
-                ))}
-              </div>
+              {/* Theme Color Change Icon Dropdown */}
+              <ThemeDropdown theme={theme} setTheme={setTheme} mode={mode} />
 
               {/* Subtle divider */}
               <div className="w-[1px] h-3 bg-[var(--card-border)]/80" />
@@ -5682,6 +5801,16 @@ export default function App() {
                       onClose={() => setShowGoGuardianNotice(false)}
                       decoyType={decoyType}
                       positionClass="absolute top-full right-0 mt-3 w-48 sm:w-56"
+                    />
+                  )}
+                </AnimatePresence>
+
+                <AnimatePresence>
+                  {showWhatsNewDrop && (
+                    <WhatsNewNotificationDrop
+                      onClose={() => setShowWhatsNewDrop(false)}
+                      onOpenModal={() => setShowWhatsNewModal(true)}
+                      positionClass="absolute top-full right-0 mt-2 w-[320px] sm:w-[420px] md:w-[480px] max-w-[calc(100vw-1.5rem)]"
                     />
                   )}
                 </AnimatePresence>
@@ -6056,28 +6185,8 @@ export default function App() {
 
               <div className="w-[1px] h-3.5 bg-[var(--card-border)]/80" />
 
-              {/* Colors picker dots */}
-              <div className="flex items-center gap-1 px-0.5">
-                {[
-                  { key: 'cyborg', color: 'bg-green-500 border-green-300 shadow-[0_0_5px_green]', tooltip: 'Cyborg Theme' },
-                  { key: 'sunset', color: 'bg-amber-500 border-amber-300', tooltip: 'Sunset Theme' },
-                  { key: 'midnight', color: 'bg-indigo-600 border-indigo-400', tooltip: 'Midnight Theme' },
-                  { key: 'forest', color: 'bg-emerald-500 border-emerald-300', tooltip: 'Forest Theme' },
-                  { key: 'violet', color: 'bg-indigo-600 border-indigo-400', tooltip: 'Violet Theme' },
-                  { key: 'ice', color: 'bg-sky-400 border-sky-300', tooltip: 'Glacier Theme' },
-                  { key: 'rose-pine', color: 'bg-rose-300 border-rose-200', tooltip: 'Rose Pine Theme' },
-                  { key: 'none', color: 'bg-gradient-to-br from-neutral-300 to-neutral-700 border-neutral-400', tooltip: 'No Theme (Monochrome)' }
-                ].map((themeOpt) => (
-                  <button
-                    key={themeOpt.key}
-                    title={themeOpt.tooltip}
-                    onClick={() => setTheme(themeOpt.key)}
-                    className={`w-2 h-2 rounded-full ${themeOpt.color} border border-transparent transition-all duration-200 hover:scale-125 cursor-pointer ${
-                      theme === themeOpt.key ? 'ring-1 ring-offset-1 ring-[var(--accent-color)] scale-110' : 'opacity-60 hover:opacity-100'
-                    }`}
-                  />
-                ))}
-              </div>
+              {/* Theme Color Change Icon Dropdown */}
+              <ThemeDropdown theme={theme} setTheme={setTheme} mode={mode} />
             </div>
           
 
@@ -6118,6 +6227,16 @@ export default function App() {
                     onClose={() => setShowGoGuardianNotice(false)}
                     decoyType={decoyType}
                     positionClass="absolute top-full right-0 mt-3 w-48 sm:w-56"
+                  />
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence>
+                {showWhatsNewDrop && (
+                  <WhatsNewNotificationDrop
+                    onClose={() => setShowWhatsNewDrop(false)}
+                    onOpenModal={() => setShowWhatsNewModal(true)}
+                    positionClass="absolute top-full right-0 mt-2 w-[320px] sm:w-[420px] md:w-[480px] max-w-[calc(100vw-2rem)]"
                   />
                 )}
               </AnimatePresence>
@@ -7839,6 +7958,77 @@ export default function App() {
 
 
         </div>
+
+        {/* WHAT'S NEW / NEW CHANGES MODAL */}
+        <AnimatePresence>
+          {showWhatsNewModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[99999] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 10 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 10 }}
+                className="w-full max-w-md bg-[#0c0f16] border border-[var(--card-border)] rounded-2xl p-6 shadow-2xl flex flex-col gap-5 text-left text-white relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-48 h-48 bg-[var(--accent-color)]/10 rounded-full blur-2xl pointer-events-none" />
+
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2.5 rounded-xl bg-[var(--accent-color)] text-[var(--bg-color)] shadow-md">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-black uppercase tracking-wider text-white">What's New / Recent Changes</h2>
+                      <p className="text-[11px] text-gray-400 font-mono">Latest updates & features</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      safeStorage.setItem(`whats_new_dismissed_${WHATS_NEW_VERSION}`, 'true');
+                      setShowWhatsNewModal(false);
+                      setHasUnreadWhatsNew(false);
+                    }}
+                    className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                    title="Close"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-3 text-xs text-gray-300 font-sans max-h-[60vh] overflow-y-auto scrollbar-thin pr-1">
+                  {WHATS_NEW_CHANGES.map((item) => (
+                    <div key={item.id} className="flex items-start gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/10 transition-colors">
+                      <div className={`w-6 h-6 rounded-lg ${item.iconBg || 'bg-white/10 text-white'} flex items-center justify-center shrink-0 mt-0.5 font-bold font-mono text-xs shadow-sm`}>
+                        {item.icon}
+                      </div>
+                      <div>
+                        <strong className="text-white block font-bold mb-0.5">{item.title}</strong>
+                        <span className="text-gray-400 text-[11px] leading-relaxed">{item.description}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-2 border-t border-white/10 flex">
+                  <button
+                    onClick={() => {
+                      safeStorage.setItem(`whats_new_dismissed_${WHATS_NEW_VERSION}`, 'true');
+                      setShowWhatsNewModal(false);
+                      setHasUnreadWhatsNew(false);
+                    }}
+                    className="w-full py-3 px-4 rounded-xl bg-[var(--accent-color)] text-[var(--bg-color)] font-extrabold text-xs uppercase tracking-wider hover:opacity-95 transition-all cursor-pointer shadow-lg shadow-[var(--accent-color)]/20 active:scale-[0.98]"
+                  >
+                    Got it, Let's Play!
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Suspense>
     </MotionConfig>
   );
