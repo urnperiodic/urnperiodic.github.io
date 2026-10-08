@@ -331,8 +331,8 @@ const gameData: Game[] = [
   },
   {
     title: '2048',
-    description: 'Girls.',
-    url: 'https://ubg365.github.io/2048/play.html',
+    description: '',
+    url: 'cl2048.html',
     thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSuxqLfXqm07uXPH0qyPu_6MofiU9nlUoq9w&s',
     category: 'Solo',
     featured: false,
@@ -368,7 +368,7 @@ const gameData: Game[] = [
   {
     title: 'Sandboxels',
     description: 'Fun to experiment',
-    url: 'clsandboxels.html',
+    url: 'https://mr-funkinguy.github.io/sandboxels/',
     thumbnail: 'clsandboxels.jpg',
     category: 'Solo', 
     featured: true,

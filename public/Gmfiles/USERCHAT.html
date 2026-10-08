@@ -144,11 +144,9 @@
         <div class="flex items-center gap-1.5 shrink-0">
           <!-- Delete All My Messages Button -->
           <button id="delete-my-messages-btn" type="button"
-            class="surface-elev border border-rose-500/30 hover:border-rose-500/60 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 py-1 px-2 sm:px-2.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
+            class="surface-elev border border-rose-500/30 hover:border-rose-500/60 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm shrink-0"
             title="Delete all messages you have sent">
-            <i data-lucide="trash-2" class="w-3 h-3 text-rose-400 shrink-0"></i>
-            <span class="hidden sm:inline">Delete My Messages</span>
-            <span class="sm:hidden">Delete Mine</span>
+            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-400 shrink-0"></i>
           </button>
 
           <div id="custom-channel-dropdown" class="md:hidden relative shrink-0">
@@ -549,6 +547,8 @@ const state = {
   theme: savedTheme
 };
 
+const isMiniMode = new URLSearchParams(window.location.search).get('mini') === 'true';
+
 function safeParse(key, fallback){ try{ const s=localStorage.getItem(key); return s?JSON.parse(s):fallback; }catch(e){ return fallback; } }
 
 
@@ -920,23 +920,29 @@ function renderHeader(){
   const prefix = c.isDirectMessage ? '' : '#';
   const isPermanent = isPermanentChannel(c.id);
 
-  const inviteBtnHtml = !c.isDirectMessage ? `
-    <button id="invite-channel-btn" type="button" title="Share invite link (bypasses password)"
-      class="ml-2 px-2 py-0.5 rounded-lg accent-bg text-[9px] font-bold flex items-center gap-1 shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0">
-      <i data-lucide="user-plus" class="w-3 h-3"></i>
-      <span class="hidden sm:inline">Invite</span>
-    </button>
-  ` : '';
+  if (isMiniMode) {
+    $('active-channel-name').innerHTML = '';
+  } else {
+    const inviteBtnHtml = !c.isDirectMessage ? `
+      <button id="invite-channel-btn" type="button" title="Share invite link (bypasses password)"
+        class="ml-2 px-2 py-0.5 rounded-lg accent-bg text-[9px] font-bold flex items-center gap-1 shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0">
+        <i data-lucide="user-plus" class="w-3 h-3"></i>
+        <span class="hidden sm:inline">Invite</span>
+      </button>
+    ` : '';
 
-  $('active-channel-name').innerHTML =
-    (c.isPasswordProtected?'<i data-lucide="lock" class="w-3 h-3 text-amber-500 shrink-0"></i>':'') +
-    (c.isDirectMessage ? '<i data-lucide="message-circle" class="w-3.5 h-3.5 accent shrink-0"></i>' : '') +
-    `<span class="truncate">${prefix}${esc(c.name)}</span>` +
-    inviteBtnHtml;
+    $('active-channel-name').innerHTML =
+      (c.isPasswordProtected?'<i data-lucide="lock" class="w-3 h-3 text-amber-500 shrink-0"></i>':'') +
+      (c.isDirectMessage ? '<i data-lucide="message-circle" class="w-3.5 h-3.5 accent shrink-0"></i>' : '') +
+      `<span class="truncate">${prefix}${esc(c.name)}</span>` +
+      inviteBtnHtml;
+  }
 
   const badgeContainer = $('channel-badge-container');
   if (badgeContainer) {
-    if (isPermanent) {
+    if (isMiniMode) {
+      badgeContainer.innerHTML = '';
+    } else if (isPermanent) {
       badgeContainer.innerHTML = `
         <span class="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded shrink-0" title="Default section: Messages are saved and never deleted">
           <i data-lucide="shield-check" class="w-2.5 h-2.5 text-emerald-400"></i>
@@ -1424,24 +1430,6 @@ function renderMessages(){
 
     html += `
       <div class="relative flex flex-col gap-0.5 hover:bg-white/[0.03] px-2.5 py-1.5 rounded-xl transition-all group">
-        <!-- Message Action Menu (Copy + Reply + Delete own) -->
-        <div class="absolute right-2 -top-2 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-1 surface-elev border bd rounded-lg px-1.5 py-0.5 shadow-md z-10 transition-opacity backdrop-blur-xs">
-          <button type="button" class="copy-msg-btn flex items-center gap-1 text-[9px] font-bold txt-dim hover:accent hover:bg-white/10 px-1.5 py-0.5 rounded transition-all cursor-pointer"
-            data-copy-text="${esc(copyContent)}"
-            title="Copy message">
-            <i data-lucide="copy" class="w-3 h-3 text-sky-400"></i>
-            <span>Copy</span>
-          </button>
-          <button type="button" class="reply-msg-btn flex items-center gap-1 text-[9px] font-bold txt-dim hover:accent hover:bg-white/10 px-1.5 py-0.5 rounded transition-all cursor-pointer"
-            data-sender="${esc(m.name||'anonymous')}"
-            data-content="${esc(bodyText)}"
-            title="Reply to ${esc(m.name||'anonymous')}">
-            <i data-lucide="reply" class="w-3 h-3 accent"></i>
-            <span>Reply</span>
-          </button>
-          ${deleteBtnHtml}
-        </div>
-
         <div class="flex items-center gap-1.5 flex-wrap">
           <span class="text-[11px] font-extrabold font-mono tracking-tight" style="color:${color}">
             ${esc(m.name||'anonymous')}
@@ -1451,6 +1439,24 @@ function renderMessages(){
         </div>
         ${replyHeaderHtml}
         ${textContentHtml}
+
+        <!-- Message Action Bar (Copy + Reply + Delete own) -->
+        <div class="opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-1.5 mt-1 text-[9px] transition-opacity">
+          <button type="button" class="copy-msg-btn flex items-center gap-1 text-[9px] font-bold txt-dim hover:accent hover:bg-white/10 px-2 py-0.5 rounded-md transition-all cursor-pointer surface-elev border bd"
+            data-copy-text="${esc(copyContent)}"
+            title="Copy message">
+            <i data-lucide="copy" class="w-2.5 h-2.5 text-sky-400"></i>
+            <span>Copy</span>
+          </button>
+          <button type="button" class="reply-msg-btn flex items-center gap-1 text-[9px] font-bold txt-dim hover:accent hover:bg-white/10 px-2 py-0.5 rounded-md transition-all cursor-pointer surface-elev border bd"
+            data-sender="${esc(m.name||'anonymous')}"
+            data-content="${esc(bodyText)}"
+            title="Reply">
+            <i data-lucide="reply" class="w-2.5 h-2.5 accent"></i>
+            <span>Reply</span>
+          </button>
+          ${deleteBtnHtml ? deleteBtnHtml.replace('text-[9px]', 'text-[9px] px-2 py-0.5 rounded-md surface-elev border bd') : ''}
+        </div>
       </div>
     `;
   });
@@ -2045,9 +2051,16 @@ function init(){
   });
 
   // Theme modal
-  safeOn('theme-trigger', 'click', ()=>{ $('theme-modal').classList.remove('hidden'); refreshIcons(); });
-  safeOn('theme-trigger-mobile', 'click', ()=>{ $('theme-modal').classList.remove('hidden'); refreshIcons(); });
-  safeOn('theme-close', 'click', ()=> $('theme-modal').classList.add('hidden'));
+  if (isMiniMode) {
+    const t1 = $('theme-trigger');
+    if (t1) t1.remove();
+    const t2 = $('theme-trigger-mobile');
+    if (t2) t2.remove();
+  } else {
+    safeOn('theme-trigger', 'click', ()=>{ $('theme-modal').classList.remove('hidden'); refreshIcons(); });
+    safeOn('theme-trigger-mobile', 'click', ()=>{ $('theme-modal').classList.remove('hidden'); refreshIcons(); });
+    safeOn('theme-close', 'click', ()=> $('theme-modal').classList.add('hidden'));
+  }
 
   // Delete All My Messages modal triggers
   safeOn('delete-my-messages-btn', 'click', openDeleteAllModal);
@@ -2063,18 +2076,23 @@ function init(){
   });
 
   // Delete Section Notification Banner
-  safeOn('tip-switch-ephemeral', 'click', () => {
-    switchChannel('temporary');
-    toast('Switched to #1h-ephemeral (Auto-Delete Section)');
-  });
-  safeOn('tip-banner-close', 'click', () => {
+  if (isMiniMode) {
     const banner = $('section-tip-banner');
-    if (banner) banner.classList.add('hidden');
-    localStorage.setItem('chat_tip_dismissed', 'true');
-  });
-  if (localStorage.getItem('chat_tip_dismissed') === 'true') {
-    const banner = $('section-tip-banner');
-    if (banner) banner.classList.add('hidden');
+    if (banner) banner.remove();
+  } else {
+    safeOn('tip-switch-ephemeral', 'click', () => {
+      switchChannel('temporary');
+      toast('Switched to #1h-ephemeral (Auto-Delete Section)');
+    });
+    safeOn('tip-banner-close', 'click', () => {
+      const banner = $('section-tip-banner');
+      if (banner) banner.classList.add('hidden');
+      localStorage.setItem('chat_tip_dismissed', 'true');
+    });
+    if (localStorage.getItem('chat_tip_dismissed') === 'true') {
+      const banner = $('section-tip-banner');
+      if (banner) banner.classList.add('hidden');
+    }
   }
 
   // Periodically update countdown timers and prune expired messages

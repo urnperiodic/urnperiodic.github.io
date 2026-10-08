@@ -1682,9 +1682,7 @@ export default function App() {
     if (!gameToLaunch) return;
     recordRecentlyPlayed(gameToLaunch.id);
     safeStorage.setItem('unblocked-last-game', gameToLaunch.id);
-    safeStorage.setItem('unblocked-refreshing-session', 'true');
-    safeStorage.setItem('unblocked-refresh-timestamp', String(Date.now()));
-    window.location.reload();
+    setSelectedGame(gameToLaunch);
   };
 
   const openGameInAboutBlank = (gameToOpen) => {
