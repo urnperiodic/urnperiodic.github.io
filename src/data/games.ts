@@ -684,7 +684,7 @@ const gameData: Game[] = [
   {
     title: '20 Questions',
     description: '...',
-    url: 'https://script.google.com/macros/s/AKfycbyUrnTBOG7GX18cuwZyso8g60AeCiUJ0z0jaMFtbj1ef8NnxhjMKGSUyANQnEHIhEYj9Q/exec',
+    url: 'https://script.google.com/macros/s/AKfycbwXuNNwRV5CR-8IdseKu75znUBH65pJcB6oSXW-qu3T-YdsCIeXru2_CBgmL07uSHbGWQ/exec',
     thumbnail: 'twenty_questions_flat.jpg',
     category: 'Multiplayer',
     featured: false
