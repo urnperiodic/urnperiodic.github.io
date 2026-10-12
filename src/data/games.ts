@@ -238,7 +238,7 @@ const gameData: Game[] = [
     title: 'Air Hockey',
     description: 'Airhockey! Play with a bot or play with a friend.',
     url: 'https://urnperiodic.github.io/airhockey/',
-    thumbnail: 'airhockey.svg',
+    thumbnail: 'airhockey.png',
     category: 'Multiplayer',
     featured: true,
     isOg: true
