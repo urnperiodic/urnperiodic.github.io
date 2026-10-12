@@ -1,5 +1,6 @@
 export const gameRankings: Record<string, string[]> = {
   S: [
+    'Air Hockey',
     'The Legend of Zelda Ocarina of Time',
     'The Legend of Zelda Ocarina of Time Master Quest',
     'Chrono Trigger',

@@ -6,13 +6,20 @@
 // anyone opens the website or the games portal.
 // ============================================================================
 
-export const WHATS_NEW_SENTENCE = "Check out our newest games, custom theme dropdown, and updated chat tools!";
+export const WHATS_NEW_SENTENCE = "Air Hockey is here! Play multiplayer with a friend or challenge the bot.";
 
 // Version identifier (used if you want to track modal dismissals)
-export const WHATS_NEW_VERSION = '2026-10-08';
+export const WHATS_NEW_VERSION = '2026-10-12';
 
 // Detailed changelog items (viewable in the full "View all changes" modal)
 export const WHATS_NEW_CHANGES = [
+  {
+    id: 'air-hockey',
+    icon: '🏒',
+    iconBg: 'bg-cyan-500/20 text-cyan-400',
+    title: 'Air Hockey Added',
+    description: 'Play Air Hockey multiplayer with a friend or take on the bot.'
+  },
   {
     id: 'theme-dropdown',
     icon: '🎨',

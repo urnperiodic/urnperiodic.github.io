@@ -234,6 +234,15 @@ const legacyGameData: Game[] = [
 ];
 
 const gameData: Game[] = [
+  {
+    title: 'Air Hockey',
+    description: 'Airhockey! Play with a bot or play with a friend.',
+    url: 'https://urnperiodic.github.io/airhockey/',
+    thumbnail: 'airhockey.svg',
+    category: 'Multiplayer',
+    featured: true,
+    isOg: true
+  },
   // ─────────────────────────────────────────────────────────────
   // ── AI / CHAT / DEV DEMOS ──
   // ─────────────────────────────────────────────────────────────
