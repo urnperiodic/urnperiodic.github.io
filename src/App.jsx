@@ -8008,6 +8008,14 @@ export default function App() {
                       <div>
                         <strong className="text-white block font-bold mb-0.5">{item.title}</strong>
                         <span className="text-gray-400 text-[11px] leading-relaxed">{item.description}</span>
+                        {item.actionUrl && (
+                          <a
+                            href={item.actionUrl}
+                            className="mt-2 inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-white transition-colors hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                          >
+                            {item.actionLabel || 'Play Now'}
+                          </a>
+                        )}
                       </div>
                     </div>
                   ))}

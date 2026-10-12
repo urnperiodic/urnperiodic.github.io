@@ -18,7 +18,9 @@ export const WHATS_NEW_CHANGES = [
     icon: '🏒',
     iconBg: 'bg-cyan-500/20 text-cyan-400',
     title: 'Air Hockey Added',
-    description: 'Play Air Hockey multiplayer with a friend or take on the bot.'
+    description: 'Play Air Hockey multiplayer with a friend or take on the bot.',
+    actionLabel: 'Play Now',
+    actionUrl: 'https://urnperiodic.github.io/airhockey/'
   },
   {
     id: 'theme-dropdown',
