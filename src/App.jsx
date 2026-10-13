@@ -463,9 +463,11 @@ function GoGuardianDecoyNotice({
 function WhatsNewNotificationDrop({
   onClose,
   onOpenModal,
+  onPlayGameCard,
   positionClass = "absolute top-full right-0 mt-2 w-[320px] sm:w-[420px] md:w-[480px] max-w-[calc(100vw-1.5rem)]"
 }) {
   const [isHovered, setIsHovered] = useState(false);
+  const playNowItem = WHATS_NEW_CHANGES.find((item) => item.actionGameTitle);
 
   // Auto-dismiss after 7 seconds like the GoGuardian shield notice, pause when hovering
   useEffect(() => {
@@ -514,6 +516,15 @@ function WhatsNewNotificationDrop({
       <p className="text-[9.5px] sm:text-[10px] text-[var(--text-primary)] font-medium leading-snug">
         {WHATS_NEW_SENTENCE}
       </p>
+      {playNowItem && (
+        <button
+          type="button"
+          onClick={() => onPlayGameCard(playNowItem.actionGameTitle)}
+          className="self-start mt-1 rounded-md bg-blue-600 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-white transition-colors hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 cursor-pointer"
+        >
+          {playNowItem.actionLabel || 'Play Now'}
+        </button>
+      )}
     </motion.div>
   );
 }
@@ -1345,6 +1356,21 @@ export default function App() {
   const [showWhatsNewDrop, setShowWhatsNewDrop] = useState(true);
   const [hasUnreadWhatsNew, setHasUnreadWhatsNew] = useState(true);
   const restoredSavedGame = useRef(false);
+
+  const navigateToGameCard = useCallback((gameTitle) => {
+    safeStorage.setItem(`whats_new_dismissed_${WHATS_NEW_VERSION}`, 'true');
+    setShowWhatsNewModal(false);
+    setShowWhatsNewDrop(false);
+    setHasUnreadWhatsNew(false);
+    setSelectedGame(null);
+    setFilter('all');
+    setGameCatalogMode('all');
+    safeStorage.setItem('unblocked-game-catalog-mode', 'all');
+    setHideUnranked(false);
+    setSearchQuery(gameTitle);
+    setCurrentGamePage(1);
+    pendingGameCardScroll.current = true;
+  }, []);
 
   // Single game coordination across arena, about:blank, and other tabs/windows
   const [aboutBlankActiveGame, setAboutBlankActiveGame] = useState(null);
@@ -5817,6 +5843,7 @@ export default function App() {
                     <WhatsNewNotificationDrop
                       onClose={() => setShowWhatsNewDrop(false)}
                       onOpenModal={() => setShowWhatsNewModal(true)}
+                      onPlayGameCard={navigateToGameCard}
                       positionClass="absolute top-full right-0 mt-2 w-[320px] sm:w-[420px] md:w-[480px] max-w-[calc(100vw-1.5rem)]"
                     />
                   )}
@@ -6243,6 +6270,7 @@ export default function App() {
                   <WhatsNewNotificationDrop
                     onClose={() => setShowWhatsNewDrop(false)}
                     onOpenModal={() => setShowWhatsNewModal(true)}
+                    onPlayGameCard={navigateToGameCard}
                     positionClass="absolute top-full right-0 mt-2 w-[320px] sm:w-[420px] md:w-[480px] max-w-[calc(100vw-2rem)]"
                   />
                 )}
@@ -8019,19 +8047,7 @@ export default function App() {
                         {item.actionGameTitle && (
                           <button
                             type="button"
-                            onClick={() => {
-                              safeStorage.setItem(`whats_new_dismissed_${WHATS_NEW_VERSION}`, 'true');
-                              setShowWhatsNewModal(false);
-                              setHasUnreadWhatsNew(false);
-                              setSelectedGame(null);
-                              setFilter('all');
-                              setGameCatalogMode('all');
-                              safeStorage.setItem('unblocked-game-catalog-mode', 'all');
-                              setHideUnranked(false);
-                              setSearchQuery(item.actionGameTitle);
-                              setCurrentGamePage(1);
-                              pendingGameCardScroll.current = true;
-                            }}
+                            onClick={() => navigateToGameCard(item.actionGameTitle)}
                             className="mt-2 inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-white transition-colors hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
                           >
                             {item.actionLabel || 'Play Now'}
