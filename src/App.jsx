@@ -1378,14 +1378,15 @@ export default function App() {
   const activeAboutBlankWinRef = useRef(null);
   const arenaInstanceId = useRef('arena_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8));
 
-  const broadcastGameStarted = useCallback((gameId, gameTitle, instId) => {
+  const broadcastGameStarted = useCallback((gameId, gameTitle, instId, pauseArena = false) => {
     try {
       const ch = new BroadcastChannel('urnperiodic_single_game_bus');
       ch.postMessage({
         type: 'GAME_LOADED',
         gameId,
         gameTitle,
-        instanceId: instId
+        instanceId: instId,
+        pauseArena
       });
       ch.close();
     } catch {}
@@ -1394,6 +1395,7 @@ export default function App() {
         gameId,
         gameTitle,
         instanceId: instId,
+        pauseArena,
         timestamp: Date.now()
       }));
     } catch {}
@@ -1460,7 +1462,7 @@ export default function App() {
       channel = new BroadcastChannel('urnperiodic_single_game_bus');
       channel.onmessage = (e) => {
         if (!e.data) return;
-        if (e.data.type === 'GAME_LOADED' && e.data.instanceId !== arenaInstanceId.current) {
+        if (e.data.type === 'GAME_LOADED' && e.data.pauseArena === true && e.data.instanceId !== arenaInstanceId.current) {
           // Another game was loaded in another window or tab! Unload arena game frame
           setGameFrame(null);
           setExternalActiveGame({
@@ -1477,7 +1479,7 @@ export default function App() {
       if (e.key === 'urnperiodic_active_game_load' && e.newValue) {
         try {
           const data = JSON.parse(e.newValue);
-          if (data && data.instanceId !== arenaInstanceId.current) {
+          if (data?.pauseArena === true && data.instanceId !== arenaInstanceId.current) {
             setGameFrame(null);
             setExternalActiveGame({
               id: data.gameId,
@@ -1538,7 +1540,12 @@ export default function App() {
     // Enforce only one game loaded: broadcast to any other windows/tabs to unload their game
     setExternalActiveGame(null);
     arenaInstanceId.current = 'arena_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
-    broadcastGameStarted(selectedGame.id, selectedGame.title, arenaInstanceId.current);
+    broadcastGameStarted(
+      selectedGame.id,
+      selectedGame.title,
+      arenaInstanceId.current,
+      aboutBlankActiveGame === selectedGame.id
+    );
 
     const cachedFrame = gameHtmlCache.get(selectedGame.url);
     if (cachedFrame) {
@@ -1829,11 +1836,7 @@ export default function App() {
   }, []);
 
   const [disableAboutBlankPause, setDisableAboutBlankPause] = useState(() => {
-    try {
-      return safeStorage.getItem('unblocked-disable-about-blank-pause') === 'true';
-    } catch {
-      return false;
-    }
+    return safeSessionStorage.getItem('unblocked-disable-about-blank-pause') === 'true';
   });
 
   const turnOffAboutBlankScreen = useCallback(() => {
@@ -1857,9 +1860,7 @@ export default function App() {
   const toggleDisableAboutBlankPause = (value) => {
     const next = typeof value === 'boolean' ? value : !disableAboutBlankPause;
     setDisableAboutBlankPause(next);
-    try {
-      safeStorage.setItem('unblocked-disable-about-blank-pause', String(next));
-    } catch {}
+    safeSessionStorage.setItem('unblocked-disable-about-blank-pause', String(next));
     if (next) {
       turnOffAboutBlankScreen();
     }
@@ -1875,8 +1876,13 @@ export default function App() {
 
   const openGameInAboutBlank = (gameToOpen) => {
     if (!gameToOpen) return;
-    recordRecentlyPlayed(gameToOpen.id);
+    const win = window.open("about:blank", "_blank");
+    if (!win) {
+      alert("Popup blocked. Allow popups for this site.");
+      return;
+    }
 
+    recordRecentlyPlayed(gameToOpen.id);
     setSelectedGame(gameToOpen);
     if (!disableAboutBlankPause) {
       setAboutBlankActiveGame(gameToOpen.id);
@@ -1892,12 +1898,6 @@ export default function App() {
           setGameFrame(f);
         });
       }
-    }
-
-    const win = window.open("about:blank", "_blank");
-    if (!win) {
-      alert("Popup blocked. Allow popups for this site.");
-      return;
     }
 
     const classroomFavicon = "https://ssl.gstatic.com/classroom/favicon.png";
@@ -7863,7 +7863,7 @@ export default function App() {
                               onChange={(e) => toggleDisableAboutBlankPause(e.target.checked)}
                               className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
                             />
-                            <span>Never show this pause screen again</span>
+                            <span>Don't show this pause screen again this session</span>
                           </label>
 
                         </div>
@@ -7923,7 +7923,7 @@ export default function App() {
                               onChange={(e) => toggleDisableAboutBlankPause(e.target.checked)}
                               className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
                             />
-                            <span>Never show this pause screen again</span>
+                            <span>Don't show this pause screen again this session</span>
                           </label>
 
                         </div>
