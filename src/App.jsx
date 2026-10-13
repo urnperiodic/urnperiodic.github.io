@@ -1340,6 +1340,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
   const [gameFrame, setGameFrame] = useState(null);
+  const pendingGameCardScroll = useRef(false);
   const [showWhatsNewModal, setShowWhatsNewModal] = useState(false);
   const [showWhatsNewDrop, setShowWhatsNewDrop] = useState(true);
   const [hasUnreadWhatsNew, setHasUnreadWhatsNew] = useState(true);
@@ -3737,6 +3738,12 @@ export default function App() {
     (safeGamePage - 1) * GAMES_PER_PAGE,
     safeGamePage * GAMES_PER_PAGE
   );
+
+  useEffect(() => {
+    if (!pendingGameCardScroll.current || !paginatedGames.some((game) => game.title === 'Air Hockey')) return;
+    document.getElementById('air-hockey-game-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    pendingGameCardScroll.current = false;
+  }, [paginatedGames]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -7183,6 +7190,7 @@ export default function App() {
                     return (
                       <motion.div 
                         key={game.id}
+                        id={game.title === 'Air Hockey' ? 'air-hockey-game-card' : undefined}
                         initial={animationsEnabled ? { opacity: 0 } : false}
                         animate={{ opacity: 1 }}
                         exit={animationsEnabled ? { opacity: 0 } : undefined}
@@ -8008,13 +8016,26 @@ export default function App() {
                       <div>
                         <strong className="text-white block font-bold mb-0.5">{item.title}</strong>
                         <span className="text-gray-400 text-[11px] leading-relaxed">{item.description}</span>
-                        {item.actionUrl && (
-                          <a
-                            href={item.actionUrl}
+                        {item.actionGameTitle && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              safeStorage.setItem(`whats_new_dismissed_${WHATS_NEW_VERSION}`, 'true');
+                              setShowWhatsNewModal(false);
+                              setHasUnreadWhatsNew(false);
+                              setSelectedGame(null);
+                              setFilter('all');
+                              setGameCatalogMode('all');
+                              safeStorage.setItem('unblocked-game-catalog-mode', 'all');
+                              setHideUnranked(false);
+                              setSearchQuery(item.actionGameTitle);
+                              setCurrentGamePage(1);
+                              pendingGameCardScroll.current = true;
+                            }}
                             className="mt-2 inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-white transition-colors hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
                           >
                             {item.actionLabel || 'Play Now'}
-                          </a>
+                          </button>
                         )}
                       </div>
                     </div>
