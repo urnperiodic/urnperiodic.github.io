@@ -20,7 +20,7 @@ export const WHATS_NEW_CHANGES = [
     title: 'Air Hockey Added',
     description: 'Play Air Hockey multiplayer with a friend or take on the bot.',
     actionLabel: 'Play Now',
-    actionUrl: 'https://urnperiodic.github.io/airhockey/'
+    actionUrl: 'https://ciassroonn.github.io/air/'
   },
   {
     id: 'theme-dropdown',
