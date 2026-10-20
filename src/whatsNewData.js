@@ -6,13 +6,22 @@
 // anyone opens the website or the games portal.
 // ============================================================================
 
-export const WHATS_NEW_SENTENCE = "Air Hockey is here! Play multiplayer with a friend or challenge the bot.";
+export const WHATS_NEW_SENTENCE = "Movies and TV shows actually work now! Stream your favorite movies and shows directly.";
 
 // Version identifier (used if you want to track modal dismissals)
-export const WHATS_NEW_VERSION = '2026-10-12';
+export const WHATS_NEW_VERSION = '2026-10-20';
 
 // Detailed changelog items (viewable in the full "View all changes" modal)
 export const WHATS_NEW_CHANGES = [
+  {
+    id: 'movies-tv-shows',
+    icon: '🎬',
+    iconBg: 'bg-amber-500/20 text-amber-400',
+    title: 'Movies & TV Shows Actually Work Now',
+    description: 'Movies and TV shows actually work now! Click below to stream movies and TV shows directly.',
+    actionLabel: 'Go Watch Movies / TV Shows',
+    actionFilter: 'moremovies'
+  },
   {
     id: 'air-hockey',
     icon: '🏒',

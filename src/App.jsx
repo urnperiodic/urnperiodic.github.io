@@ -469,7 +469,7 @@ function WhatsNewNotificationDrop({
   positionClass = "absolute top-full right-0 mt-2 w-[320px] sm:w-[420px] md:w-[480px] max-w-[calc(100vw-1.5rem)]"
 }) {
   const [isHovered, setIsHovered] = useState(false);
-  const playNowItem = WHATS_NEW_CHANGES.find((item) => item.actionGameTitle);
+  const actionItem = WHATS_NEW_CHANGES.find((item) => item.actionFilter || item.actionGameTitle || item.actionLabel);
 
   // Auto-dismiss after 7 seconds like the GoGuardian shield notice, pause when hovering
   useEffect(() => {
@@ -518,13 +518,13 @@ function WhatsNewNotificationDrop({
       <p className="text-[9.5px] sm:text-[10px] text-[var(--text-primary)] font-medium leading-snug">
         {WHATS_NEW_SENTENCE}
       </p>
-      {playNowItem && (
+      {actionItem && (
         <button
           type="button"
-          onClick={() => onPlayGameCard(playNowItem.actionGameTitle)}
+          onClick={() => onPlayGameCard(actionItem)}
           className="self-start mt-1 rounded-md bg-blue-600 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-white transition-colors hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 cursor-pointer"
         >
-          {playNowItem.actionLabel || 'Play Now'}
+          {actionItem.actionLabel || 'Go Watch Movies / TV Shows'}
         </button>
       )}
     </motion.div>
@@ -1359,19 +1359,39 @@ export default function App() {
   const [hasUnreadWhatsNew, setHasUnreadWhatsNew] = useState(true);
   const restoredSavedGame = useRef(false);
 
-  const navigateToGameCard = useCallback((gameTitle) => {
+  const navigateToGameCard = useCallback((actionTarget) => {
     safeStorage.setItem(`whats_new_dismissed_${WHATS_NEW_VERSION}`, 'true');
     setShowWhatsNewModal(false);
     setShowWhatsNewDrop(false);
     setHasUnreadWhatsNew(false);
-    setSelectedGame(null);
-    setFilter('all');
-    setGameCatalogMode('all');
-    safeStorage.setItem('unblocked-game-catalog-mode', 'all');
-    setHideUnranked(false);
-    setSearchQuery(gameTitle);
-    setCurrentGamePage(1);
-    pendingGameCardScroll.current = true;
+
+    let target = actionTarget;
+    if (typeof target === 'object' && target !== null) {
+      if (target.actionFilter) {
+        setSelectedGame(null);
+        setFilter(target.actionFilter);
+        return;
+      }
+      if (target.actionGameTitle) {
+        target = target.actionGameTitle;
+      }
+    }
+
+    if (typeof target === 'string') {
+      if (['movies', 'moremovies', 'youtube', 'chat', 'lobbychat', 'download', 'info'].includes(target)) {
+        setSelectedGame(null);
+        setFilter(target);
+        return;
+      }
+      setSelectedGame(null);
+      setFilter('all');
+      setGameCatalogMode('all');
+      safeStorage.setItem('unblocked-game-catalog-mode', 'all');
+      setHideUnranked(false);
+      setSearchQuery(target);
+      setCurrentGamePage(1);
+      pendingGameCardScroll.current = true;
+    }
   }, []);
 
   // Single game coordination across arena, about:blank, and other tabs/windows
@@ -5150,7 +5170,7 @@ export default function App() {
                     </div>
 
                     <p className="mt-2 text-[11px] leading-relaxed text-neutral-200 font-semibold">
-                      The movies/tv shows/anime button does not work at school as Iboss blocks all the servers from working.
+                      Movies and TV shows actually work now! You can watch full movies, TV series, and shows
                     </p>
 
                     <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[10px]">
@@ -8119,13 +8139,13 @@ export default function App() {
                       <div>
                         <strong className="text-white block font-bold mb-0.5">{item.title}</strong>
                         <span className="text-gray-400 text-[11px] leading-relaxed">{item.description}</span>
-                        {item.actionGameTitle && (
+                        {(item.actionFilter || item.actionGameTitle || item.actionLabel) && (
                           <button
                             type="button"
-                            onClick={() => navigateToGameCard(item.actionGameTitle)}
-                            className="mt-2 inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-white transition-colors hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                            onClick={() => navigateToGameCard(item)}
+                            className="mt-2 inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-white transition-colors hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 cursor-pointer"
                           >
-                            {item.actionLabel || 'Play Now'}
+                            {item.actionLabel || (item.actionFilter === 'movies' ? 'Go Watch Movies / TV Shows' : 'Play Now')}
                           </button>
                         )}
                       </div>
