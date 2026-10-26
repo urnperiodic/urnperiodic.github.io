@@ -234,6 +234,15 @@
           </button>
         </div>
 
+        <!-- Clipboard image attachment preview -->
+        <div id="image-paste-preview" class="hidden surface-elev border bd rounded-xl p-2 mb-2" role="status" aria-live="polite">
+          <div class="flex items-center gap-3">
+            <img id="image-paste-thumb" alt="Pasted image preview" class="w-16 h-16 object-contain rounded-lg surface-deep" />
+            <div class="min-w-0 flex-1"><p class="text-[11px] font-bold txt">Image attached</p><p id="image-paste-info" class="text-[10px] txt-mute truncate"></p></div>
+            <button id="image-paste-remove" type="button" aria-label="Remove attached image" class="p-2 txt-mute hover:txt rounded-lg">✕</button>
+          </div>
+        </div>
+        <p id="image-paste-status" class="text-[10px] txt-mute mb-1" aria-live="polite">Paste an image with Ctrl+V / ⌘V</p>
         <!-- input row -->
         <form id="compose-form" class="flex items-center gap-1.5 surface-elev border bd rounded-xl p-1 transition-all focus-within:accent-bd">
           <input id="compose-input" type="text" placeholder="⚠️ Set nickname" maxlength="500"
@@ -540,6 +549,9 @@ const state = {
   messages: [],
   chatName: savedName,
   replyTo: null,
+  pastedImage: null,
+  imageProcessing: false,
+  sendingMessage: false,
   searchFilter: '',
   customChannels: [],
   localChannels: safeParse('local_custom_channels', []),
@@ -1439,6 +1451,7 @@ function renderMessages(){
         </div>
         ${replyHeaderHtml}
         ${textContentHtml}
+        ${safeChatImageUrl(m.imageUrl) ? `<img src="${esc(safeChatImageUrl(m.imageUrl))}" alt="Image shared by ${esc(m.name || 'anonymous')}" loading="lazy" decoding="async" class="mt-1 max-w-full rounded-xl border bd object-contain" style="max-width:min(100%,420px);max-height:360px" />` : ''}
 
         <!-- Message Action Bar (Copy + Reply + Delete own) -->
         <div class="opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-1.5 mt-1 text-[9px] transition-opacity">
@@ -1723,6 +1736,7 @@ function switchChannel(id){
     openAuthModal('signin');
     return;
   }
+  clearPastedImage();
   state.activeChannel = target;
   state.searchFilter=''; $('filter-input').value='';
   subscribeChannel();
@@ -1733,13 +1747,102 @@ function switchChannel(id){
    ============================================================ */
 // Note: Handled in active channels onSnapshot listener above
 
+/* ---------- Clipboard image attachments ---------- */
+// Inline images use the existing encrypted imageUrl field: no new backend required.
+// Hex encryption expands data URLs, so keep the final image under 180 KB.
+const MAX_PASTED_IMAGE_BYTES = 180 * 1024;
+let imagePasteRevision = 0;
+
+function clearPastedImage() {
+  imagePasteRevision++;
+  state.pastedImage = null;
+  state.imageProcessing = false;
+  $('image-paste-preview').classList.add('hidden');
+  $('image-paste-thumb').removeAttribute('src');
+  $('image-paste-info').textContent = '';
+  $('image-paste-status').textContent = 'Paste an image with Ctrl+V / ⌘V';
+  setSendState();
+}
+
+async function preparePastedImage(file) {
+  if (file.size > 25 * 1024 * 1024) throw new Error('Image too large. Maximum source size is 25 MB.');
+  if (!/^image\/(png|jpe?g|webp|gif|bmp|avif)$/i.test(file.type)) {
+    throw new Error('Paste a PNG, JPEG, WebP, GIF, BMP or AVIF image.');
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('This image could not be read.'));
+      image.src = url;
+    });
+    let scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement('canvas');
+    for (let attempt = 0; attempt < 9; attempt++) {
+      canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Image processing is unavailable in this browser.');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/webp', Math.max(0.45, 0.85 - attempt * 0.05));
+      const bytes = Math.ceil((dataUrl.length - dataUrl.indexOf(',') - 1) * 3 / 4);
+      if (bytes <= MAX_PASTED_IMAGE_BYTES) {
+        return { dataUrl, width: canvas.width, height: canvas.height, bytes };
+      }
+      scale *= 0.78;
+    }
+    throw new Error('Image is too complex. Try a smaller image or crop.');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function handleImagePaste(event) {
+  const items = Array.from(event.clipboardData?.items || []);
+  const file = items.find(item => item.kind === 'file' && item.type.startsWith('image/'))?.getAsFile()
+    || Array.from(event.clipboardData?.files || []).find(file => file.type.startsWith('image/'));
+  if (!file) return; // Ordinary text pasting remains native.
+  event.preventDefault();
+  if (state.sendingMessage) return;
+  if (isCurrentLocked()) { toast('Unlock this channel before attaching an image.'); return; }
+  const revision = ++imagePasteRevision;
+  state.imageProcessing = true;
+  $('image-paste-status').textContent = 'Preparing pasted image…';
+  setSendState();
+  try {
+    const image = await preparePastedImage(file);
+    if (revision !== imagePasteRevision) return;
+    state.pastedImage = image;
+    $('image-paste-thumb').src = image.dataUrl;
+    $('image-paste-info').textContent = `${image.width} × ${image.height} · ${Math.ceil(image.bytes / 1024)} KB`;
+    $('image-paste-preview').classList.remove('hidden');
+    $('image-paste-status').textContent = 'Ready to send · paste again to replace · GIFs send as still images';
+  } catch (error) {
+    if (revision === imagePasteRevision) {
+      toast(error.message || 'Could not paste this image.');
+      $('image-paste-status').textContent = 'Could not prepare image. Try another image.';
+    }
+  } finally {
+    if (revision === imagePasteRevision) {
+      state.imageProcessing = false;
+      setSendState();
+    }
+  }
+}
+
+function safeChatImageUrl(url) {
+  return typeof url === 'string' && /^data:image\/(?:png|jpeg|webp|gif);base64,[a-z0-9+/=]+$/i.test(url) ? url : '';
+}
+
 /* ============================================================
    SEND MESSAGE
    ============================================================ */
 function setSendState(){
   const btn = $('send-btn');
   const validName = (state.chatName || '').trim().length >= 2;
-  const hasContent = $('compose-input').value.trim() || state.mediaUrl;
+  const hasContent = $('compose-input').value.trim() || state.pastedImage;
+  btn.disabled = !validName || !hasContent || state.imageProcessing || state.sendingMessage;
   const form = $('compose-form');
   const input = $('compose-input');
 
@@ -1747,7 +1850,7 @@ function setSendState(){
   input.placeholder = validName ? 'Write message… (type @ to mention)' : '⚠️ Enter nickname to speak (do not use real name)';
   form.classList.toggle('opacity-60', !validName);
 
-  if(validName && hasContent){
+  if(!btn.disabled){
     btn.className = "p-2 rounded-lg transition-all flex items-center justify-center shrink-0 accent-bg hover:scale-105 active:scale-95 cursor-pointer font-bold shadow";
   } else {
     btn.className = "p-2 rounded-lg transition-all flex items-center justify-center shrink-0 bg-neutral-700 text-neutral-400";
@@ -1755,6 +1858,11 @@ function setSendState(){
 }
 
 async function sendMessage(){
+  if (state.sendingMessage || state.imageProcessing) return;
+  if (isCurrentLocked()) { toast('Unlock this channel before sending.'); return; }
+  state.sendingMessage = true;
+  setSendState();
+  try {
   const c = currentChannel();
 
   const currentName = (state.chatName || '').trim();
@@ -1768,13 +1876,16 @@ async function sendMessage(){
     return;
   }
   const text = $('compose-input').value.trim();
-  if(!text) return;
+  const imageUrl = state.pastedImage?.dataUrl || null;
+  const imageRevision = imagePasteRevision;
+  if(!text && !imageUrl) return;
 
   const ts = Date.now();
   const replyTarget = state.replyTo ? { name: state.replyTo.name, text: state.replyTo.text } : null;
 
   // Always encrypt payload client-side before dispatching
   const encryptedText = await encryptPayload(text, c.id);
+  const encryptedImage = imageUrl ? await encryptPayload(imageUrl, c.id) : null;
 
   const myClientId = getClientId();
   const myAuthUid = auth.currentUser?.uid || myClientId;
@@ -1786,6 +1897,7 @@ async function sendMessage(){
     senderId: myClientId,
     isRegistered: false,
     text: text,
+    imageUrl: imageUrl,
     replyTo: replyTarget,
     isEncrypted: true,
     timestamp: ts,
@@ -1798,11 +1910,17 @@ async function sendMessage(){
   // Cache locally with encrypted payload
   const localEncryptedMsg = {
     ...msgData,
-    text: encryptedText
+    text: encryptedText,
+    imageUrl: encryptedImage
   };
   const locals = getLocalMessages(c.id);
   const validLocals = [...locals, localEncryptedMsg].filter(m => (ts - (m.timestamp || ts)) < MESSAGE_TTL_MS);
-  localStorage.setItem(`local_messages_${c.id}`, JSON.stringify(validLocals.slice(-100)));
+  try {
+    localStorage.setItem(`local_messages_${c.id}`, JSON.stringify(validLocals.slice(-100)));
+  } catch (cacheError) {
+    console.warn('Local message cache is full:', cacheError);
+    toast('Local cache is full; still attempting to send online.');
+  }
   if (c.id === 'general') {
     localStorage.setItem('lobby-chat-notification', String(ts));
   }
@@ -1815,6 +1933,7 @@ async function sendMessage(){
   // Clear inputs and active reply target
   clearReplyTarget();
   $('compose-input').value='';
+  if (imageRevision === imagePasteRevision) clearPastedImage();
   setSendState();
   $('compose-input').focus();
 
@@ -1827,6 +1946,7 @@ async function sendMessage(){
       senderId: msgData.senderId,
       isRegistered: false,
       text: encryptedText,
+      imageUrl: encryptedImage,
       replyTo: replyTarget,
       isEncrypted: true,
       timestamp: ts,
@@ -1838,6 +1958,14 @@ async function sendMessage(){
     }
   } catch(err) {
     console.warn('Firestore send failed (local kept):', err);
+    toast('Not synced online. Your message is kept locally where storage is available.');
+  }
+  } catch (error) {
+    console.error('Message send error:', error);
+    toast('Could not send this message. Please try again.');
+  } finally {
+    state.sendingMessage = false;
+    setSendState();
   }
 }
 
@@ -2033,6 +2161,8 @@ function init(){
 
   // Compose & Send
   safeOn('compose-form', 'submit', (e)=>{ e.preventDefault(); sendMessage(); });
+  safeOn('compose-input', 'paste', handleImagePaste);
+  safeOn('image-paste-remove', 'click', clearPastedImage);
   safeOn('compose-input', 'input', setSendState);
   safeOn('compose-input', 'keydown', (e)=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMessage(); }});
   safeOn('reply-cancel-btn', 'click', clearReplyTarget);
@@ -2111,5 +2241,6 @@ if (document.readyState === 'loading') {
   init();
 }
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
