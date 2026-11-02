@@ -4936,7 +4936,7 @@ export default function App() {
                     style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
                   >
                     <span className="text-neutral-400 font-bold" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 'bold' }}>Leadcreator:</span>
-                    <span className="font-bold text-[var(--text-primary)]" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>Thorne Thompson (TT)</span>
+                    <span className="font-bold text-[var(--text-primary)]" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>TT/Urnperiodic</span>
                   </span>
                   <span 
                     className="text-[8px] leading-[11px] tracking-tight flex items-center gap-1 transition-colors"
