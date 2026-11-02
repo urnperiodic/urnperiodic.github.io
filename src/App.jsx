@@ -365,7 +365,6 @@ const decoyOptions = [
   { value: 'gmail', label: 'Inbox', labelLong: 'Inbox - JCPS', icon: 'https://ssl.gstatic.com/ui/v1/icons/mail/images/favicon_gmail_2026_v2.ico' },
   { value: 'duolingo', label: 'Lingo', labelLong: 'Duolingo', icon: 'https://www.google.com/s2/favicons?sz=64&domain=duolingo.com' },
   { value: 'ixl', label: 'IXL', labelLong: 'IXL Learning', icon: 'https://www.google.com/s2/favicons?sz=64&domain=ixl.com' }
-  { value: 'Deltamath', label: 'Deltamath', labelLong: 'Deltamath', icon: 'https://www.deltamath.com/favicon-32x32.png' }
 ];
 
 const getDecoyTitle = (type, customTitles = {}) => {
@@ -380,7 +379,6 @@ const getDecoyTitle = (type, customTitles = {}) => {
   if (type === 'gmail') return "Inbox - Jersey City Public Schools";
   if (type === 'duolingo') return "Duolingo - Learn a language for free";
   if (type === 'ixl') return "IXL | Math, Language Arts, Science, Social Studies, and Spanish";
-  if (type === 'Deltamath') return "Deltamath";
   return "Urnperiodic StudyTools";
 };
 
