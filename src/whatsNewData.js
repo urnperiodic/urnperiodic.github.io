@@ -6,7 +6,7 @@
 // anyone opens the website or the games portal.
 // ============================================================================
 
-export const WHATS_NEW_SENTENCE = "Movies and TV shows actually work now! Stream your favorite movies and shows directly.";
+export const WHATS_NEW_SENTENCE = "Updated AI pass and dm me if u want it (Depends on if I trust u or not) Also updated lead creator name so people actually know who made it.";
 
 // Version identifier (used if you want to track modal dismissals)
 export const WHATS_NEW_VERSION = '2026-10-20';
