@@ -2324,7 +2324,7 @@ export default function App() {
   const handleAdminPasswordSubmit = (e) => {
     if (e) e.preventDefault();
     const val = adminPasswordInput.trim();
-    if (val === 'password1') {
+    if (val === '12345') {
       setIsAdminUnlocked(true);
       setAdminError('');
       setAdminPasswordInput('');
