@@ -33,6 +33,15 @@ const legacyGameData: Game[] = [
     featured: true,
     isOg: true
   },
+    {
+    title: 'Quoridor',
+    description: 'A strategic board game where players try to reach the opposite side of the board while blocking opponents.',
+    url: 'https://urnperiodic.github.io/Quoridor-',
+    thumbnail: 'Quoridor.png',
+    category: 'Solo or Multiplayer.',
+    featured: true,
+    isOg: true
+  },
   {
     title: 'Beepbox - A song maker',
     description: 'make cool songs',
@@ -402,12 +411,12 @@ const gameData: Game[] = [
     isOg: true
   },
   {
-    title: 'Bloons TD6 copy',
-    description: 'A knockoff',
-    url: 'https://iims-sucksasaschool.github.io/BTD6/',
+    title: 'Bloons TD6 and BTD Battles 2 Copy',
+    description: 'A good knockoff',
+    url: 'https://urnperiodic.github.io/BTD6/',
     thumbnail: 'bloons.jpg',
     category: 'Solo or Multiplayer.',
-    featured: false,
+    featured: true,
     isOg: true
   },
   {
