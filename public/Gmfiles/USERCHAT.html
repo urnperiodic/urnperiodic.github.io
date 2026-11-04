@@ -119,11 +119,11 @@
     <section class="flex-1 flex flex-col h-full overflow-hidden surface">
 
       <!-- HEADER -->
-      <header class="px-3 py-2 border-b bd surface-deep flex items-center justify-between gap-2 shrink-0">
-        <div class="flex items-center gap-2 min-w-0">
+      <header class="px-2.5 py-1.5 sm:px-3 sm:py-2 border-b bd surface-deep flex items-center justify-between gap-1.5 shrink-0">
+        <div class="flex items-center gap-1.5 min-w-0">
           <span class="txt-mute font-extrabold text-[11px] hidden md:inline">#</span>
-          <h1 id="active-channel-name" class="text-[11px] font-black txt tracking-tight flex items-center gap-1 uppercase truncate"></h1>
-          <div id="channel-badge-container"></div>
+          <h1 id="active-channel-name" class="text-[11px] font-black txt tracking-tight flex items-center gap-1 uppercase truncate max-w-[80px] sm:max-w-[160px]"></h1>
+          <div id="channel-badge-container" class="hidden md:inline-flex items-center"></div>
         </div>
 
         <div class="hidden sm:flex items-center gap-2 shrink-0">
@@ -141,51 +141,51 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-1.5 shrink-0">
+        <div class="flex items-center gap-1 shrink-0">
           <!-- Delete All My Messages Button -->
           <button id="delete-my-messages-btn" type="button"
-            class="surface-elev border border-rose-500/30 hover:border-rose-500/60 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm shrink-0"
+            class="surface-elev border border-rose-500/30 hover:border-rose-500/60 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm shrink-0"
             title="Delete all messages you have sent">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-400 shrink-0"></i>
+            <i data-lucide="trash-2" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-rose-400 shrink-0"></i>
           </button>
 
           <div id="custom-channel-dropdown" class="md:hidden relative shrink-0">
             <button id="channel-dropdown-btn" type="button"
-              class="surface-elev border bd py-1 px-2.5 rounded-lg text-[10px] font-extrabold uppercase outline-none accent flex items-center gap-1.5 cursor-pointer hover:bg-white/5 active:scale-95 transition-all shadow-sm">
-              <span id="channel-dropdown-current" class="truncate max-w-[95px] font-mono">#GENERAL</span>
-              <i data-lucide="chevron-down" class="w-3 h-3 txt-mute shrink-0"></i>
+              class="surface-elev border bd py-0.5 px-2 sm:py-1 sm:px-2.5 rounded-lg text-[9.5px] sm:text-[10px] font-extrabold uppercase outline-none accent flex items-center gap-1 cursor-pointer hover:bg-white/5 active:scale-95 transition-all shadow-sm">
+              <span id="channel-dropdown-current" class="truncate max-w-[65px] sm:max-w-[95px] font-mono">#GENERAL</span>
+              <i data-lucide="chevron-down" class="w-2.5 h-2.5 sm:w-3 sm:h-3 txt-mute shrink-0"></i>
             </button>
-            <div id="channel-dropdown-menu" class="hidden absolute right-0 top-full mt-1.5 w-60 surface-elev border bd rounded-xl shadow-2xl p-1.5 z-50 animate-fade-in flex-col gap-1">
+            <div id="channel-dropdown-menu" class="hidden absolute right-0 top-full mt-1 w-48 sm:w-56 max-w-[calc(100vw-12px)] surface-elev border bd rounded-xl shadow-2xl p-1 z-50 animate-fade-in flex-col gap-1 overflow-hidden">
             </div>
           </div>
-          <button id="theme-trigger-mobile" class="md:hidden p-1.5 hover:bg-white/10 txt-dim rounded transition-all cursor-pointer" title="Theme">
-            <i data-lucide="palette" class="w-4 h-4"></i>
+          <button id="theme-trigger-mobile" class="md:hidden w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center hover:bg-white/10 txt-dim rounded-lg transition-all cursor-pointer shrink-0" title="Theme">
+            <i data-lucide="palette" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
           </button>
         </div>
       </header>
 
       <!-- NICKNAME BAR -->
-      <div id="nickname-bar" class="flex items-center justify-between p-2 px-3 border-b bd bg-amber-500/10 border-amber-500/20 shrink-0 transition-all">
-        <span class="text-[9px] sm:text-[10px] uppercase font-black text-amber-400 tracking-wider">Enter a Nickname to speak, DO NOT USE YOUR REAL NAME</span>
-        <div class="flex items-center gap-1.5 shrink-0 ml-2">
-          <input id="nickname-mobile" type="text" placeholder="Name" minlength="2" maxlength="16"
-            class="surface-deep text-[11px] px-2.5 py-1 rounded-lg outline-none border bd focus:accent-bd text-right max-w-[120px] font-extrabold txt placeholder-mute" />
-          <button id="nickname-save-btn" type="button" class="accent-bg text-[10px] font-extrabold px-2.5 py-1 rounded-lg transition-all active:scale-95 cursor-pointer">OK</button>
+      <div id="nickname-bar" class="flex items-center justify-between p-1.5 px-2.5 border-b bd bg-amber-500/10 border-amber-500/20 shrink-0 transition-all text-left">
+        <span class="text-[8.5px] sm:text-[9.5px] uppercase font-black text-amber-400 tracking-tight truncate flex-1 min-w-0">Set nickname (no real name)</span>
+        <div class="flex items-center gap-1 shrink-0 ml-1.5">
+          <input id="nickname-mobile" type="text" placeholder="Nick" minlength="2" maxlength="16"
+            class="surface-deep text-[10px] px-2 py-0.5 rounded-md outline-none border bd focus:accent-bd text-right w-16 sm:w-24 font-bold txt placeholder-mute" />
+          <button id="nickname-save-btn" type="button" class="accent-bg text-[9px] font-black px-2 py-0.5 rounded-md transition-all active:scale-95 cursor-pointer">OK</button>
         </div>
       </div>
 
       <!-- DELETE / EPHEMERAL NOTICE BANNER -->
-      <div id="section-tip-banner" class="flex items-center justify-between p-2 px-3 border-b bd bg-blue-500/10 border-blue-500/20 shrink-0 text-left transition-all">
-        <div class="flex items-center gap-2 min-w-0 flex-1">
-          <div class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
-            <i data-lucide="info" class="w-3.5 h-3.5"></i>
+      <div id="section-tip-banner" class="flex items-center justify-between p-1.5 px-2.5 border-b bd bg-blue-500/10 border-blue-500/20 shrink-0 text-left transition-all">
+        <div class="flex items-center gap-1.5 min-w-0 flex-1">
+          <div class="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+            <i data-lucide="info" class="w-3 h-3"></i>
           </div>
-          <p class="text-[10px] sm:text-[11px] text-slate-200 leading-tight">
-            <strong class="text-blue-300 font-bold">Want messages deleted?</strong> #general is permanent. Switch to <button id="tip-switch-ephemeral" type="button" class="text-rose-400 font-bold underline hover:text-rose-300 cursor-pointer">#1h-ephemeral (Auto-Delete Section)</button>, click 🗑️ on any message, or <button id="tip-delete-all-mine" type="button" class="text-rose-400 font-bold underline hover:text-rose-300 cursor-pointer">delete all your messages</button>.
+          <p class="text-[9.5px] text-slate-200 leading-tight truncate sm:whitespace-normal">
+            <strong class="text-blue-300 font-bold">Ephemeral room?</strong> Switch to <button id="tip-switch-ephemeral" type="button" class="text-rose-400 font-bold underline hover:text-rose-300 cursor-pointer">#1h-ephemeral</button> or <button id="tip-delete-all-mine" type="button" class="text-rose-400 font-bold underline hover:text-rose-300 cursor-pointer">delete all messages</button>.
           </p>
         </div>
-        <button id="tip-banner-close" type="button" class="p-1 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg shrink-0 ml-2 cursor-pointer" title="Dismiss notice">
-          <i data-lucide="x" class="w-3.5 h-3.5"></i>
+        <button id="tip-banner-close" type="button" class="p-0.5 text-slate-400 hover:text-white hover:bg-white/10 rounded shrink-0 ml-1 cursor-pointer" title="Dismiss notice">
+          <i data-lucide="x" class="w-3 h-3"></i>
         </button>
       </div>
 
@@ -215,40 +215,50 @@
       </div>
 
       <!-- MESSAGES -->
-      <div id="messages-panel" class="flex-1 overflow-y-auto px-3 py-3 space-y-3 scrollbar-thin"></div>
+      <div class="flex-1 relative overflow-hidden flex flex-col">
+        <div id="messages-panel" class="flex-1 overflow-y-auto px-2 py-2 sm:px-3 sm:py-3 space-y-1.5 sm:space-y-2.5 scrollbar-thin"></div>
+
+        <!-- SCROLL TO BOTTOM BUTTON (Jumps to bottom if user scrolled up) -->
+        <button id="scroll-to-bottom-btn" type="button"
+          class="hidden absolute bottom-3 right-3 z-30 px-2.5 py-1 rounded-full surface-elev border bd text-[9.5px] font-bold accent shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-1 cursor-pointer select-none bg-black/85 backdrop-blur-md"
+          title="Jump to latest messages">
+          <i data-lucide="arrow-down" class="w-3 h-3 text-[var(--accent)]"></i>
+          <span>Latest</span>
+        </button>
+      </div>
 
       <!-- COMPOSER -->
-      <footer id="composer" class="p-2.5 border-t bd surface-deep shrink-0">
+      <footer id="composer" class="p-2 sm:p-2.5 border-t bd surface-deep shrink-0">
 
         <!-- REPLY PREVIEW BANNER -->
-        <div id="reply-preview-bar" class="hidden items-center justify-between p-2 rounded-xl surface-elev border accent-bd mb-2 text-left animate-fade-in">
+        <div id="reply-preview-bar" class="hidden items-center justify-between p-1.5 sm:p-2 rounded-xl surface-elev border accent-bd mb-1.5 text-left animate-fade-in">
           <div class="min-w-0 flex-1 border-l-2 accent-bd pl-2">
-            <span class="text-[9.5px] font-bold txt-mute block uppercase tracking-wider flex items-center gap-1">
-              <i data-lucide="reply" class="w-3 h-3 accent"></i>
+            <span class="text-[9px] font-bold txt-mute block uppercase tracking-wider flex items-center gap-1">
+              <i data-lucide="reply" class="w-2.5 h-2.5 accent"></i>
               <span>Replying to <span id="reply-target-name" class="accent font-extrabold font-mono">@User</span></span>
             </span>
-            <p id="reply-target-text" class="text-[11px] txt-dim truncate font-mono mt-0.5"></p>
+            <p id="reply-target-text" class="text-[10.5px] txt-dim truncate font-mono mt-0.5"></p>
           </div>
-          <button id="reply-cancel-btn" type="button" class="p-1 txt-mute hover:txt hover:bg-white/10 rounded-lg cursor-pointer shrink-0 ml-2" title="Cancel Reply">
-            <i data-lucide="x" class="w-4 h-4"></i>
+          <button id="reply-cancel-btn" type="button" class="p-1 txt-mute hover:txt hover:bg-white/10 rounded-lg cursor-pointer shrink-0 ml-1.5" title="Cancel Reply">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
           </button>
         </div>
 
         <!-- Clipboard image attachment preview -->
         <div id="image-paste-preview" class="hidden surface-elev border bd rounded-xl p-2 mb-2" role="status" aria-live="polite">
           <div class="flex items-center gap-3">
-            <img id="image-paste-thumb" alt="Pasted image preview" class="w-16 h-16 object-contain rounded-lg surface-deep" />
+            <img id="image-paste-thumb" alt="Pasted image preview" class="w-14 h-14 object-contain rounded-lg surface-deep" />
             <div class="min-w-0 flex-1"><p class="text-[11px] font-bold txt">Image attached</p><p id="image-paste-info" class="text-[10px] txt-mute truncate"></p></div>
-            <button id="image-paste-remove" type="button" aria-label="Remove attached image" class="p-2 txt-mute hover:txt rounded-lg">✕</button>
+            <button id="image-paste-remove" type="button" aria-label="Remove attached image" class="p-1.5 txt-mute hover:txt rounded-lg">✕</button>
           </div>
         </div>
-        <p id="image-paste-status" class="text-[10px] txt-mute mb-1" aria-live="polite">Paste an image with Ctrl+V / ⌘V</p>
+        <p id="image-paste-status" class="hidden sm:block text-[9.5px] txt-mute mb-1" aria-live="polite">Paste an image with Ctrl+V / ⌘V</p>
         <!-- input row -->
-        <form id="compose-form" class="flex items-center gap-1.5 surface-elev border bd rounded-xl p-1 transition-all focus-within:accent-bd">
+        <form id="compose-form" class="flex items-center gap-1 surface-elev border bd rounded-xl p-1 transition-all focus-within:accent-bd">
           <input id="compose-input" type="text" placeholder="⚠️ Set nickname" maxlength="500"
-            class="flex-1 bg-transparent border-none text-[12px] txt placeholder-mute pl-2 py-1.5 outline-none font-medium min-w-0" />
+            class="flex-1 bg-transparent border-none text-[11.5px] txt placeholder-mute pl-2 py-1 outline-none font-medium min-w-0" />
           <button id="send-btn" type="submit"
-            class="p-2 rounded-lg transition-all flex items-center justify-center shrink-0 bg-neutral-700 text-neutral-400">
+            class="p-1.5 sm:p-2 rounded-lg transition-all flex items-center justify-center shrink-0 bg-neutral-700 text-neutral-400">
             <i data-lucide="send" class="w-3.5 h-3.5"></i>
           </button>
         </form>
@@ -819,14 +829,14 @@ function renderChannels(){
       let labelExtra = '';
       if (isCustom && c.createdAt) {
         const remainingMins = Math.max(1, Math.ceil((ROOM_TTL_MS - (now - c.createdAt)) / 60000));
-        labelExtra = `<span class="text-[8.5px] font-mono text-rose-400 font-bold ml-auto shrink-0 px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">${remainingMins}m left</span>`;
+        labelExtra = `<span class="text-[8px] font-mono text-rose-400 font-bold ml-auto shrink-0 px-1 py-0.2 rounded bg-rose-500/10 border border-rose-500/20">${remainingMins}m</span>`;
       }
       return `
         <button data-chan-item="${c.id}" type="button"
-          class="w-full text-left px-2.5 py-2 rounded-lg flex items-center justify-between text-[11px] font-bold transition-all cursor-pointer ${active ? 'accent-bg shadow-sm' : 'txt-dim hover:txt hover:bg-white/5'}">
-          <div class="flex items-center gap-2 min-w-0 truncate">
-            <i data-lucide="${channelIcon(c, locked)}" class="w-3.5 h-3.5 shrink-0 ${locked ? 'text-amber-400' : 'opacity-80'}"></i>
-            <span class="truncate font-mono uppercase tracking-wide">#${esc(c.name)}</span>
+          class="w-full text-left px-2 py-1.5 rounded-lg flex items-center justify-between text-[10.5px] font-bold transition-all cursor-pointer ${active ? 'accent-bg shadow-sm' : 'txt-dim hover:txt hover:bg-white/5'}">
+          <div class="flex items-center gap-1.5 min-w-0 truncate">
+            <i data-lucide="${channelIcon(c, locked)}" class="w-3 h-3 shrink-0 ${locked ? 'text-amber-400' : 'opacity-80'}"></i>
+            <span class="truncate font-mono uppercase text-[10px] tracking-tight">#${esc(c.name)}</span>
           </div>
           ${labelExtra}
         </button>
@@ -834,11 +844,11 @@ function renderChannels(){
     }).join('');
 
     const createItem = `
-      <div class="my-1 border-t bd opacity-30"></div>
+      <div class="my-0.5 border-t bd opacity-30"></div>
       <button id="dropdown-create-btn" type="button"
-        class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 text-[10.5px] font-black uppercase text-white bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all cursor-pointer shadow-md">
-        <i data-lucide="plus" class="w-3.5 h-3.5 text-white"></i>
-        <span>CREATE CHANNEL (1H TTL)</span>
+        class="w-full px-2 py-1.5 rounded-lg flex items-center justify-center gap-1.5 text-[9.5px] font-black uppercase text-white bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all cursor-pointer shadow-sm">
+        <i data-lucide="plus" class="w-3 h-3 text-white shrink-0"></i>
+        <span class="truncate">+ Create Channel (1h)</span>
       </button>
     `;
 
@@ -866,12 +876,26 @@ function renderChannels(){
 
 function toggleChannelDropdown(show) {
   const menu = $('channel-dropdown-menu');
+  const btn = $('channel-dropdown-btn');
   if (!menu) return;
   const isHidden = menu.classList.contains('hidden');
   const shouldShow = show !== undefined ? show : isHidden;
   if (shouldShow) {
     menu.classList.remove('hidden');
     menu.classList.add('flex');
+    if (btn) {
+      // Calculate viewport boundary clamping so menu never cuts off on the left
+      const btnRect = btn.getBoundingClientRect();
+      const winWidth = window.innerWidth;
+      const targetWidth = Math.min(210, winWidth - 12);
+      menu.style.width = `${targetWidth}px`;
+      if (btnRect.right - targetWidth < 6) {
+        const overflow = 6 - (btnRect.right - targetWidth);
+        menu.style.right = `-${overflow}px`;
+      } else {
+        menu.style.right = '0px';
+      }
+    }
   } else {
     menu.classList.add('hidden');
     menu.classList.remove('flex');
@@ -952,20 +976,24 @@ function renderHeader(){
 
   const badgeContainer = $('channel-badge-container');
   if (badgeContainer) {
-    if (isMiniMode) {
+    const isSmall = isMiniMode || window.innerWidth < 640;
+    if (isSmall) {
       badgeContainer.innerHTML = '';
+      badgeContainer.classList.add('hidden');
     } else if (isPermanent) {
+      badgeContainer.classList.remove('hidden');
       badgeContainer.innerHTML = `
         <span class="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded shrink-0" title="Default section: Messages are saved and never deleted">
           <i data-lucide="shield-check" class="w-2.5 h-2.5 text-emerald-400"></i>
-          <span class="hidden sm:inline">Saved (No 1h delete)</span>
+          <span>Saved (No 1h delete)</span>
         </span>
       `;
     } else {
+      badgeContainer.classList.remove('hidden');
       badgeContainer.innerHTML = `
         <span class="inline-flex items-center gap-1 text-[9px] font-mono text-rose-400 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded shrink-0" title="Messages are automatically deleted 1 hour after sending">
           <i data-lucide="clock" class="w-2.5 h-2.5 text-rose-400"></i>
-          <span class="hidden sm:inline">1h auto-delete</span>
+          <span>1h auto-delete</span>
         </span>
       `;
     }
@@ -1344,7 +1372,16 @@ function displayedMessages(){
     (m.text||'').toLowerCase().includes(q));
 }
 
-function renderMessages(){
+let userIsAtBottom = true;
+let shouldForceScrollToBottom = true;
+let lastRenderedMessageCount = 0;
+
+function isPanelNearBottom(panel, threshold = 70) {
+  if (!panel) return true;
+  return (panel.scrollHeight - panel.scrollTop - panel.clientHeight) <= threshold;
+}
+
+function renderMessages(forceScroll = false){
   const panel = $('messages-panel');
   const gate = $('unlock-gate');
   const composer = $('composer');
@@ -1366,19 +1403,30 @@ function renderMessages(){
   const c = currentChannel();
   const isPermanent = isPermanentChannel(c.id);
   const msgs = displayedMessages();
+
+  // Smart Scroll tracking: capture scroll position before rendering
+  const prevScrollTop = panel.scrollTop;
+  const wasAtBottom = userIsAtBottom || isPanelNearBottom(panel, 70);
+  const doForce = forceScroll || shouldForceScrollToBottom;
+  shouldForceScrollToBottom = false;
+
   if(msgs.length===0){
     panel.innerHTML = `
-      <div class="h-full flex flex-col items-center justify-center text-center p-6 select-none max-w-sm mx-auto animate-fade-in">
-        <div class="w-12 h-12 rounded-2xl surface-elev border bd flex items-center justify-center mb-3 shadow-sm">
-          <i data-lucide="${c.isDirectMessage ? 'message-circle' : 'hash'}" class="w-6 h-6 accent"></i>
+      <div class="h-full flex flex-col items-center justify-center text-center p-4 sm:p-6 select-none max-w-sm mx-auto animate-fade-in">
+        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl surface-elev border bd flex items-center justify-center mb-2.5 shadow-sm">
+          <i data-lucide="${c.isDirectMessage ? 'message-circle' : 'hash'}" class="w-5 h-5 sm:w-6 sm:h-6 accent"></i>
         </div>
-        <h3 class="text-sm font-black uppercase tracking-wider txt">
+        <h3 class="text-xs sm:text-sm font-black uppercase tracking-wider txt">
           ${state.searchFilter ? 'No Messages Found' : (c.isDirectMessage ? esc(c.name) : `#${esc(c.name)}`)}
         </h3>
-        <p class="text-[11px] txt-dim mt-1.5 leading-relaxed">
+        <p class="text-[10px] sm:text-[11px] txt-dim mt-1 leading-relaxed">
           ${state.searchFilter ? 'Try searching for a different keyword or clear the search filter.' : (isPermanent ? 'Messages in this default section are permanently saved.' : 'Messages in this room are temporary and automatically delete 1 hour after being sent.')}
         </p>
       </div>`;
+    panel.scrollTop = 0;
+    userIsAtBottom = true;
+    const scrollBtn = $('scroll-to-bottom-btn');
+    if (scrollBtn) scrollBtn.classList.add('hidden');
     refreshIcons();
     return;
   }
@@ -1388,7 +1436,7 @@ function renderMessages(){
   msgs.forEach(m=>{
     const label = formatDateLabel(m.timestamp||now);
     if(label!==prevDate){
-      html += `<div class="flex items-center gap-2 py-1.5 select-none">
+      html += `<div class="flex items-center gap-2 py-1 select-none">
         <div class="flex-1 h-px bg-white/5"></div>
         <span class="text-[8px] font-bold font-mono txt-mute uppercase tracking-wider">${label}</span>
         <div class="flex-1 h-px bg-white/5"></div></div>`;
@@ -1404,7 +1452,7 @@ function renderMessages(){
       const remainingMins = Math.max(0, Math.ceil(remainingMs / 60000));
       const timeRemainingStr = remainingMins <= 1 ? '<1m' : `${remainingMins}m`;
       timeRemainingBadge = `
-        <span class="inline-flex items-center gap-1 text-[8px] font-mono txt-mute" title="Message auto-deletes in ${timeRemainingStr}">
+        <span class="inline-flex items-center gap-0.5 text-[8px] font-mono txt-mute" title="Message auto-deletes in ${timeRemainingStr}">
           <i data-lucide="clock" class="w-2.5 h-2.5 opacity-60"></i>
           <span>${timeRemainingStr}</span>
         </span>
@@ -1420,20 +1468,20 @@ function renderMessages(){
       const isMe = (m.name || '').trim().toLowerCase() === (state.chatName || '').trim().toLowerCase();
       const senderText = isMe ? 'You' : esc(m.name || 'User');
       replyHeaderHtml = `
-        <div class="border-l-2 accent-bd pl-2.5 py-0.5 my-1 rounded-r bg-white/[0.03]">
-          <span class="text-[9.5px] font-bold txt-mute block tracking-tight">${senderText} replied to <span class="accent font-extrabold font-mono">@${esc(replyInfo.replyToName)}</span></span>
-          <p class="text-[11px] txt-dim truncate font-mono mt-0.5">${esc(replyInfo.replyToText)}</p>
+        <div class="border-l-2 accent-bd pl-2 py-0.5 my-0.5 rounded-r bg-white/[0.03]">
+          <span class="text-[9px] font-bold txt-mute block tracking-tight">${senderText} replied to <span class="accent font-extrabold font-mono">@${esc(replyInfo.replyToName)}</span></span>
+          <p class="text-[10px] txt-dim truncate font-mono mt-0.5">${esc(replyInfo.replyToText)}</p>
         </div>
       `;
     }
 
-    const textContentHtml = bodyText ? `<div class="msg-text text-[12px] leading-normal break-words" style="color:var(--text)">${esc(bodyText)}</div>` : '';
+    const textContentHtml = bodyText ? `<div class="msg-text text-[11.5px] sm:text-[12px] leading-snug break-words" style="color:var(--text)">${esc(bodyText)}</div>` : '';
 
     const deleteBtnHtml = isOwner ? `
-      <button type="button" class="delete-msg-btn flex items-center gap-1 text-[9px] font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 px-1.5 py-0.5 rounded transition-all cursor-pointer"
+      <button type="button" class="delete-msg-btn flex items-center gap-1 text-[8.5px] font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 px-1.5 py-0.5 rounded surface-elev border bd transition-all cursor-pointer"
         data-msg-id="${esc(m.id || m.key)}"
         title="Delete your message">
-        <i data-lucide="trash-2" class="w-3 h-3 text-rose-400"></i>
+        <i data-lucide="trash-2" class="w-2.5 h-2.5 text-rose-400"></i>
         <span>Delete</span>
       </button>
     ` : '';
@@ -1441,9 +1489,9 @@ function renderMessages(){
     const copyContent = bodyText ? (m.imageUrl ? `${bodyText}\n${m.imageUrl}` : bodyText) : (m.imageUrl || '');
 
     html += `
-      <div class="relative flex flex-col gap-0.5 hover:bg-white/[0.03] px-2.5 py-1.5 rounded-xl transition-all group">
+      <div class="relative flex flex-col gap-0.5 hover:bg-white/[0.03] px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl transition-all group">
         <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="text-[11px] font-extrabold font-mono tracking-tight" style="color:${color}">
+          <span class="text-[10.5px] sm:text-[11px] font-extrabold font-mono tracking-tight" style="color:${color}">
             ${esc(m.name||'anonymous')}
           </span>
           ${timeRemainingBadge}
@@ -1451,30 +1499,59 @@ function renderMessages(){
         </div>
         ${replyHeaderHtml}
         ${textContentHtml}
-        ${safeChatImageUrl(m.imageUrl) ? `<img src="${esc(safeChatImageUrl(m.imageUrl))}" alt="Image shared by ${esc(m.name || 'anonymous')}" loading="lazy" decoding="async" class="mt-1 max-w-full rounded-xl border bd object-contain" style="max-width:min(100%,420px);max-height:360px" />` : ''}
+        ${safeChatImageUrl(m.imageUrl) ? `<img src="${esc(safeChatImageUrl(m.imageUrl))}" alt="Image shared by ${esc(m.name || 'anonymous')}" loading="lazy" decoding="async" class="mt-1 max-w-full rounded-xl border bd object-contain" style="max-width:min(100%,360px);max-height:300px" />` : ''}
 
         <!-- Message Action Bar (Copy + Reply + Delete own) -->
-        <div class="opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-1.5 mt-1 text-[9px] transition-opacity">
-          <button type="button" class="copy-msg-btn flex items-center gap-1 text-[9px] font-bold txt-dim hover:accent hover:bg-white/10 px-2 py-0.5 rounded-md transition-all cursor-pointer surface-elev border bd"
+        <div class="opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-1 mt-0.5 text-[8.5px] transition-opacity">
+          <button type="button" class="copy-msg-btn flex items-center gap-1 text-[8.5px] font-bold txt-dim hover:accent hover:bg-white/10 px-1.5 py-0.5 rounded-md transition-all cursor-pointer surface-elev border bd"
             data-copy-text="${esc(copyContent)}"
             title="Copy message">
             <i data-lucide="copy" class="w-2.5 h-2.5 text-sky-400"></i>
             <span>Copy</span>
           </button>
-          <button type="button" class="reply-msg-btn flex items-center gap-1 text-[9px] font-bold txt-dim hover:accent hover:bg-white/10 px-2 py-0.5 rounded-md transition-all cursor-pointer surface-elev border bd"
+          <button type="button" class="reply-msg-btn flex items-center gap-1 text-[8.5px] font-bold txt-dim hover:accent hover:bg-white/10 px-1.5 py-0.5 rounded-md transition-all cursor-pointer surface-elev border bd"
             data-sender="${esc(m.name||'anonymous')}"
             data-content="${esc(bodyText)}"
             title="Reply">
             <i data-lucide="reply" class="w-2.5 h-2.5 accent"></i>
             <span>Reply</span>
           </button>
-          ${deleteBtnHtml ? deleteBtnHtml.replace('text-[9px]', 'text-[9px] px-2 py-0.5 rounded-md surface-elev border bd') : ''}
+          ${deleteBtnHtml}
         </div>
       </div>
     `;
   });
   panel.innerHTML = html;
-  panel.scrollTop = panel.scrollHeight;
+
+  // Decide scroll position: only scroll to bottom if forced or if user was already at the bottom
+  if (doForce || wasAtBottom) {
+    panel.scrollTop = panel.scrollHeight;
+    userIsAtBottom = true;
+    const scrollBtn = $('scroll-to-bottom-btn');
+    if (scrollBtn) scrollBtn.classList.add('hidden');
+  } else {
+    // User was scrolled up reading earlier history!
+    // Preserve their exact scroll position without teleporting them to the bottom!
+    panel.scrollTop = prevScrollTop;
+    userIsAtBottom = false;
+
+    // Show floating jump-to-latest button if new messages arrived while user was scrolled up
+    if (msgs.length > lastRenderedMessageCount) {
+      const scrollBtn = $('scroll-to-bottom-btn');
+      if (scrollBtn) scrollBtn.classList.remove('hidden');
+    }
+  }
+
+  lastRenderedMessageCount = msgs.length;
+
+  // Asynchronous image loading: only stick to bottom if user was at the bottom
+  panel.querySelectorAll('img').forEach(img => {
+    img.addEventListener('load', () => {
+      if (userIsAtBottom) {
+        panel.scrollTop = panel.scrollHeight;
+      }
+    }, { once: true });
+  });
 
   // Wire up Copy, Reply & Delete button clicks
   panel.querySelectorAll('.copy-msg-btn').forEach(btn => {
@@ -1737,6 +1814,7 @@ function switchChannel(id){
     return;
   }
   clearPastedImage();
+  shouldForceScrollToBottom = true;
   state.activeChannel = target;
   state.searchFilter=''; $('filter-input').value='';
   subscribeChannel();
@@ -1927,7 +2005,7 @@ async function sendMessage(){
 
   if(!state.messages.some(m=>m.timestamp===ts && m.name===msgData.name)){
     state.messages.push(msgData);
-    renderMessages();
+    renderMessages(true);
   }
 
   // Clear inputs and active reply target
@@ -2157,6 +2235,34 @@ function init(){
     if (dropdown && !dropdown.contains(e.target)) {
       toggleChannelDropdown(false);
     }
+  });
+
+  // Smart scroll listeners on messages-panel
+  const msgPanel = $('messages-panel');
+  if (msgPanel) {
+    msgPanel.addEventListener('scroll', () => {
+      userIsAtBottom = isPanelNearBottom(msgPanel, 70);
+      const scrollBtn = $('scroll-to-bottom-btn');
+      if (scrollBtn && userIsAtBottom) {
+        scrollBtn.classList.add('hidden');
+      }
+    }, { passive: true });
+  }
+
+  // Jump to latest / bottom floating button
+  safeOn('scroll-to-bottom-btn', 'click', () => {
+    const p = $('messages-panel');
+    if (p) {
+      p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' });
+      userIsAtBottom = true;
+      const scrollBtn = $('scroll-to-bottom-btn');
+      if (scrollBtn) scrollBtn.classList.add('hidden');
+    }
+  });
+
+  // Responsive header update on resize
+  window.addEventListener('resize', () => {
+    renderHeader();
   });
 
   // Compose & Send
