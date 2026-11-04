@@ -356,6 +356,9 @@ function ThemeDropdown({ theme, setTheme, mode }) {
 
 const decoyOptions = [
   { value: 'classroom', label: 'Classroom', labelLong: 'Google Classroom', icon: 'https://ssl.gstatic.com/classroom/favicon.png' },
+  { value: 'deltamath', label: 'DeltaMath', labelLong: 'DeltaMath', icon: 'https://www.deltamath.com/favicon-32x32.png' },
+  { value: 'studysync', label: 'StudySync', labelLong: 'StudySync', icon: 'https://apps.studysync.com/favicon-studysync.ico' },
+  { value: 'commonlit', label: 'CommonLit', labelLong: 'CommonLit', icon: 'https://cdn.prod.website-files.com/6751e31f9aaa082b0f7234ec/6751e31f9aaa082b0f7235f8_commonlit-favicon.png' },
   { value: 'drive', label: 'Drive', labelLong: 'Google Drive', icon: 'https://ssl.gstatic.com/docs/doclist/images/drive_favicon_2026_32dp.png' },
   { value: 'docs', label: 'Docs', labelLong: 'Google Docs', icon: 'https://ssl.gstatic.com/docs/documents/images/docs-favicon-2026-v2.ico' },
   { value: 'slides', label: 'Slides', labelLong: 'Google Slides', icon: 'https://ssl.gstatic.com/docs/presentations/images/favicon-2026-v2.ico' },
@@ -367,12 +370,14 @@ const decoyOptions = [
   { value: 'ixl', label: 'IXL', labelLong: 'IXL Learning', icon: 'https://www.google.com/s2/favicons?sz=64&domain=ixl.com' }
 ];
 
-const getDecoyTitle = (type, customTitles = {}) => {
-  const custom = (customTitles && customTitles[type] ? String(customTitles[type]).trim() : '');
-  if (type === 'drive') return custom || "My Drive - Google Drive";
-  if (type === 'docs') return custom || "Google Docs";
-  if (type === 'slides') return custom || "Google Slides";
+const getDefaultDecoyTitle = (type) => {
   if (type === 'classroom') return "Home - Classroom";
+  if (type === 'deltamath') return "DeltaMath";
+  if (type === 'studysync') return "StudySync - Assignments";
+  if (type === 'commonlit') return "CommonLit | Free Reading Passages and Literacy Resources";
+  if (type === 'drive') return "My Drive - Google Drive";
+  if (type === 'docs') return "Google Docs";
+  if (type === 'slides') return "Google Slides";
   if (type === 'canva') return "Home - Canva";
   if (type === 'clever') return "Clever | Log in with Clever";
   if (type === 'campus') return "Campus Student";
@@ -380,6 +385,31 @@ const getDecoyTitle = (type, customTitles = {}) => {
   if (type === 'duolingo') return "Duolingo - Learn a language for free";
   if (type === 'ixl') return "IXL | Math, Language Arts, Science, Social Studies, and Spanish";
   return "Urnperiodic StudyTools";
+};
+
+const getDecoyTitle = (type, customTitles = {}) => {
+  const custom = (customTitles && customTitles[type] ? String(customTitles[type]).trim() : '');
+  if (custom) return custom;
+  return getDefaultDecoyTitle(type);
+};
+
+const getDecoyFavicon = (type) => {
+  if (type === 'deltamath') return "https://www.deltamath.com/favicon-32x32.png";
+  if (type === 'studysync') return "https://apps.studysync.com/favicon-studysync.ico";
+  if (type === 'commonlit') return "https://cdn.prod.website-files.com/6751e31f9aaa082b0f7234ec/6751e31f9aaa082b0f7235f8_commonlit-favicon.png";
+  const found = decoyOptions.find(opt => opt.value === type);
+  if (found && found.icon && found.icon !== 'school') return found.icon;
+  if (type === 'classroom') return "https://ssl.gstatic.com/classroom/favicon.png";
+  if (type === 'drive') return "https://ssl.gstatic.com/docs/doclist/images/drive_favicon_2026_32dp.png";
+  if (type === 'docs') return "https://ssl.gstatic.com/docs/documents/images/docs-favicon-2026-v2.ico";
+  if (type === 'slides') return "https://ssl.gstatic.com/docs/presentations/images/favicon-2026-v2.ico";
+  if (type === 'canva') return "https://static.canva.com/domain-assets/canva/static/images/favicon-1.ico";
+  if (type === 'clever') return "https://www.google.com/s2/favicons?sz=64&domain=clever.com";
+  if (type === 'campus') return "https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png";
+  if (type === 'gmail') return "https://ssl.gstatic.com/ui/v1/icons/mail/images/favicon_gmail_2026_v2.ico";
+  if (type === 'duolingo') return "https://www.google.com/s2/favicons?sz=64&domain=duolingo.com";
+  if (type === 'ixl') return "https://www.google.com/s2/favicons?sz=64&domain=ixl.com";
+  return "https://ssl.gstatic.com/classroom/favicon.png";
 };
 
 const EMULATED_PLATFORMS = [
@@ -518,15 +548,24 @@ function WhatsNewNotificationDrop({
       <p className="text-[9.5px] sm:text-[10px] text-[var(--text-primary)] font-medium leading-snug">
         {WHATS_NEW_SENTENCE}
       </p>
-      {actionItem && (
+      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
         <button
           type="button"
-          onClick={() => onPlayGameCard(actionItem)}
-          className="self-start mt-1 rounded-md bg-blue-600 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-white transition-colors hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 cursor-pointer"
+          onClick={() => onPlayGameCard('Bloons TD6 and BTD Battles 2 Copy')}
+          className="rounded-md bg-red-600 hover:bg-red-500 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300 cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
         >
-          {actionItem.actionLabel || 'Go Watch Movies / TV Shows'}
+          <Play className="w-2.5 h-2.5 fill-current" />
+          <span>Play BTD6</span>
         </button>
-      )}
+        <button
+          type="button"
+          onClick={() => onPlayGameCard('Quoridor')}
+          className="rounded-md bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
+        >
+          <Play className="w-2.5 h-2.5 fill-current" />
+          <span>Play Quoridor</span>
+        </button>
+      </div>
     </motion.div>
   );
 }
@@ -582,6 +621,7 @@ function DecoyDropdown({
   onCustomTitleChange 
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [activeDecoy, setActiveDecoy] = useState(value);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -594,9 +634,17 @@ function DecoyDropdown({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    setActiveDecoy(value);
+  }, [value, isOpen]);
+
   const selectedOption = decoyOptions.find(opt => opt.value === value) || decoyOptions[0];
   const isHighlighted = value !== 'none';
   const activeCustomTitle = customTitles?.[value];
+
+  const currentTargetOpt = decoyOptions.find(opt => opt.value === activeDecoy) || selectedOption;
+  const currentTargetDefaultTitle = getDefaultDecoyTitle(activeDecoy);
+  const currentTargetCustomTitle = customTitles?.[activeDecoy] || '';
 
   return (
     <div ref={dropdownRef} className="relative inline-block text-left">
@@ -636,110 +684,203 @@ function DecoyDropdown({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.95 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className={`absolute top-full right-0 mt-1.5 w-60 sm:w-64 max-h-[420px] overflow-y-auto rounded-xl border p-1.5 shadow-2xl z-[2600] select-none scrollbar-thin ${
+            className={`absolute top-full right-0 mt-1.5 w-[330px] sm:w-[510px] rounded-2xl border shadow-2xl z-[2600] select-none overflow-hidden ${
               mode === 'light'
-                ? 'bg-white border-neutral-200 shadow-xl'
-                : 'bg-[#12121a]/95 backdrop-blur-md border-white/10'
+                ? 'bg-white border-neutral-200 text-neutral-900 shadow-xl'
+                : 'bg-[#12121a]/95 backdrop-blur-md border-white/10 text-white'
             }`}
           >
-            <div className="px-2 py-1 mb-1 border-b border-white/10 flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold text-neutral-400 uppercase tracking-wider">
-                Select Decoy
-              </span>
-              <span className="text-[9px] text-[var(--accent-color)] font-mono">
-                Custom Title Enabled
+            {/* Top Bar */}
+            <div className={`px-3 py-2 border-b flex items-center justify-between ${mode === 'light' ? 'border-neutral-200 bg-neutral-50' : 'border-white/10 bg-white/[0.02]'}`}>
+              <div className="flex items-center gap-1.5">
+                <School className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider">
+                  Decoy Disguise
+                </span>
+              </div>
+              <span className="text-[10px] text-[var(--accent-color)] font-mono font-semibold">
+                Custom Title on the Side →
               </span>
             </div>
-            <div className="flex flex-col gap-1">
-              {decoyOptions.map((opt) => {
-                const isSelected = opt.value === value;
-                const isCustomizable = ['drive', 'docs', 'slides'].includes(opt.value);
-                const customVal = customTitles?.[opt.value] || '';
 
-                return (
-                  <div 
-                    key={opt.value}
-                    className={`rounded-lg transition-all ${
-                      isSelected 
-                        ? mode === 'light'
-                          ? 'bg-neutral-100 border border-neutral-300'
-                          : 'bg-white/10 border border-[var(--accent-color)]/40'
-                        : 'border border-transparent'
-                    }`}
-                  >
+            {/* Split Content: Left List + Right Side Text Box */}
+            <div className="flex flex-col sm:flex-row">
+              
+              {/* Left Column: Decoy Options List */}
+              <div className={`w-full sm:w-[245px] max-h-[350px] overflow-y-auto p-1.5 flex flex-col gap-1 border-b sm:border-b-0 sm:border-r scrollbar-thin ${
+                mode === 'light' ? 'border-neutral-200' : 'border-white/10'
+              }`}>
+                <div className="px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-neutral-400">
+                  Select Disguise
+                </div>
+                {decoyOptions.map((opt) => {
+                  const isSelected = opt.value === value;
+                  const isEditing = opt.value === activeDecoy;
+                  const hasCustom = !!customTitles?.[opt.value];
+
+                  return (
                     <button
+                      key={opt.value}
                       type="button"
                       onClick={() => {
                         onChange(opt.value);
-                        if (!isCustomizable) {
-                          setIsOpen(false);
-                        }
+                        setActiveDecoy(opt.value);
                       }}
-                      className={`flex items-center gap-2 w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 cursor-pointer ${
-                        isSelected 
+                      className={`flex items-center gap-2 w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
+                        isEditing
                           ? mode === 'light'
-                            ? 'text-neutral-900 font-bold'
-                            : 'text-white font-bold' 
+                            ? 'bg-neutral-100 text-neutral-900 border border-neutral-300 shadow-xs'
+                            : 'bg-white/10 text-white border border-[var(--accent-color)]/50 shadow-xs'
                           : mode === 'light'
-                            ? 'text-neutral-700 hover:text-black hover:bg-neutral-100'
-                            : 'text-neutral-300 hover:text-white hover:bg-white/5'
+                            ? 'text-neutral-700 hover:text-black hover:bg-neutral-100/70 border border-transparent'
+                            : 'text-neutral-300 hover:text-white hover:bg-white/5 border border-transparent'
                       }`}
                     >
                       {opt.icon === 'school' ? (
-                        <School className={`w-3.5 h-3.5 ${isSelected ? (mode === 'light' ? 'text-black' : 'text-[var(--accent-color)]') : (mode === 'light' ? 'text-neutral-900' : 'text-[var(--accent-color)]')}`} />
+                        <School className={`w-3.5 h-3.5 shrink-0 ${isSelected ? (mode === 'light' ? 'text-black' : 'text-[var(--accent-color)]') : 'text-neutral-400'}`} />
                       ) : (
                         <img src={opt.icon} className="w-3.5 h-3.5 object-contain shrink-0" referrerPolicy="no-referrer" alt="" />
                       )}
-                      <span className="flex-1 font-sans truncate">
+                      
+                      <span className="flex-1 font-sans truncate text-[11px]">
                         {opt.labelLong}
                       </span>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-[var(--accent-color)] shrink-0" />}
-                    </button>
 
-                    {/* Small textbox under favicon selector for Drive, Docs, and Slides */}
-                    {isCustomizable && (
-                      <div 
-                        className="px-2 pb-1.5 pt-0.5 flex items-center gap-1"
-                        onClick={(e) => e.stopPropagation()}
+                      {hasCustom && (
+                        <span className="text-[8px] font-mono font-bold px-1.5 py-0.2 rounded bg-[var(--accent-color)]/15 text-[var(--accent-color)] border border-[var(--accent-color)]/30 shrink-0">
+                          Custom
+                        </span>
+                      )}
+
+                      {isSelected && (
+                        <Check className="w-3.5 h-3.5 text-[var(--accent-color)] shrink-0 ml-1" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Right Column: Text Box on the Side for Customizing */}
+              <div className={`w-full sm:w-[265px] p-3 flex flex-col justify-between gap-3 ${
+                mode === 'light' ? 'bg-neutral-50/80' : 'bg-black/30'
+              }`}>
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between border-b pb-2 border-white/10">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400">
+                      Side Editor
+                    </span>
+                    <span className="text-[9px] font-mono text-[var(--accent-color)]">
+                      Instant update
+                    </span>
+                  </div>
+
+                  {/* Active Selected Decoy Info */}
+                  <div className={`flex items-center gap-2 p-2 rounded-xl border ${
+                    mode === 'light' ? 'bg-white border-neutral-200' : 'bg-[#181824] border-white/10'
+                  }`}>
+                    {currentTargetOpt.icon === 'school' ? (
+                      <div className="p-1.5 rounded-lg bg-[var(--accent-color)]/15 text-[var(--accent-color)]">
+                        <School className="w-4 h-4" />
+                      </div>
+                    ) : (
+                      <div className="p-1.5 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+                        <img src={currentTargetOpt.icon} className="w-4 h-4 object-contain shrink-0" referrerPolicy="no-referrer" alt="" />
+                      </div>
+                    )}
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-xs font-bold truncate">
+                        {currentTargetOpt.labelLong}
+                      </span>
+                      <span className="text-[10px] text-neutral-400 font-mono truncate">
+                        {currentTargetOpt.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* The Side Text Box for Inputting Custom Title */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-mono font-bold text-neutral-300 uppercase tracking-wider flex items-center justify-between">
+                      <span>Custom Tab Title</span>
+                      {currentTargetCustomTitle ? (
+                        <span className="text-[9px] text-[var(--accent-color)]">Custom Active</span>
+                      ) : (
+                        <span className="text-[9px] text-neutral-400">Using Default</span>
+                      )}
+                    </label>
+
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder={`Default: ${currentTargetDefaultTitle}`}
+                      value={currentTargetCustomTitle}
+                      onChange={(e) => onCustomTitleChange && onCustomTitleChange(activeDecoy, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          onChange(activeDecoy);
+                          setIsOpen(false);
+                        }
+                      }}
+                      className={`w-full text-xs font-mono px-2.5 py-2 rounded-lg border outline-none transition-all ${
+                        mode === 'light'
+                          ? 'bg-white border-neutral-300 text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900'
+                          : 'bg-black/60 border-white/20 text-white placeholder:text-neutral-500 focus:border-[var(--accent-color)] focus:shadow-[0_0_10px_rgba(0,229,176,0.2)]'
+                      }`}
+                    />
+
+                    {/* Reset to Default or Default Status */}
+                    {currentTargetCustomTitle ? (
+                      <button
+                        type="button"
+                        onClick={() => onCustomTitleChange && onCustomTitleChange(activeDecoy, '')}
+                        className="py-1 px-2.5 rounded-lg text-[10px] font-mono font-bold bg-white/10 hover:bg-rose-500/20 text-neutral-200 hover:text-rose-300 border border-white/10 hover:border-rose-500/40 transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-0.5"
+                        title="Clear custom title and use default"
                       >
-                        <input
-                          type="text"
-                          placeholder={
-                            opt.value === 'drive'
-                              ? 'Custom title (e.g. My Drive - Folder)'
-                              : opt.value === 'docs'
-                              ? 'Custom title (e.g. History Essay Draft)'
-                              : 'Custom title (e.g. Chapter 4 Slides)'
-                          }
-                          value={customVal}
-                          onChange={(e) => onCustomTitleChange && onCustomTitleChange(opt.value, e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              onChange(opt.value);
-                              setIsOpen(false);
-                            }
-                          }}
-                          className={`w-full text-[10px] font-mono px-2 py-1 rounded-md border outline-none transition-all placeholder:text-[9px] ${
-                            mode === 'light'
-                              ? 'bg-white border-neutral-300 text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900'
-                              : 'bg-black/50 border-white/20 text-white placeholder:text-neutral-500 focus:border-[var(--accent-color)]'
-                          }`}
-                        />
-                        {customVal && (
-                          <button
-                            type="button"
-                            onClick={() => onCustomTitleChange && onCustomTitleChange(opt.value, '')}
-                            className="p-1 rounded text-neutral-400 hover:text-red-400 text-[10px] cursor-pointer shrink-0"
-                            title="Clear custom title"
-                          >
-                            ✕
-                          </button>
-                        )}
+                        <RotateCcw className="w-3 h-3" />
+                        <span>Use Default Title</span>
+                      </button>
+                    ) : (
+                      <div className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg py-1 px-2 text-center flex items-center justify-center gap-1">
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        <span>Default title is active</span>
                       </div>
                     )}
                   </div>
-                );
-              })}
+
+                  {/* Browser Tab Preview */}
+                  <div className={`p-2 rounded-xl border flex flex-col gap-1 ${
+                    mode === 'light' ? 'bg-white border-neutral-200' : 'bg-black/40 border-white/10'
+                  }`}>
+                    <span className="text-[9px] font-mono uppercase tracking-wider text-neutral-400 font-bold">
+                      Tab Disguise Preview
+                    </span>
+                    <div className="flex items-center gap-2 bg-neutral-900/90 text-neutral-200 px-2.5 py-1.5 rounded-lg border border-white/10 shadow-inner">
+                      {currentTargetOpt.icon === 'school' ? (
+                        <School className="w-3.5 h-3.5 text-[var(--accent-color)] shrink-0" />
+                      ) : (
+                        <img src={currentTargetOpt.icon} className="w-3.5 h-3.5 object-contain shrink-0" referrerPolicy="no-referrer" alt="" />
+                      )}
+                      <span className="text-[11px] font-medium truncate font-sans">
+                        {currentTargetCustomTitle || currentTargetDefaultTitle}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Actions */}
+                <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+                  <span className="text-[9px] text-neutral-400 font-mono">
+                    Press Enter or click outside
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    className="px-3 py-1 rounded-lg bg-[var(--accent-color)] text-[var(--bg-color)] font-mono font-bold text-[10px] hover:opacity-90 transition-opacity cursor-pointer shadow-sm"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+
             </div>
           </motion.div>
         )}
@@ -1060,24 +1201,24 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlDecoyType = params.get('decoyType');
-      if (urlDecoyType && ['classroom', 'canva', 'clever', 'campus', 'docs', 'gmail', 'duolingo', 'ixl'].includes(urlDecoyType)) {
+      if (urlDecoyType && decoyOptions.some(d => d.value === urlDecoyType)) {
         return urlDecoyType;
       }
       const urlDecoy = params.get('decoy');
       if (urlDecoy === 'true') return 'classroom';
       if (urlDecoy === 'false') return 'classroom';
-      if (urlDecoy && ['classroom', 'canva', 'clever', 'campus', 'docs', 'drive', 'slides', 'gmail', 'duolingo', 'ixl'].includes(urlDecoy)) {
+      if (urlDecoy && decoyOptions.some(d => d.value === urlDecoy)) {
         return urlDecoy;
       }
       const cached = localStorage.getItem('study-tools-decoy-type');
-      if (cached && ['classroom', 'canva', 'clever', 'campus', 'docs', 'drive', 'slides', 'gmail', 'duolingo', 'ixl'].includes(cached)) {
+      if (cached && decoyOptions.some(d => d.value === cached)) {
         return cached;
       }
     }
     return 'classroom';
   });
 
-  const isWhiteDecoy = decoyType === 'classroom' || decoyType === 'docs' || decoyType === 'drive' || decoyType === 'slides' || decoyType === 'clever';
+  const isWhiteDecoy = ['classroom', 'docs', 'drive', 'slides', 'clever', 'deltamath', 'studysync', 'commonlit'].includes(decoyType);
   const [showGoGuardianNotice, setShowGoGuardianNotice] = useState(() => {
     const hasShownBefore = safeStorage.getItem('unblocked-goguardian-notice-shown');
     const initialViewMode = safeStorage.getItem('classroom-view-mode');
@@ -1094,7 +1235,7 @@ export default function App() {
 
   // Automatically switch to white mode on classroom, google docs, drive, slides, and clever decoys
   useEffect(() => {
-    if (decoyType === 'classroom' || decoyType === 'docs' || decoyType === 'drive' || decoyType === 'slides' || decoyType === 'clever') {
+    if (['classroom', 'docs', 'drive', 'slides', 'clever', 'deltamath', 'studysync', 'commonlit'].includes(decoyType)) {
       setMode('light');
     }
   }, [decoyType]);
@@ -1359,6 +1500,8 @@ export default function App() {
   const [hasUnreadWhatsNew, setHasUnreadWhatsNew] = useState(true);
   const restoredSavedGame = useRef(false);
 
+  const launchGameRef = useRef(null);
+
   const navigateToGameCard = useCallback((actionTarget) => {
     safeStorage.setItem(`whats_new_dismissed_${WHATS_NEW_VERSION}`, 'true');
     setShowWhatsNewModal(false);
@@ -1383,6 +1526,22 @@ export default function App() {
         setFilter(target);
         return;
       }
+
+      const matched = games.find((g) => {
+        if (!g.title) return false;
+        const lower = g.title.toLowerCase();
+        const tLower = target.toLowerCase();
+        if (lower === tLower) return true;
+        if (target === 'Bloons TD6 and BTD Battles 2 Copy' && (lower.includes('btd6') || lower.includes('bloons td6'))) return true;
+        if (target === 'Quoridor' && lower.includes('quoridor')) return true;
+        return false;
+      });
+
+      if (matched && launchGameRef.current) {
+        launchGameRef.current(matched);
+        return;
+      }
+
       setSelectedGame(null);
       setFilter('all');
       setGameCatalogMode('all');
@@ -1392,7 +1551,7 @@ export default function App() {
       setCurrentGamePage(1);
       pendingGameCardScroll.current = true;
     }
-  }, []);
+  }, [games]);
 
   // Single game coordination across arena, about:blank, and other tabs/windows
   const [aboutBlankActiveGame, setAboutBlankActiveGame] = useState(null);
@@ -1652,6 +1811,7 @@ export default function App() {
   });
 
   const openWorkspaceInAboutBlank = (currentFilter) => {
+    if (currentFilter === 'chat') return;
     let url = "";
     if (currentFilter === 'movies') {
       url = window.location.origin + '?filter=movies&view=games';
@@ -1659,8 +1819,6 @@ export default function App() {
       url = window.location.origin + '?filter=moremovies&view=games';
     } else if (currentFilter === 'youtube') {
       url = 'https://urnperiodic.github.io/youtube1/';
-    } else if (currentFilter === 'chat') {
-      url = 'https://grandplat2.vercel.app/';
     } else if (currentFilter === 'lobbychat') {
       url = window.location.origin + '?filter=lobbychat&view=games';
     } else if (currentFilter === 'download') {
@@ -1681,29 +1839,7 @@ export default function App() {
     const win = window.open('about:blank', '_blank');
     if (win) {
       let parentTitle = getDecoyTitle(decoyType, customDecoyTitles);
-      let parentFavicon = "https://ssl.gstatic.com/classroom/favicon.png";
-      
-      if (decoyType === 'classroom') {
-        parentFavicon = "https://ssl.gstatic.com/classroom/favicon.png";
-      } else if (decoyType === 'drive') {
-        parentFavicon = "https://ssl.gstatic.com/docs/doclist/images/drive_favicon_2026_32dp.png";
-      } else if (decoyType === 'docs') {
-        parentFavicon = "https://ssl.gstatic.com/docs/documents/images/docs-favicon-2026-v2.ico";
-      } else if (decoyType === 'slides') {
-        parentFavicon = "https://ssl.gstatic.com/docs/presentations/images/favicon-2026-v2.ico";
-      } else if (decoyType === 'canva') {
-        parentFavicon = "https://static.canva.com/domain-assets/canva/static/images/favicon-1.ico";
-      } else if (decoyType === 'clever') {
-        parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=clever.com";
-      } else if (decoyType === 'campus') {
-        parentFavicon = "https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png";
-      } else if (decoyType === 'gmail') {
-        parentFavicon = "https://ssl.gstatic.com/ui/v1/icons/mail/images/favicon_gmail_2026_v2.ico";
-      } else if (decoyType === 'duolingo') {
-        parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=duolingo.com";
-      } else if (decoyType === 'ixl') {
-        parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=ixl.com";
-      }
+      let parentFavicon = getDecoyFavicon(decoyType);
 
       win.document.open();
       win.document.write(`
@@ -1897,6 +2033,7 @@ export default function App() {
     setGameFrame({ src: gameToLaunch.url });
     setSelectedGame(gameToLaunch);
   };
+  launchGameRef.current = launchGame;
 
   const openGameInAboutBlank = (gameToOpen) => {
     if (!gameToOpen) return;
@@ -1926,28 +2063,7 @@ export default function App() {
 
     const classroomFavicon = "https://ssl.gstatic.com/classroom/favicon.png";
     let tabTitle = getDecoyTitle(decoyType, customDecoyTitles);
-    let tabFavicon = classroomFavicon;
-    if (decoyType === 'classroom') {
-      tabFavicon = "https://ssl.gstatic.com/classroom/favicon.png";
-    } else if (decoyType === 'drive') {
-      tabFavicon = "https://ssl.gstatic.com/docs/doclist/images/drive_favicon_2026_32dp.png";
-    } else if (decoyType === 'docs') {
-      tabFavicon = "https://ssl.gstatic.com/docs/documents/images/docs-favicon-2026-v2.ico";
-    } else if (decoyType === 'slides') {
-      tabFavicon = "https://ssl.gstatic.com/docs/presentations/images/favicon-2026-v2.ico";
-    } else if (decoyType === 'canva') {
-      tabFavicon = "https://static.canva.com/domain-assets/canva/static/images/favicon-1.ico";
-    } else if (decoyType === 'clever') {
-      tabFavicon = "https://www.google.com/s2/favicons?sz=64&domain=clever.com";
-    } else if (decoyType === 'campus') {
-      tabFavicon = "https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png";
-    } else if (decoyType === 'gmail') {
-      tabFavicon = "https://ssl.gstatic.com/ui/v1/icons/mail/images/favicon_gmail_2026_v2.ico";
-    } else if (decoyType === 'duolingo') {
-      tabFavicon = "https://www.google.com/s2/favicons?sz=64&domain=duolingo.com";
-    } else if (decoyType === 'ixl') {
-      tabFavicon = "https://www.google.com/s2/favicons?sz=64&domain=ixl.com";
-    }
+    let tabFavicon = getDecoyFavicon(decoyType);
 
     win.document.open();
     win.document.write(`
@@ -2314,6 +2430,42 @@ export default function App() {
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [adminError, setAdminError] = useState('');
+  const [showAiPassNotice, setShowAiPassNotice] = useState(false);
+  const whatsNewShownRef = useRef(false);
+
+  // Trigger AI pass notice ONLY AFTER "What's New" is finished/closed
+  useEffect(() => {
+    if (showWhatsNewDrop) {
+      whatsNewShownRef.current = true;
+    } else if (whatsNewShownRef.current) {
+      // What's New was shown and has just been closed/dismissed
+      if (!isAdminUnlocked) {
+        const timer = setTimeout(() => {
+          setShowAiPassNotice(true);
+        }, 350);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [showWhatsNewDrop, isAdminUnlocked]);
+
+  // Fallback if What's New was not shown on mount
+  useEffect(() => {
+    if (!showWhatsNewDrop && !isAdminUnlocked) {
+      const timer = setTimeout(() => {
+        setShowAiPassNotice(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // Auto-dismiss AI pass notice after 5 seconds
+  useEffect(() => {
+    if (!showAiPassNotice) return;
+    const timer = setTimeout(() => {
+      setShowAiPassNotice(false);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [showAiPassNotice]);
 
   useEffect(() => {
     try {
@@ -2326,6 +2478,7 @@ export default function App() {
     const val = adminPasswordInput.trim();
     if (val === 'sharp') {
       setIsAdminUnlocked(true);
+      setShowAiPassNotice(false);
       setAdminError('');
       setAdminPasswordInput('');
       setFilter('chat');
@@ -2364,8 +2517,34 @@ export default function App() {
             setAdminError('');
           }} 
         />
-        <div className="absolute top-full right-0 mt-2 z-[99999]">
-          <form onSubmit={handleAdminPasswordSubmit}>
+        <div className="absolute top-full right-[-50px] sm:right-[-30px] mt-2.5 z-[99999] w-72 sm:w-80 bg-[#13111c] border-2 border-pink-500/80 rounded-xl p-3.5 shadow-2xl text-left select-none animate-fade-in">
+          {/* Pointer arrow pointing UP to padlock */}
+          <div className="absolute -top-2.5 right-[55px] sm:right-[35px] w-3.5 h-3.5 bg-[#13111c] border-t-2 border-l-2 border-pink-500/80 transform rotate-45" />
+
+          <div className="flex items-center justify-between gap-1 pb-1.5 mb-2 border-b border-pink-500/20">
+            <span className="text-[10px] font-black uppercase tracking-wider text-pink-400 flex items-center gap-1 font-mono">
+              <Sparkles className="w-3 h-3 text-pink-400" />
+              <span>AI Pass Unlock</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setIsAdminPanelOpen(false);
+                setAdminPasswordInput('');
+                setAdminError('');
+              }}
+              className="text-neutral-400 hover:text-white cursor-pointer p-0.5 rounded hover:bg-white/10"
+              title="Close"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <p className="text-[11px] text-neutral-200 leading-relaxed font-medium mb-2.5">
+            DM @Urnperiodic (or his personal account) on Instgram to get the AI pass.
+          </p>
+
+          <form onSubmit={handleAdminPasswordSubmit} className="space-y-2">
             <input
               type="password"
               value={adminPasswordInput}
@@ -2380,17 +2559,144 @@ export default function App() {
                   setAdminError('');
                 }
               }}
-              placeholder={adminError || "Enter password..."}
+              placeholder={adminError || "Enter AI pass / password..."}
               autoFocus
-              className={`w-52 bg-[#0f0e17] border rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-400 shadow-2xl outline-none transition-all font-mono ${
+              className={`w-full bg-[#0f0e17] border rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-400 shadow-inner outline-none transition-all font-mono ${
                 adminError 
                   ? 'border-red-500 placeholder-red-400 shadow-[0_0_12px_rgba(239,68,68,0.5)]' 
-                  : 'border-white/20 focus:border-[var(--accent-color)] shadow-[0_4px_24px_rgba(0,0,0,0.7)]'
+                  : 'border-white/20 focus:border-pink-500 shadow-[0_4px_24px_rgba(0,0,0,0.7)]'
               }`}
             />
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <a
+                href="https://www.instagram.com/urnperiodic/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] text-pink-400 hover:text-pink-300 font-bold flex items-center gap-1 transition-colors"
+              >
+                <span>Instagram @Urnperiodic</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+              <button
+                type="submit"
+                className="px-3 py-1 rounded bg-pink-600 hover:bg-pink-500 text-white font-bold text-[10px] tracking-wider uppercase transition-all shadow-md cursor-pointer active:scale-95"
+              >
+                Unlock
+              </button>
+            </div>
           </form>
         </div>
       </>
+    );
+  };
+
+  const renderPadlockWithNotice = (isAltBar = false) => {
+    return (
+      <div className="relative inline-flex items-center justify-center">
+        {/* Admin Panel Button */}
+        <button
+          onClick={() => {
+            setIsAdminPanelOpen((prev) => !prev);
+            setIsGlobalSettingsOpen(false);
+          }}
+          className={`${isAltBar ? 'p-1.5 rounded-full' : 'p-1 rounded-md'} transition-all cursor-pointer flex items-center justify-center shrink-0 relative ${
+            isAdminPanelOpen
+              ? 'bg-[var(--accent-color)] text-[var(--bg-color)]'
+              : mode === 'light'
+                ? 'text-black hover:text-black hover:bg-black/5'
+                : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
+          }`}
+          title={isAdminUnlocked ? "AI Chat Pass Unlocked" : "Admin Panel - AI Pass (DM @Urnperiodic)"}
+          aria-label="Admin Panel"
+        >
+          <Lock className={isAltBar ? "w-3.5 h-3.5" : "w-3 h-3"} style={{ color: !isAdminPanelOpen && mode === 'light' ? '#000000' : undefined }} />
+
+          {/* Notification point towards padlock icon */}
+          {!isAdminUnlocked && (
+            <span 
+              className="absolute -top-1 -right-1 flex h-2.5 w-2.5 pointer-events-none z-30" 
+              title="Notification: DM @Urnperiodic on Instagram for AI pass"
+            >
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-gradient-to-tr from-pink-500 to-purple-500 border border-[var(--bg-secondary)] shadow-[0_0_8px_rgba(236,72,153,0.9)]"></span>
+            </span>
+          )}
+        </button>
+
+        {/* Notification point callout towards the padlock icon */}
+        <AnimatePresence>
+          {showAiPassNotice && !isAdminUnlocked && !isAdminPanelOpen && (
+            <motion.div
+              initial={animationsEnabled ? { opacity: 0, y: -4, scale: 0.95 } : false}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={animationsEnabled ? { opacity: 0, y: -4, scale: 0.95 } : undefined}
+              transition={{ duration: 0.18 }}
+              className="absolute top-full right-[-8px] sm:right-0 mt-2 w-56 sm:w-60 bg-[#13111c] border border-pink-500/80 text-white rounded-xl p-2.5 shadow-[0_0_24px_rgba(236,72,153,0.3)] z-[99999] select-none text-left font-medium overflow-hidden"
+            >
+              {/* Pointer arrow pointing UP directly to the padlock icon */}
+              <div className="absolute -top-1.5 right-3 w-2.5 h-2.5 bg-[#13111c] border-t border-l border-pink-500/80 transform rotate-45 z-10" />
+
+              {/* Dismiss button in top corner - NO title bar */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAiPassNotice(false);
+                  safeStorage.setItem('ai_pass_notice_dismissed', 'true');
+                }}
+                className="absolute top-1.5 right-1.5 p-0.5 text-neutral-400 hover:text-white rounded hover:bg-white/10 transition-colors cursor-pointer z-10"
+                title="Dismiss"
+              >
+                <X className="w-3 h-3" />
+              </button>
+
+              {/* Notice text (compact, no title) */}
+              <p className="text-[10px] leading-snug text-neutral-200 font-medium pr-4 mt-0.5">
+                DM @Urnperiodic (or his personal account) on Instgram to get the AI pass.
+              </p>
+
+              {/* Compact Action Buttons */}
+              <div className="mt-2 pt-1.5 border-t border-white/10 flex items-center justify-between gap-1.5">
+                <a
+                  href="https://www.instagram.com/urnperiodic/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="px-2 py-0.5 rounded bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold text-[9px] transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
+                >
+                  <span>Instagram</span>
+                  <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsAdminPanelOpen(true);
+                    setIsGlobalSettingsOpen(false);
+                    setShowAiPassNotice(false);
+                  }}
+                  className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-neutral-200 hover:text-white font-bold text-[9px] transition-all cursor-pointer border border-white/10 flex items-center gap-1 active:scale-95"
+                >
+                  <Lock className="w-2.5 h-2.5" />
+                  <span>Enter Pass</span>
+                </button>
+              </div>
+
+              {/* 5-second animated progress line at bottom */}
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10 overflow-hidden">
+                <motion.div
+                  initial={{ width: "100%" }}
+                  animate={{ width: "0%" }}
+                  transition={{ duration: 5, ease: "linear" }}
+                  className="h-full bg-gradient-to-r from-pink-500 to-purple-500"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {renderAdminPanelPopover()}
+      </div>
     );
   };
   // Animations state: disabled by default at start for Chromebook performance
@@ -2524,29 +2830,7 @@ export default function App() {
         const iframeSrc = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${window.location.hash}`;
         
         let parentTitle = getDecoyTitle(decoyType, customDecoyTitles);
-        let parentFavicon = "https://ssl.gstatic.com/classroom/favicon.png";
-        
-        if (decoyType === 'classroom') {
-          parentFavicon = "https://ssl.gstatic.com/classroom/favicon.png";
-        } else if (decoyType === 'drive') {
-          parentFavicon = "https://ssl.gstatic.com/docs/doclist/images/drive_favicon_2026_32dp.png";
-        } else if (decoyType === 'docs') {
-          parentFavicon = "https://ssl.gstatic.com/docs/documents/images/docs-favicon-2026-v2.ico";
-        } else if (decoyType === 'slides') {
-          parentFavicon = "https://ssl.gstatic.com/docs/presentations/images/favicon-2026-v2.ico";
-        } else if (decoyType === 'canva') {
-          parentFavicon = "https://static.canva.com/domain-assets/canva/static/images/favicon-1.ico";
-        } else if (decoyType === 'clever') {
-          parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=clever.com";
-        } else if (decoyType === 'campus') {
-          parentFavicon = "https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png";
-        } else if (decoyType === 'gmail') {
-          parentFavicon = "https://ssl.gstatic.com/ui/v1/icons/mail/images/favicon_gmail_2026_v2.ico";
-        } else if (decoyType === 'duolingo') {
-          parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=duolingo.com";
-        } else if (decoyType === 'ixl') {
-          parentFavicon = "https://www.google.com/s2/favicons?sz=64&domain=ixl.com";
-        }
+        let parentFavicon = getDecoyFavicon(decoyType);
 
         win.document.open();
         win.document.write(`
@@ -2967,30 +3251,7 @@ export default function App() {
     } else if (viewMode === 'games') {
       const activeTitle = getDecoyTitle(decoyType, customDecoyTitles);
       setBothTitles(activeTitle);
-      
-      if (decoyType === 'classroom') {
-        updateFavicon(classroomFavicon);
-      } else if (decoyType === 'drive') {
-        updateFavicon("https://ssl.gstatic.com/docs/doclist/images/drive_favicon_2026_32dp.png");
-      } else if (decoyType === 'docs') {
-        updateFavicon("https://ssl.gstatic.com/docs/documents/images/docs-favicon-2026-v2.ico");
-      } else if (decoyType === 'slides') {
-        updateFavicon("https://ssl.gstatic.com/docs/presentations/images/favicon-2026-v2.ico");
-      } else if (decoyType === 'canva') {
-        updateFavicon("https://static.canva.com/domain-assets/canva/static/images/favicon-1.ico");
-      } else if (decoyType === 'clever') {
-        updateFavicon("https://www.google.com/s2/favicons?sz=64&domain=clever.com");
-      } else if (decoyType === 'campus') {
-        updateFavicon("https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png");
-      } else if (decoyType === 'gmail') {
-        updateFavicon("https://ssl.gstatic.com/ui/v1/icons/mail/images/favicon_gmail_2026_v2.ico");
-      } else if (decoyType === 'duolingo') {
-        updateFavicon("https://www.google.com/s2/favicons?sz=64&domain=duolingo.com");
-      } else if (decoyType === 'ixl') {
-        updateFavicon("https://www.google.com/s2/favicons?sz=64&domain=ixl.com");
-      } else {
-        updateFavicon(classroomFavicon);
-      }
+      updateFavicon(getDecoyFavicon(decoyType));
     } else {
       // Default to StudyTools for locked/welcome screens
       setBothTitles("Urnperiodic StudyTools");
@@ -4692,12 +4953,305 @@ export default function App() {
 
         </div>
 
+        {/* Bottom Copyright */}
+        <div className="w-full text-center py-2 text-[11px] text-[var(--text-muted)] font-mono select-none">
+          © {new Date().getFullYear()} TT / Urnperiodic • TT stands for Torin Thorgood
+        </div>
+
       </div>
       </MotionConfig>
     );
   }
 
+  const triggerPanicToClassroom = useCallback(() => {
+    try {
+      safeStorage.setItem('classroom-view-mode', 'articles');
+      safeStorage.setItem('classroom-passcode-unlocked', 'false');
+      window.history.replaceState({ disguise: 'educational_workspace' }, 'Home - Classroom', window.location.pathname || '/');
+      window.close();
+    } catch (err) {
+      console.error(err);
+    }
+    window.location.href = "https://classroom.google.com";
+  }, []);
 
+  const renderSystemSettingsPopover = (isAltBar = false) => {
+    if (!isGlobalSettingsOpen) return null;
+    const isLight = mode === 'light';
+
+    return (
+      <>
+        {/* Backdrop for click outside */}
+        <div
+          className="fixed inset-0 z-[99998] cursor-default"
+          onClick={() => setIsGlobalSettingsOpen(false)}
+        />
+        <div
+          className={`absolute top-full right-0 mt-2 w-80 max-h-[85vh] overflow-y-auto rounded-2xl p-4 shadow-2xl z-[99999] select-none text-left animate-fade-in no-scrollbar transition-colors ${
+            isLight
+              ? 'bg-white border-2 border-neutral-200/90 text-neutral-900 shadow-[0_20px_50px_rgba(0,0,0,0.18)]'
+              : 'bg-[#12111c] border-2 border-white/15 text-white shadow-[0_20px_50px_rgba(0,0,0,0.7)] backdrop-blur-xl'
+          }`}
+        >
+          {/* Pointer arrow pointing UP to gear */}
+          <div
+            className={`absolute -top-2 right-3 w-3.5 h-3.5 border-t-2 border-l-2 transform rotate-45 ${
+              isLight
+                ? 'bg-white border-neutral-200/90'
+                : 'bg-[#12111c] border-white/15'
+            }`}
+          />
+
+          <div className="flex flex-col gap-3.5">
+            {/* Header */}
+            <div className={`flex items-center justify-between pb-2.5 border-b ${
+              isLight ? 'border-neutral-200' : 'border-white/10'
+            }`}>
+              <div className="flex items-center gap-2">
+                <div className={`p-1 rounded-md ${
+                  isLight ? 'bg-neutral-100 text-neutral-800' : 'bg-white/10 text-neutral-200'
+                }`}>
+                  <Settings className="w-3.5 h-3.5" />
+                </div>
+                <span className={`text-[11px] font-black uppercase tracking-wider font-mono ${
+                  isLight ? 'text-neutral-700' : 'text-neutral-300'
+                }`}>
+                  System Settings
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsGlobalSettingsOpen(false)}
+                className={`p-1 rounded-md transition-colors cursor-pointer ${
+                  isLight
+                    ? 'text-neutral-500 hover:text-black hover:bg-neutral-100'
+                    : 'text-neutral-400 hover:text-white hover:bg-white/10'
+                }`}
+                title="Close Settings"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Toggle 1: Sign Out On Close */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <span className={`text-xs font-bold leading-tight ${isLight ? 'text-neutral-900' : 'text-white'}`}>
+                  Sign Out On Close
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={autoLockOnClose}
+                  onClick={() => {
+                    const newVal = !autoLockOnClose;
+                    setAutoLockOnClose(newVal);
+                    safeStorage.setItem('unblocked-auto-lock-on-close', String(newVal));
+                  }}
+                  className={`relative w-12 h-6.5 rounded-full cursor-pointer flex items-center p-0.5 transition-colors duration-200 shrink-0 border-2 ${
+                    autoLockOnClose
+                      ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                      : isLight
+                        ? 'bg-neutral-200 border-neutral-300'
+                        : 'bg-neutral-800 border-neutral-700'
+                  }`}
+                  title="Toggle Sign Out On Close"
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-out transform ${
+                      autoLockOnClose ? 'translate-x-5.5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+              <p className={`text-[11px] leading-snug ${isLight ? 'text-neutral-600' : 'text-neutral-300'}`}>
+                Automatically lock workspace when tab or window is closed.
+              </p>
+            </div>
+
+            {/* Toggle 2: Emergency Panic Keys */}
+            <div className={`flex flex-col gap-1.5 pt-2.5 border-t ${isLight ? 'border-neutral-200' : 'border-white/10'}`}>
+              <div className="flex items-center justify-between gap-3">
+                <span className={`text-xs font-bold leading-tight ${isLight ? 'text-neutral-900' : 'text-white'}`}>
+                  Emergency Panic Keys
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={panicKeysEnabled}
+                  onClick={() => {
+                    const newVal = !panicKeysEnabled;
+                    setPanicKeysEnabled(newVal);
+                    safeStorage.setItem('unblocked-panic-keys-enabled', String(newVal));
+                  }}
+                  className={`relative w-12 h-6.5 rounded-full cursor-pointer flex items-center p-0.5 transition-colors duration-200 shrink-0 border-2 ${
+                    panicKeysEnabled
+                      ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                      : isLight
+                        ? 'bg-neutral-200 border-neutral-300'
+                        : 'bg-neutral-800 border-neutral-700'
+                  }`}
+                  title="Toggle Emergency Panic Keys"
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-out transform ${
+                      panicKeysEnabled ? 'translate-x-5.5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+              <p className={`text-[11px] leading-snug ${isLight ? 'text-neutral-600' : 'text-neutral-300'}`}>
+                Enable emergency exit keys (<code className={`font-mono px-1 py-0.5 rounded text-[10px] font-semibold ${isLight ? 'bg-neutral-200 text-neutral-800' : 'bg-white/10 text-neutral-200 border border-white/10'}`}>[</code>, <code className={`font-mono px-1 py-0.5 rounded text-[10px] font-semibold ${isLight ? 'bg-neutral-200 text-neutral-800' : 'bg-white/10 text-neutral-200 border border-white/10'}`}>]</code>, <code className={`font-mono px-1 py-0.5 rounded text-[10px] font-semibold ${isLight ? 'bg-neutral-200 text-neutral-800' : 'bg-white/10 text-neutral-200 border border-white/10'}`}>`</code>, <code className={`font-mono px-1 py-0.5 rounded text-[10px] font-semibold ${isLight ? 'bg-neutral-200 text-neutral-800' : 'bg-white/10 text-neutral-200 border border-white/10'}`}>\</code>, Double Escape).
+              </p>
+            </div>
+
+            {/* Toggle 3: Auto Hide Header */}
+            <div className={`flex flex-col gap-1.5 pt-2.5 border-t ${isLight ? 'border-neutral-200' : 'border-white/10'}`}>
+              <div className="flex items-center justify-between gap-3">
+                <span className={`text-xs font-bold leading-tight ${isLight ? 'text-neutral-900' : 'text-white'}`}>
+                  Auto Hide Header
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={autoHideHeader}
+                  onClick={() => {
+                    const newVal = !autoHideHeader;
+                    setAutoHideHeader(newVal);
+                    safeStorage.setItem('unblocked-auto-hide-header', String(newVal));
+                  }}
+                  className={`relative w-12 h-6.5 rounded-full cursor-pointer flex items-center p-0.5 transition-colors duration-200 shrink-0 border-2 ${
+                    autoHideHeader
+                      ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                      : isLight
+                        ? 'bg-neutral-200 border-neutral-300'
+                        : 'bg-neutral-800 border-neutral-700'
+                  }`}
+                  title="Toggle Auto Hide Header"
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-out transform ${
+                      autoHideHeader ? 'translate-x-5.5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+              <p className={`text-[11px] leading-snug ${isLight ? 'text-neutral-600' : 'text-neutral-300'}`}>
+                Automatically hide header when launching a portal.
+              </p>
+            </div>
+
+            {/* Toggle 4: History Masking */}
+            <div className={`flex flex-col gap-1.5 pt-2.5 border-t ${isLight ? 'border-neutral-200' : 'border-white/10'}`}>
+              <div className="flex items-center justify-between gap-3">
+                <span className={`text-xs font-bold leading-tight flex items-center gap-1.5 ${isLight ? 'text-neutral-900' : 'text-white'}`}>
+                  <History className={`w-3.5 h-3.5 ${isLight ? 'text-indigo-600' : 'text-indigo-400'}`} />
+                  History Masking
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={historyMaskingEnabled}
+                  onClick={() => {
+                    const newVal = !historyMaskingEnabled;
+                    setHistoryMaskingEnabled(newVal);
+                    safeStorage.setItem('unblocked-history-masking', String(newVal));
+                    if (newVal && typeof window !== 'undefined') {
+                      try {
+                        window.history.replaceState({ disguise: 'educational_workspace' }, document.title, window.location.pathname || '/');
+                      } catch (e) {}
+                    }
+                  }}
+                  className={`relative w-12 h-6.5 rounded-full cursor-pointer flex items-center p-0.5 transition-colors duration-200 shrink-0 border-2 ${
+                    historyMaskingEnabled
+                      ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                      : isLight
+                        ? 'bg-neutral-200 border-neutral-300'
+                        : 'bg-neutral-800 border-neutral-700'
+                  }`}
+                  title="Toggle Browser History Masking (replaceState)"
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-out transform ${
+                      historyMaskingEnabled ? 'translate-x-5.5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+              <p className={`text-[11px] leading-snug ${isLight ? 'text-neutral-600' : 'text-neutral-300'}`}>
+                Prevents portal titles and sub-paths from accumulating in browser history via{' '}
+                <code className={`font-mono px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                  isLight
+                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                    : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                }`}>
+                  history.replaceState()
+                </code>.
+              </p>
+            </div>
+
+            {/* Action Buttons: Information & Docs + Download Website */}
+            <div className={`pt-2.5 border-t flex flex-col gap-2 ${isLight ? 'border-neutral-200' : 'border-white/10'}`}>
+              <button
+                type="button"
+                onClick={() => {
+                  setFilter('info');
+                  setSelectedGame(null);
+                  setGameHeaderHidden(false);
+                  setIsGlobalSettingsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl border font-semibold text-xs transition-all cursor-pointer group active:scale-98 shadow-sm ${
+                  isLight
+                    ? 'bg-neutral-100 hover:bg-neutral-200/80 border-neutral-200 text-neutral-900'
+                    : 'bg-white/10 hover:bg-white/15 border-white/15 text-white'
+                }`}
+                title="View Information & Docs"
+              >
+                <span className="flex items-center gap-2">
+                  <div className={`p-1 rounded-lg ${
+                    isLight ? 'bg-sky-100 text-sky-700' : 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
+                  }`}>
+                    <Info className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <span>Information & Docs</span>
+                </span>
+                <ChevronRight className={`w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 ${
+                  isLight ? 'text-neutral-500' : 'text-neutral-400'
+                }`} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  downloadEntireWebsite();
+                  setIsGlobalSettingsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl border font-semibold text-xs transition-all cursor-pointer group active:scale-98 shadow-sm ${
+                  isLight
+                    ? 'bg-neutral-100 hover:bg-neutral-200/80 border-neutral-200 text-neutral-900'
+                    : 'bg-white/10 hover:bg-white/15 border-white/15 text-white'
+                }`}
+                title="Download Website"
+              >
+                <span className="flex items-center gap-2">
+                  <div className={`p-1 rounded-lg ${
+                    isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  }`}>
+                    <Download className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <span>Download Website</span>
+                </span>
+                <ChevronRight className={`w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 ${
+                  isLight ? 'text-neutral-500' : 'text-neutral-400'
+                }`} />
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </>
+    );
+  };
 
   return (
     <MotionConfig reducedMotion={animationsEnabled ? "never" : "always"}>
@@ -4809,8 +5363,7 @@ export default function App() {
 
             {/* Decoy Selector */}
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono font-bold text-neutral-400 uppercase select-none">Decoy:</span>
-              <DecoyDropdown value={decoyType} onChange={setDecoyType} mode={mode} />
+              <DecoyDropdown value={decoyType} onChange={setDecoyType} mode={mode} customTitles={customDecoyTitles} onCustomTitleChange={handleCustomTitleChange} />
 
               <AutoRandomizeDecoyButton
                 autoRandomize={autoRandomizeDecoy}
@@ -4828,11 +5381,11 @@ export default function App() {
 
               {/* Cloak / About:blank Button (to the right of shuffle button) */}
               <motion.button
-                whileHover={animationsEnabled && filter !== 'lobbychat' ? { scale: 1.05 } : undefined}
-                whileTap={animationsEnabled && filter !== 'lobbychat' ? { scale: 0.95 } : undefined}
-                onClick={() => { if (filter !== 'lobbychat') openWorkspaceInAboutBlank(filter); }}
+                whileHover={animationsEnabled && filter !== 'lobbychat' && filter !== 'chat' ? { scale: 1.05 } : undefined}
+                whileTap={animationsEnabled && filter !== 'lobbychat' && filter !== 'chat' ? { scale: 0.95 } : undefined}
+                onClick={() => { if (filter !== 'lobbychat' && filter !== 'chat') openWorkspaceInAboutBlank(filter); }}
                 className={`px-3 py-1.5 rounded-lg border flex items-center gap-1.5 text-xs font-semibold transition-all ${
-                  filter !== 'lobbychat'
+                  filter !== 'lobbychat' && filter !== 'chat'
                     ? 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] hover:border-[var(--accent-color)] cursor-pointer'
                     : 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] opacity-40 cursor-not-allowed'
                 }`}
@@ -4840,7 +5393,7 @@ export default function App() {
                   filter === 'movies' ? "Open Movies in about:blank" :
                   filter === 'moremovies' ? "Open More Movies in about:blank" :
                   filter === 'youtube' ? "Open YouTube in about:blank" :
-                  filter === 'chat' ? "Open AI Chat in about:blank" :
+                  filter === 'chat' ? "AI Chat cannot be opened in about:blank" :
                   filter === 'lobbychat' ? "Open Lobby Chat in about:blank" :
                   filter === 'download' ? "Open Download in about:blank" :
                   "Cloak site in about:blank"
@@ -4865,7 +5418,7 @@ export default function App() {
 
               {/* Open Link Button */}
               {(() => {
-                const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'chat' ? 'https://grandplat2.vercel.app/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : '';
+                const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : '';
                 const hasUrl = !!url;
                 return (
                   <motion.button
@@ -4877,7 +5430,7 @@ export default function App() {
                         ? 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] hover:border-[var(--accent-color)] hover:bg-[var(--accent-color)]/10 cursor-pointer shadow-[0_0_8px_rgba(0,0,0,0)] hover:shadow-[0_0_8px_var(--accent-color)]'
                         : 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] opacity-40 cursor-not-allowed'
                     }`}
-                    title={hasUrl ? "Open Workspace in new tab" : "No external link available"}
+                    title={filter === 'chat' ? "Direct link disabled for AI Chat" : (hasUrl ? "Open Workspace in new tab" : "No external link available")}
                   >
                     <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                     <span>Open Link</span>
@@ -5053,8 +5606,7 @@ export default function App() {
               </button>
 
               {/* Decoy Selector & Auto Randomize */}
-              <div className="flex items-center gap-1">
-                <DecoyDropdown value={decoyType} onChange={setDecoyType} mode={mode} compact={true} />
+                <DecoyDropdown value={decoyType} onChange={setDecoyType} mode={mode} compact={true} customTitles={customDecoyTitles} onCustomTitleChange={handleCustomTitleChange} />
 
                 <AutoRandomizeDecoyButton
                   autoRandomize={autoRandomizeDecoy}
@@ -5074,9 +5626,9 @@ export default function App() {
                 {/* Cloak & Open Link & Refresh Buttons */}
                 <div className="flex items-center gap-0.5">
                   <button
-                    onClick={() => { if (filter !== 'lobbychat') openWorkspaceInAboutBlank(filter); }}
+                    onClick={() => { if (filter !== 'lobbychat' && filter !== 'chat') openWorkspaceInAboutBlank(filter); }}
                     className={`p-1 rounded-md transition-all ${
-                      filter !== 'lobbychat'
+                      filter !== 'lobbychat' && filter !== 'chat'
                         ? 'text-[var(--accent-color)] hover:bg-[var(--accent-color)]/10 cursor-pointer'
                         : 'text-[var(--accent-color)] opacity-40 cursor-not-allowed'
                     }`}
@@ -5084,7 +5636,7 @@ export default function App() {
                       filter === 'movies' ? "Open Movies in about:blank" :
                       filter === 'moremovies' ? "Open More Movies in about:blank" :
                       filter === 'youtube' ? "Open YouTube in about:blank" :
-                      filter === 'chat' ? "Open AI Chat in about:blank" :
+                      filter === 'chat' ? "AI Chat cannot be opened in about:blank" :
                       filter === 'lobbychat' ? "Open Lobby Chat in about:blank" :
                       filter === 'download' ? "Open Download in about:blank" :
                       "Cloak site in about:blank"
@@ -5094,7 +5646,7 @@ export default function App() {
                   </button>
 
                   {(() => {
-                    const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'chat' ? 'https://grandplat2.vercel.app/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : '';
+                    const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : '';
                     const hasUrl = !!url;
                     return (
                       <button
@@ -5104,7 +5656,7 @@ export default function App() {
                             ? 'text-[var(--accent-color)] hover:bg-[var(--accent-color)]/10 cursor-pointer shadow-[0_0_8px_rgba(0,0,0,0)] hover:shadow-[0_0_8px_var(--accent-color)]'
                             : 'text-[var(--accent-color)] opacity-40 cursor-not-allowed'
                         }`}
-                        title={hasUrl ? "Open Workspace in new tab" : "No external link available"}
+                        title={filter === 'chat' ? "Direct link disabled for AI Chat" : (hasUrl ? "Open Workspace in new tab" : "No external link available")}
                       >
                         <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                       </button>
@@ -5305,9 +5857,9 @@ export default function App() {
                 {/* Cloak / About:blank Button (to the right of shuffle button) */}
                 <div className="relative">
                   <button
-                    onClick={() => { if (filter !== 'lobbychat') openWorkspaceInAboutBlank(filter); }}
+                    onClick={() => { if (filter !== 'lobbychat' && filter !== 'chat') openWorkspaceInAboutBlank(filter); }}
                     className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
-                      filter !== 'lobbychat'
+                      filter !== 'lobbychat' && filter !== 'chat'
                         ? 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] hover:border-[var(--accent-color)] cursor-pointer'
                         : 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] opacity-40 cursor-not-allowed'
                     } ${showNotices && noticeStep === 2 ? 'ring-2 ring-[var(--accent-color)] ring-offset-2 ring-offset-[#0d0d12] animate-pulse' : ''}`}
@@ -5315,7 +5867,7 @@ export default function App() {
                       filter === 'movies' ? "Open Movies in about:blank" :
                       filter === 'moremovies' ? "Open More Movies in about:blank" :
                       filter === 'youtube' ? "Open YouTube in about:blank" :
-                      filter === 'chat' ? "Open AI Chat in about:blank" :
+                      filter === 'chat' ? "AI Chat cannot be opened in about:blank" :
                       filter === 'lobbychat' ? "Open Lobby Chat in about:blank" :
                       filter === 'download' ? "Open Download in about:blank" :
                       "Cloak site in about:blank"
@@ -5399,7 +5951,7 @@ export default function App() {
 
                 {/* Open Link Button */}
                 {(() => {
-                  const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'chat' ? 'https://grandplat2.vercel.app/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : '';
+                  const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : '';
                   const hasUrl = !!url;
                   return (
                     <button
@@ -5409,7 +5961,7 @@ export default function App() {
                           ? 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] hover:border-[var(--accent-color)] hover:bg-[var(--accent-color)]/10 cursor-pointer shadow-[0_0_8px_rgba(0,0,0,0)] hover:shadow-[0_0_8px_var(--accent-color)]'
                           : 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] opacity-40 cursor-not-allowed'
                       }`}
-                      title={hasUrl ? "Open Workspace in new tab" : "No external link available"}
+                      title={filter === 'chat' ? "Direct link disabled for AI Chat" : (hasUrl ? "Open Workspace in new tab" : "No external link available")}
                     >
                       <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                     </button>
@@ -5515,7 +6067,6 @@ export default function App() {
                 )}
               </AnimatePresence>
             </div>
-          </div>
 
           {/* Top Right: Combined Animations & Settings, plus Theme Slider */}
           <div ref={compactRightRef} className="flex items-center gap-1.5 justify-end shrink-0 min-w-0 ml-auto z-10">{/* Combined Animations & Settings Group */}
@@ -5556,24 +6107,8 @@ export default function App() {
               {/* Subtle divider */}
               <div className="w-px h-3.5 bg-[var(--card-border)]/60" />
 
-              {/* Admin Panel Button */}
-              <button
-                onClick={() => {
-                  setIsAdminPanelOpen(prev => !prev);
-                  setIsGlobalSettingsOpen(false);
-                }}
-                className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
-                  isAdminPanelOpen
-                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)]'
-                    : mode === 'light' 
-                      ? 'text-black hover:text-black hover:bg-black/5' 
-                      : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
-                }`}
-                title="Admin Panel"
-                aria-label="Admin Panel"
-              >
-                <Lock className="w-3 h-3" style={{ color: !isAdminPanelOpen && mode === 'light' ? '#000000' : undefined }} />
-              </button>
+              {/* Admin Panel Button with AI Pass Notification */}
+              {renderPadlockWithNotice(false)}
 
               {/* AI Button near Settings (Only visible after pass is entered) */}
               {isAdminUnlocked && (
@@ -5696,156 +6231,7 @@ export default function App() {
                 )}
               </div>
 
-              {renderAdminPanelPopover()}
-              {isGlobalSettingsOpen && (
-                <div className="absolute top-full right-0 mt-2 w-72 max-h-[85vh] overflow-y-auto bg-[#12121a] border border-white/10 rounded-xl p-4 shadow-2xl z-[99999] select-none text-left animate-fade-in no-scrollbar">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-neutral-400">System Settings</span>
-                      <button onClick={() => setIsGlobalSettingsOpen(false)} className="text-neutral-400 hover:text-white cursor-pointer">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <span className="text-xs font-bold text-white">Sign Out On Close</span>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-neutral-400 leading-normal max-w-[150px]">
-                          Automatically lock workspace when tab or window is closed.
-                        </span>
-                        <div
-                          onClick={() => {
-                            const newVal = !autoLockOnClose;
-                            setAutoLockOnClose(newVal);
-                            safeStorage.setItem('unblocked-auto-lock-on-close', String(newVal));
-                          }}
-                          className="relative w-[50px] h-6 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 transition-all duration-300 shrink-0"
-                          title="Toggle Sign Out On Close"
-                        >
-                          <div 
-                            className={`w-5 h-5 rounded-full shadow-md transition-all duration-300 ease-out transform ${
-                              autoLockOnClose ? 'translate-x-6 bg-[var(--accent-color)]' : 'translate-x-0 bg-neutral-500'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 border-t border-white/5 pt-2">
-                      <span className="text-xs font-bold text-white">Emergency Panic Keys</span>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-neutral-400 leading-normal max-w-[150px]">
-                          Enable emergency exit keys ([, ], `, \, Double Escape).
-                        </span>
-                        <div
-                          onClick={() => {
-                            const newVal = !panicKeysEnabled;
-                            setPanicKeysEnabled(newVal);
-                            safeStorage.setItem('unblocked-panic-keys-enabled', String(newVal));
-                          }}
-                          className="relative w-[50px] h-6 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 transition-all duration-300 shrink-0"
-                          title="Toggle Emergency Panic Keys"
-                        >
-                          <div 
-                            className={`w-5 h-5 rounded-full shadow-md transition-all duration-300 ease-out transform ${
-                              panicKeysEnabled ? 'translate-x-6 bg-[var(--accent-color)]' : 'translate-x-0 bg-neutral-500'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 border-t border-white/5 pt-2">
-                      <span className="text-xs font-bold text-white">Auto Hide Header</span>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-neutral-400 leading-normal max-w-[150px]">
-                          Automatically hide header when launching a portal.
-                        </span>
-                        <div
-                          onClick={() => {
-                            const newVal = !autoHideHeader;
-                            setAutoHideHeader(newVal);
-                            safeStorage.setItem('unblocked-auto-hide-header', String(newVal));
-                          }}
-                          className="relative w-[50px] h-6 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 transition-all duration-300 shrink-0"
-                          title="Toggle Auto Hide Header"
-                        >
-                          <div 
-                            className={`w-5 h-5 rounded-full shadow-md transition-all duration-300 ease-out transform ${
-                              autoHideHeader ? 'translate-x-6 bg-[var(--accent-color)]' : 'translate-x-0 bg-neutral-500'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 border-t border-white/5 pt-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <History className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-                          History Masking
-                        </span>
-                        <div
-                          onClick={() => {
-                            const newVal = !historyMaskingEnabled;
-                            setHistoryMaskingEnabled(newVal);
-                            safeStorage.setItem('unblocked-history-masking', String(newVal));
-                            if (newVal && typeof window !== 'undefined') {
-                              try {
-                                window.history.replaceState({ disguise: 'educational_workspace' }, document.title, window.location.pathname || '/');
-                              } catch (e) {}
-                            }
-                          }}
-                          className="relative w-[50px] h-6 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 transition-all duration-300 shrink-0"
-                          title="Toggle Browser History Masking (replaceState)"
-                        >
-                          <div 
-                            className={`w-5 h-5 rounded-full shadow-md transition-all duration-300 ease-out transform ${
-                              historyMaskingEnabled ? 'translate-x-6 bg-[var(--accent-color)]' : 'translate-x-0 bg-neutral-500'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                      <span className="text-[10px] text-neutral-400 leading-normal">
-                        Prevents portal titles and sub-paths from accumulating in browser history via <code className="text-[var(--accent-color)] font-mono">history.replaceState()</code>.
-                      </span>
-                    </div>
-
-                    {/* Download & Notification options */}
-                    <div className="pt-2 border-t border-white/5 flex flex-col gap-1.5">
-                      <button
-                        onClick={() => {
-                          setFilter('info');
-                          setSelectedGame(null);
-                          setGameHeaderHidden(false);
-                          setIsGlobalSettingsOpen(false);
-                        }}
-                        className="w-full flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-[var(--accent-color)]/20 hover:border-[var(--accent-color)] border border-white/10 text-white text-xs font-semibold transition-all cursor-pointer group"
-                        title="View Information & Docs"
-                      >
-                        <span className="flex items-center gap-2">
-                          <Info className="w-3.5 h-3.5 text-[var(--accent-color)] group-hover:scale-110 transition-transform" />
-                          <span>Information & Docs</span>
-                        </span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          downloadEntireWebsite();
-                          setIsGlobalSettingsOpen(false);
-                        }}
-                        className="w-full flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-[var(--accent-color)]/20 hover:border-[var(--accent-color)] border border-white/10 text-white text-xs font-semibold transition-all cursor-pointer group"
-                        title="Download Website"
-                      >
-                        <span className="flex items-center gap-2">
-                          <Download className="w-3.5 h-3.5 text-[var(--accent-color)] group-hover:scale-110 transition-transform" />
-                          <span>Download Website</span>
-                        </span>
-                      </button>
-                    </div>
-
-                  </div>
-                </div>
-              )}
+              {renderSystemSettingsPopover(false)}
 
               <button
                 onClick={() => setViewModeAndSave('articles')}
@@ -6066,24 +6452,8 @@ export default function App() {
               </div>
             </div>{/* Unified Settings, Colors & Sign Out Group */}
             <div className="relative flex items-center gap-2 border border-[var(--card-border)] bg-[var(--bg-secondary)] p-1 rounded-full shadow-sm">
-              {/* Admin Panel Button */}
-              <button
-                onClick={() => {
-                  setIsAdminPanelOpen(prev => !prev);
-                  setIsGlobalSettingsOpen(false);
-                }}
-                className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
-                  isAdminPanelOpen
-                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)]'
-                    : mode === 'light'
-                      ? 'text-black hover:text-black hover:bg-black/5'
-                      : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
-                }`}
-                title="Admin Panel"
-                aria-label="Admin Panel"
-              >
-                <Lock className="w-3.5 h-3.5" style={{ color: !isAdminPanelOpen && mode === 'light' ? '#000000' : undefined }} />
-              </button>
+              {/* Admin Panel Button with AI Pass Notification */}
+              {renderPadlockWithNotice(true)}
 
               {/* AI Button near Settings (Only visible after pass is entered) */}
               {isAdminUnlocked && (
@@ -6138,156 +6508,7 @@ export default function App() {
                 </button>
               </div>
 
-              {renderAdminPanelPopover()}
-              {isGlobalSettingsOpen && (
-                <div className="absolute top-full right-0 mt-2 w-72 max-h-[85vh] overflow-y-auto bg-[#12121a] border border-white/10 rounded-xl p-4 shadow-2xl z-[99999] select-none text-left animate-fade-in no-scrollbar">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-neutral-400">System Settings</span>
-                      <button onClick={() => setIsGlobalSettingsOpen(false)} className="text-neutral-400 hover:text-white cursor-pointer">
-                        <X className="w-3" style={{ height: '12px' }} />
-                      </button>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <span className="text-xs font-bold text-white">Sign Out On Close</span>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-neutral-400 leading-normal max-w-[150px]">
-                          Automatically lock workspace when tab or window is closed.
-                        </span>
-                        <div
-                          onClick={() => {
-                            const newVal = !autoLockOnClose;
-                            setAutoLockOnClose(newVal);
-                            safeStorage.setItem('unblocked-auto-lock-on-close', String(newVal));
-                          }}
-                          className="relative w-[50px] h-6 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 transition-all duration-300 shrink-0"
-                          title="Toggle Sign Out On Close"
-                        >
-                          <div 
-                            className={`w-5 h-5 rounded-full shadow-md transition-all duration-300 ease-out transform ${
-                              autoLockOnClose ? 'translate-x-6 bg-[var(--accent-color)]' : 'translate-x-0 bg-neutral-500'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 border-t border-white/5 pt-2">
-                      <span className="text-xs font-bold text-white">Emergency Panic Keys</span>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-neutral-400 leading-normal max-w-[150px]">
-                          Enable emergency exit keys ([, ], `, \, Double Escape).
-                        </span>
-                        <div
-                          onClick={() => {
-                            const newVal = !panicKeysEnabled;
-                            setPanicKeysEnabled(newVal);
-                            safeStorage.setItem('unblocked-panic-keys-enabled', String(newVal));
-                          }}
-                          className="relative w-[50px] h-6 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 transition-all duration-300 shrink-0"
-                          title="Toggle Emergency Panic Keys"
-                        >
-                          <div 
-                            className={`w-5 h-5 rounded-full shadow-md transition-all duration-300 ease-out transform ${
-                              panicKeysEnabled ? 'translate-x-6 bg-[var(--accent-color)]' : 'translate-x-0 bg-neutral-500'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 border-t border-white/5 pt-2">
-                      <span className="text-xs font-bold text-white">Auto Hide Header</span>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-neutral-400 leading-normal max-w-[150px]">
-                          Automatically hide header when launching a portal.
-                        </span>
-                        <div
-                          onClick={() => {
-                            const newVal = !autoHideHeader;
-                            setAutoHideHeader(newVal);
-                            safeStorage.setItem('unblocked-auto-hide-header', String(newVal));
-                          }}
-                          className="relative w-[50px] h-6 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 transition-all duration-300 shrink-0"
-                          title="Toggle Auto Hide Header"
-                        >
-                          <div 
-                            className={`w-5 h-5 rounded-full shadow-md transition-all duration-300 ease-out transform ${
-                              autoHideHeader ? 'translate-x-6 bg-[var(--accent-color)]' : 'translate-x-0 bg-neutral-500'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 border-t border-white/5 pt-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <History className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-                          History Masking
-                        </span>
-                        <div
-                          onClick={() => {
-                            const newVal = !historyMaskingEnabled;
-                            setHistoryMaskingEnabled(newVal);
-                            safeStorage.setItem('unblocked-history-masking', String(newVal));
-                            if (newVal && typeof window !== 'undefined') {
-                              try {
-                                window.history.replaceState({ disguise: 'educational_workspace' }, document.title, window.location.pathname || '/');
-                              } catch (e) {}
-                            }
-                          }}
-                          className="relative w-[50px] h-6 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 transition-all duration-300 shrink-0"
-                          title="Toggle Browser History Masking (replaceState)"
-                        >
-                          <div 
-                            className={`w-5 h-5 rounded-full shadow-md transition-all duration-300 ease-out transform ${
-                              historyMaskingEnabled ? 'translate-x-6 bg-[var(--accent-color)]' : 'translate-x-0 bg-neutral-500'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                      <span className="text-[10px] text-neutral-400 leading-normal">
-                        Prevents portal titles and sub-paths from accumulating in browser history via <code className="text-[var(--accent-color)] font-mono">history.replaceState()</code>.
-                      </span>
-                    </div>
-
-                    {/* Download & Notification options */}
-                    <div className="pt-2 border-t border-white/5 flex flex-col gap-1.5">
-                      <button
-                        onClick={() => {
-                          setFilter('info');
-                          setSelectedGame(null);
-                          setGameHeaderHidden(false);
-                          setIsGlobalSettingsOpen(false);
-                        }}
-                        className="w-full flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-[var(--accent-color)]/20 hover:border-[var(--accent-color)] border border-white/10 text-white text-xs font-semibold transition-all cursor-pointer group"
-                        title="View Information & Docs"
-                      >
-                        <span className="flex items-center gap-2">
-                          <Info className="w-3.5 h-3.5 text-[var(--accent-color)] group-hover:scale-110 transition-transform" />
-                          <span>Information & Docs</span>
-                        </span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          downloadEntireWebsite();
-                          setIsGlobalSettingsOpen(false);
-                        }}
-                        className="w-full flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-[var(--accent-color)]/20 hover:border-[var(--accent-color)] border border-white/10 text-white text-xs font-semibold transition-all cursor-pointer group"
-                        title="Download Website"
-                      >
-                        <span className="flex items-center gap-2">
-                          <Download className="w-3.5 h-3.5 text-[var(--accent-color)] group-hover:scale-110 transition-transform" />
-                          <span>Download Website</span>
-                        </span>
-                      </button>
-                    </div>
-
-                  </div>
-                </div>
-              )}
+              {renderSystemSettingsPopover(true)}
 
               <button
                 onClick={() => setViewModeAndSave('articles')}
@@ -7738,7 +7959,7 @@ export default function App() {
                       title="Reload Iframe (Refresh portal frame)"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Reload Iframe</span>
+                      <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Iframe</span>
                     </button>
 
                     {/* Refresh Page button */}
@@ -7748,7 +7969,7 @@ export default function App() {
                       title="Refresh Entire Page (Safe reload for about:blank)"
                     >
                       <RotateCcw className={`w-3.5 h-3.5 text-[var(--accent-color)] ${isRefreshing ? 'animate-spin' : ''}`} />
-                      <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Refresh Page</span>
+                      <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Page</span>
                     </button>
 
                     {/* Direct Gmfiles Link button for local public games */}
@@ -7758,13 +7979,14 @@ export default function App() {
                           setGameFrame(null);
                           window.open(getDirectGmfilesUrl(selectedGame.url), '_blank');
                         }}
-                        className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-2.5 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
+                        className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-2.5 sm:px-3 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
                         title={`Open Direct Link (${getDirectGmfilesUrl(selectedGame.url)})`}
                       >
                         <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
                           <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
                         </svg>
+                        <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Link</span>
                       </button>
                     )}
 
@@ -7829,13 +8051,13 @@ export default function App() {
                     <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Abt:Blank</span>
                   </button>
 
-                  {/* Lobby Chat (Slideout Chat) Toggle Button */}
+                  {/* Lobby Chat (Slideout Chat) Toggle Button - icon only */}
                   <button
                     onClick={() => {
                       setDockedChatCollapsed(!dockedChatCollapsed);
                       if (dockedChatCollapsed) setHasUnreadLobby(false);
                     }}
-                    className={`relative flex items-center gap-1.5 border py-1.5 px-2.5 sm:px-3 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
+                    className={`relative flex items-center gap-1.5 border py-1.5 px-2.5 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
                       !dockedChatCollapsed 
                         ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)] font-bold shadow-[0_0_8px_rgba(0,229,176,0.15)]' 
                         : 'border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)]'
@@ -7844,7 +8066,6 @@ export default function App() {
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     <LobbyUnreadIndicator visible={hasUnreadLobby} />
-                    <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Slideout Chat</span>
                   </button>
 
                   {/* Hide / Show Header Button */}
@@ -7866,6 +8087,20 @@ export default function App() {
                       {gameHeaderHidden ? 'SHOW HEADER' : 'HIDE HEADER'}
                     </span>
                   </motion.button>
+
+                  {/* Emergency Panic Button */}
+                  <button
+                    onClick={triggerPanicToClassroom}
+                    className="flex items-center gap-1.5 border-2 border-red-500 hover:border-red-600 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white py-1.5 px-2.5 sm:px-3 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shadow-sm active:scale-95 group"
+                    title="Emergency Panic: Instantly opens Google Classroom. You can also press: [ , ] , ` , \ , or Double Escape"
+                    aria-label="Emergency Panic Button"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5 text-red-500 group-hover:text-white shrink-0 animate-pulse" />
+                    <span className="text-[10px] font-black tracking-tight uppercase">Panic</span>
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-red-500/20 group-hover:bg-white/20 border border-red-500/30 text-red-400 group-hover:text-white font-mono font-bold">
+                      Keys: [ ] \
+                    </span>
+                  </button>
 
 
 
@@ -8086,9 +8321,23 @@ export default function App() {
         </main>
       </div>
 
+      {/* GLOBAL BOTTOM COPYRIGHT FOOTER */}
+      {!selectedGame && (
+        <footer className="w-full border-t border-[var(--card-border)] bg-[var(--bg-secondary)]/80 backdrop-blur-md py-4 px-6 select-none shrink-0 mt-auto z-20">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs text-[var(--text-muted)] font-mono">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-[var(--text-primary)]">TT / Urnperiodic</span>
+              <span>•</span>
+              <span>© {new Date().getFullYear()}</span>
+            </div>
+            <div className="text-xs font-semibold text-[var(--text-primary)]/90 tracking-wide">
+              TT stands for Torin Thorgood 
+            </div>
+          </div>
+        </footer>
+      )}
 
-
-        </div>
+    </div>
 
         {/* WHAT'S NEW / NEW CHANGES MODAL */}
         <AnimatePresence>

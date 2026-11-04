@@ -6,13 +6,31 @@
 // anyone opens the website or the games portal.
 // ============================================================================
 
-export const WHATS_NEW_SENTENCE = "Updated AI pass and dm me if u want it (Depends on if I trust u or not) Also updated lead creator name so people actually know who made it.";
+export const WHATS_NEW_SENTENCE = "BTD6 and BTD Battles two copy and Quoridor is out. Both games are multiplayer and single player.";
 
 // Version identifier (used if you want to track modal dismissals)
-export const WHATS_NEW_VERSION = '2026-10-20';
+export const WHATS_NEW_VERSION = '2026-11-03';
 
 // Detailed changelog items (viewable in the full "View all changes" modal)
 export const WHATS_NEW_CHANGES = [
+  {
+    id: 'btd6-battles-2',
+    icon: '🎈',
+    iconBg: 'bg-red-500/20 text-red-400',
+    title: 'BTD6 & BTD Battles 2 Copy Out Now',
+    description: 'BTD6 and BTD Battles two copy is out! Both games are multiplayer and single player.',
+    actionLabel: 'Play BTD6',
+    actionGameTitle: 'Bloons TD6 and BTD Battles 2 Copy'
+  },
+  {
+    id: 'quoridor',
+    icon: '♟️',
+    iconBg: 'bg-emerald-500/20 text-emerald-400',
+    title: 'Quoridor Out Now',
+    description: 'Quoridor is out! Strategic board game with both multiplayer and single player modes.',
+    actionLabel: 'Play Quoridor',
+    actionGameTitle: 'Quoridor'
+  },
   {
     id: 'movies-tv-shows',
     icon: '🎬',
