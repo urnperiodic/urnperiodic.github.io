@@ -30,6 +30,51 @@ const GAME_RUNTIME_SHIM = `<script>
   window.poki_script_closure_raw = poki_script_closure_raw;
   window.poki_get_team_raw = poki_get_team_raw;
   window.poki_set_team_raw = poki_set_team_raw;
+  try {
+    window.onbeforeunload = null;
+    const origAdd = window.addEventListener;
+    window.addEventListener = function(type, listener, options) {
+      if (type === 'beforeunload') return;
+      return origAdd.call(this, type, listener, options);
+    };
+  } catch(e) {}
+  try {
+    const origReq = Element.prototype.requestPointerLock || Element.prototype.mozRequestPointerLock || Element.prototype.webkitRequestPointerLock;
+    if (origReq) {
+      Element.prototype.requestPointerLock = function(options) {
+        try { window.focus(); } catch(e) {}
+        try {
+          const res = origReq.call(this, options);
+          if (res && typeof res.catch === 'function') {
+            return res.catch(() => {
+              if (options) {
+                try { return origReq.call(this); } catch(e) {}
+              }
+            });
+          }
+          return res;
+        } catch (err) {
+          if (options) {
+            try { return origReq.call(this); } catch(e) {}
+          }
+        }
+      };
+    }
+    const syncCursorLock = () => {
+      const lockedEl = document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement;
+      if (lockedEl) {
+        try { lockedEl.style.setProperty('cursor', 'none', 'important'); } catch(e) {}
+        try { document.documentElement.style.setProperty('cursor', 'none', 'important'); } catch(e) {}
+        try { if (document.body) document.body.style.setProperty('cursor', 'none', 'important'); } catch(e) {}
+      } else {
+        try { document.documentElement.style.removeProperty('cursor'); } catch(e) {}
+        try { if (document.body) document.body.style.removeProperty('cursor'); } catch(e) {}
+      }
+    };
+    document.addEventListener('pointerlockchange', syncCursorLock, false);
+    document.addEventListener('mozpointerlockchange', syncCursorLock, false);
+    document.addEventListener('webkitpointerlockchange', syncCursorLock, false);
+  } catch(e) {}
 </script>`;
 
 const prepareGameHtml = (html, baseUrl) => {
@@ -1820,7 +1865,7 @@ export default function App() {
     } else if (currentFilter === 'youtube') {
       url = 'https://urnperiodic.github.io/youtube1/';
     } else if (currentFilter === 'lobbychat') {
-      url = window.location.origin + '?filter=lobbychat&view=games';
+      url = window.location.origin + '/USERCHAT.html';
     } else if (currentFilter === 'download') {
       url = 'https://urnperiodic.github.io/download/';
     } else {
@@ -1906,7 +1951,7 @@ export default function App() {
           <iframe 
             id="cloak-frame" 
             src="${url}"
-            allow="fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write; microphone; camera; geolocation; gamepads"
+            allow="pointer-lock; fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write; microphone; camera; geolocation; gamepad; gamepads; accelerometer; gyroscope"
             allowfullscreen="true"
           ></iframe>
           <script>
@@ -2199,7 +2244,7 @@ export default function App() {
         </div>
         <iframe 
           id="about-blank-game-frame" 
-          allow="fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write; microphone; camera; geolocation; gamepads" 
+          allow="pointer-lock; fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write; microphone; camera; geolocation; gamepad; gamepads; accelerometer; gyroscope" 
           referrerpolicy="no-referrer"
           allowfullscreen="true"
         ></iframe>
@@ -2897,7 +2942,7 @@ export default function App() {
             <iframe 
               id="cloak-frame" 
               src="${iframeSrc}"
-              allow="fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write; microphone; camera; geolocation; gamepads"
+              allow="pointer-lock; fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write; microphone; camera; geolocation; gamepad; gamepads; accelerometer; gyroscope"
               allowfullscreen="true"
             ></iframe>
             <script>
@@ -3149,18 +3194,6 @@ export default function App() {
       window.open(downloadUrl, '_blank', 'noopener,noreferrer');
     }
   };
-
-  // Prevent accidental close or refresh only when actively inside a game
-  useEffect(() => {
-    if (!selectedGame) return;
-    const handleBeforeUnload = (e) => {
-      e.preventDefault();
-      e.returnValue = ''; // Required for most browsers to show prompt
-      return ''; 
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [selectedGame]);
 
   // Parse filter parameter from query string on mount
   useEffect(() => {
@@ -5381,11 +5414,11 @@ export default function App() {
 
               {/* Cloak / About:blank Button (to the right of shuffle button) */}
               <motion.button
-                whileHover={animationsEnabled && filter !== 'lobbychat' && filter !== 'chat' ? { scale: 1.05 } : undefined}
-                whileTap={animationsEnabled && filter !== 'lobbychat' && filter !== 'chat' ? { scale: 0.95 } : undefined}
-                onClick={() => { if (filter !== 'lobbychat' && filter !== 'chat') openWorkspaceInAboutBlank(filter); }}
+                whileHover={animationsEnabled && filter !== 'chat' ? { scale: 1.05 } : undefined}
+                whileTap={animationsEnabled && filter !== 'chat' ? { scale: 0.95 } : undefined}
+                onClick={() => { if (filter !== 'chat') openWorkspaceInAboutBlank(filter); }}
                 className={`px-3 py-1.5 rounded-lg border flex items-center gap-1.5 text-xs font-semibold transition-all ${
-                  filter !== 'lobbychat' && filter !== 'chat'
+                  filter !== 'chat'
                     ? 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] hover:border-[var(--accent-color)] cursor-pointer'
                     : 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] opacity-40 cursor-not-allowed'
                 }`}
@@ -5418,7 +5451,7 @@ export default function App() {
 
               {/* Open Link Button */}
               {(() => {
-                const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : '';
+                const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? '/USERCHAT.html' : '';
                 const hasUrl = !!url;
                 return (
                   <motion.button
@@ -5626,9 +5659,9 @@ export default function App() {
                 {/* Cloak & Open Link & Refresh Buttons */}
                 <div className="flex items-center gap-0.5">
                   <button
-                    onClick={() => { if (filter !== 'lobbychat' && filter !== 'chat') openWorkspaceInAboutBlank(filter); }}
+                    onClick={() => { if (filter !== 'chat') openWorkspaceInAboutBlank(filter); }}
                     className={`p-1 rounded-md transition-all ${
-                      filter !== 'lobbychat' && filter !== 'chat'
+                      filter !== 'chat'
                         ? 'text-[var(--accent-color)] hover:bg-[var(--accent-color)]/10 cursor-pointer'
                         : 'text-[var(--accent-color)] opacity-40 cursor-not-allowed'
                     }`}
@@ -5646,7 +5679,7 @@ export default function App() {
                   </button>
 
                   {(() => {
-                    const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : '';
+                    const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? '/USERCHAT.html' : '';
                     const hasUrl = !!url;
                     return (
                       <button
@@ -5857,9 +5890,9 @@ export default function App() {
                 {/* Cloak / About:blank Button (to the right of shuffle button) */}
                 <div className="relative">
                   <button
-                    onClick={() => { if (filter !== 'lobbychat' && filter !== 'chat') openWorkspaceInAboutBlank(filter); }}
+                    onClick={() => { if (filter !== 'chat') openWorkspaceInAboutBlank(filter); }}
                     className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
-                      filter !== 'lobbychat' && filter !== 'chat'
+                      filter !== 'chat'
                         ? 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] hover:border-[var(--accent-color)] cursor-pointer'
                         : 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] opacity-40 cursor-not-allowed'
                     } ${showNotices && noticeStep === 2 ? 'ring-2 ring-[var(--accent-color)] ring-offset-2 ring-offset-[#0d0d12] animate-pulse' : ''}`}
@@ -5951,7 +5984,7 @@ export default function App() {
 
                 {/* Open Link Button */}
                 {(() => {
-                  const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : '';
+                  const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? '/USERCHAT.html' : '';
                   const hasUrl = !!url;
                   return (
                     <button
@@ -7889,40 +7922,45 @@ export default function App() {
                   </button>
                 </div>
               ) : (
-                <div className={`sticky ${gameHeaderHidden ? 'top-0' : headerOpen ? 'top-[108px] sm:top-[56px]' : 'top-[108px] md:top-[44px]'} z-[50] flex flex-col sm:flex-row sm:items-center justify-between border-b border-[var(--card-border)] bg-[var(--bg-secondary)] rounded-none py-3 px-4 gap-3 shadow-inner`}>
+                <div className={`sticky ${gameHeaderHidden ? 'top-0' : headerOpen ? 'top-[108px] sm:top-[56px]' : 'top-[108px] md:top-[44px]'} z-[50] flex flex-row items-center justify-between border-b border-[var(--card-border)] bg-[var(--bg-secondary)] rounded-none py-1.5 px-2.5 sm:px-4 gap-2 sm:gap-3 shadow-inner min-h-[44px] h-[44px] overflow-hidden select-none`}>
                   
-                  <button
-                    onClick={() => {
-                      safeStorage.removeItem('unblocked-last-game');
-                      setSelectedGame(null);
-                    }}
-                    className="flex items-center gap-2 border border-[var(--card-border)] hover:border-[var(--accent-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)] transition-all font-mono py-1.5 px-3.5 rounded-lg text-xs font-bold leading-normal cursor-pointer"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Go back</span>
-                  </button>
+                  {/* Left: Back button + Auto-truncating Title & Tag */}
+                  <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden mr-1 sm:mr-2">
+                    <button
+                      onClick={() => {
+                        safeStorage.removeItem('unblocked-last-game');
+                        setSelectedGame(null);
+                      }}
+                      className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)] transition-all font-mono py-1 px-2.5 sm:px-3 rounded-lg text-xs font-bold leading-normal cursor-pointer shrink-0"
+                      title="Go back to portals list"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+                      <span className="hidden xs:inline sm:inline">Go back</span>
+                    </button>
 
-                  <div className="hidden xl:flex items-center gap-2.5">
-                    <span className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-2">
-                      {selectedGame.title}
-                      <span className="text-[9px] uppercase tracking-wider font-mono px-2 py-0.5 rounded border border-[var(--card-border)] bg-[var(--bg-color)] text-[var(--accent-color)]">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden" title={selectedGame.title}>
+                      <span className="font-bold text-xs sm:text-sm text-[var(--text-primary)] truncate block min-w-0 tracking-tight">
+                        {selectedGame.title}
+                      </span>
+                      <span className="hidden md:inline-flex text-[9px] uppercase tracking-wider font-mono px-1.5 py-0.5 rounded border border-[var(--card-border)] bg-[var(--bg-color)] text-[var(--accent-color)] shrink-0 truncate max-w-[120px]">
                         {selectedGame.category}
                       </span>
                       {selectedGame.isAiGenerated && (
-                        <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-mono px-2 py-0.5 rounded border border-[var(--card-border)] bg-[var(--accent-color)]/10 text-[var(--text-primary)]">
+                        <span className="hidden lg:inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-mono px-1.5 py-0.5 rounded border border-[var(--card-border)] bg-[var(--accent-color)]/10 text-[var(--text-primary)] shrink-0">
                           <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z" fill="currentColor" />
                           </svg>
                           <span>Gemini AI</span>
                         </span>
                       )}
-                    </span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-wrap">
+                  {/* Right: Controls toolbar (strictly single-row flex-nowrap) */}
+                  <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 flex-nowrap overflow-x-auto scrollbar-none">
                     
                     {/* Zoom controls */}
-                    <div className="flex items-center bg-[var(--bg-color)] border border-[var(--card-border)] rounded-lg overflow-hidden p-0.5">
+                    <div className="flex items-center h-7 bg-[var(--bg-color)] border border-[var(--card-border)] rounded-lg overflow-hidden p-0.5 shrink-0">
                       <button
                         onClick={() => setZoom(z => Math.max(0.4, z - 0.1))}
                         className="p-1 px-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)] rounded transition-colors"
@@ -7955,7 +7993,7 @@ export default function App() {
                         const iframe = document.getElementById('game-frame');
                         if (iframe) iframe.src = iframe.src;
                       }}
-                      className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-2.5 sm:px-3 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
+                      className="flex items-center gap-1.5 h-7 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1 px-2 sm:px-2.5 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer shrink-0"
                       title="Reload Iframe (Refresh portal frame)"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
@@ -7965,7 +8003,7 @@ export default function App() {
                     {/* Refresh Page button */}
                     <button
                       onClick={handleRefreshPage}
-                      className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-2.5 sm:px-3 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
+                      className="flex items-center gap-1.5 h-7 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1 px-2 sm:px-2.5 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer shrink-0"
                       title="Refresh Entire Page (Safe reload for about:blank)"
                     >
                       <RotateCcw className={`w-3.5 h-3.5 text-[var(--accent-color)] ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -7979,7 +8017,7 @@ export default function App() {
                           setGameFrame(null);
                           window.open(getDirectGmfilesUrl(selectedGame.url), '_blank');
                         }}
-                        className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-2.5 sm:px-3 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
+                        className="flex items-center gap-1.5 h-7 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1 px-2 sm:px-2.5 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer shrink-0"
                         title={`Open Direct Link (${getDirectGmfilesUrl(selectedGame.url)})`}
                       >
                         <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -8001,7 +8039,7 @@ export default function App() {
                           link.click();
                           document.body.removeChild(link);
                         }}
-                        className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-2.5 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
+                        className="flex items-center gap-1.5 h-7 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1 px-2 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer shrink-0"
                         title="Download Offline (.html)"
                       >
                         <Download className="w-3.5 h-3.5 text-[var(--accent-color)]" />
@@ -8020,7 +8058,7 @@ export default function App() {
                           }
                         }
                       }}
-                      className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-2.5 sm:px-3 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
+                      className="flex items-center gap-1.5 h-7 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1 px-2 sm:px-2.5 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer shrink-0"
                       title="Toggle Fullscreen Arena (FS)"
                     >
                       <Expand className="w-3.5 h-3.5" />
@@ -8030,7 +8068,7 @@ export default function App() {
                     {/* Window Fullscreen Button */}
                     <button
                       onClick={() => setWindowFullscreen(!windowFullscreen)}
-                      className={`flex items-center gap-1.5 border py-1.5 px-2.5 sm:px-3 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
+                      className={`flex items-center gap-1.5 h-7 border py-1 px-2 sm:px-2.5 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer shrink-0 ${
                         windowFullscreen
                           ? 'border-amber-500 bg-amber-500/15 text-amber-500 font-bold shadow-[0_0_8px_rgba(245,158,11,0.2)]'
                           : 'border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)]'
@@ -8041,70 +8079,68 @@ export default function App() {
                       <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Win FS</span>
                     </button>
 
-                  {/* Open in New Tab (Blank) button */}
-                  <button
-                    onClick={() => openGameInAboutBlank(selectedGame)}
-                    className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1.5 px-2.5 sm:px-3 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer"
-                    title="Open in Blank (about:blank)"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Abt:Blank</span>
-                  </button>
-
-                  {/* Lobby Chat (Slideout Chat) Toggle Button - icon only */}
-                  <button
-                    onClick={() => {
-                      setDockedChatCollapsed(!dockedChatCollapsed);
-                      if (dockedChatCollapsed) setHasUnreadLobby(false);
-                    }}
-                    className={`relative flex items-center gap-1.5 border py-1.5 px-2.5 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
-                      !dockedChatCollapsed 
-                        ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)] font-bold shadow-[0_0_8px_rgba(0,229,176,0.15)]' 
-                        : 'border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)]'
-                    }`}
-                    title="Toggle Slideout Chat inside Portal Arena"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <LobbyUnreadIndicator visible={hasUnreadLobby} />
-                  </button>
-
-                  {/* Hide / Show Header Button */}
-                  <motion.button
-                    whileHover={animationsEnabled ? { scale: 1.03 } : undefined}
-                    whileTap={animationsEnabled ? { scale: 0.97 } : undefined}
-                    onClick={() => setGameHeaderHidden(!gameHeaderHidden)}
-                    className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)] py-1.5 px-3 rounded-lg text-xs font-mono font-medium transition-all duration-200 cursor-pointer relative"
-                    title={gameHeaderHidden ? "Show Main Website Header" : "Hide Main Website Header"}
-                  >
-                    <motion.div
-                      animate={animationsEnabled ? (gameHeaderHidden ? { rotate: 180, scale: 1.05 } : { rotate: 0, scale: 1 }) : { rotate: 0, scale: 1 }}
-                      transition={animationsEnabled ? { type: "spring", stiffness: 200, damping: 15 } : { duration: 0 }}
-                      className="flex items-center justify-center"
+                    {/* Open in New Tab (Blank) button */}
+                    <button
+                      onClick={() => openGameInAboutBlank(selectedGame)}
+                      className="flex items-center gap-1.5 h-7 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1 px-2 sm:px-2.5 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer shrink-0"
+                      title="Open in Blank (about:blank)"
                     >
-                      {gameHeaderHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                    </motion.div>
-                    <span className="hidden sm:inline text-[10px] font-bold tracking-tight">
-                      {gameHeaderHidden ? 'SHOW HEADER' : 'HIDE HEADER'}
-                    </span>
-                  </motion.button>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Abt:Blank</span>
+                    </button>
 
-                  {/* Emergency Panic Button */}
-                  <button
-                    onClick={triggerPanicToClassroom}
-                    className="flex items-center gap-1.5 border-2 border-red-500 hover:border-red-600 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white py-1.5 px-2.5 sm:px-3 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shadow-sm active:scale-95 group"
-                    title="Emergency Panic: Instantly opens Google Classroom. You can also press: [ , ] , ` , \ , or Double Escape"
-                    aria-label="Emergency Panic Button"
-                  >
-                    <ShieldAlert className="w-3.5 h-3.5 text-red-500 group-hover:text-white shrink-0 animate-pulse" />
-                    <span className="text-[10px] font-black tracking-tight uppercase">Panic</span>
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-red-500/20 group-hover:bg-white/20 border border-red-500/30 text-red-400 group-hover:text-white font-mono font-bold">
-                      Keys: [ ] \
-                    </span>
-                  </button>
+                    {/* Lobby Chat (Slideout Chat) Toggle Button - icon only */}
+                    <button
+                      onClick={() => {
+                        setDockedChatCollapsed(!dockedChatCollapsed);
+                        if (dockedChatCollapsed) setHasUnreadLobby(false);
+                      }}
+                      className={`relative flex items-center gap-1.5 h-7 border py-1 px-2 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer shrink-0 ${
+                        !dockedChatCollapsed 
+                          ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)] font-bold shadow-[0_0_8px_rgba(0,229,176,0.15)]' 
+                          : 'border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)]'
+                      }`}
+                      title="Toggle Slideout Chat inside Portal Arena"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <LobbyUnreadIndicator visible={hasUnreadLobby} />
+                    </button>
 
+                    {/* Hide / Show Header Button */}
+                    <motion.button
+                      whileHover={animationsEnabled ? { scale: 1.03 } : undefined}
+                      whileTap={animationsEnabled ? { scale: 0.97 } : undefined}
+                      onClick={() => setGameHeaderHidden(!gameHeaderHidden)}
+                      className="flex items-center gap-1.5 h-7 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)] py-1 px-2.5 rounded-lg text-xs font-mono font-medium transition-all duration-200 cursor-pointer relative shrink-0"
+                      title={gameHeaderHidden ? "Show Main Website Header" : "Hide Main Website Header"}
+                    >
+                      <motion.div
+                        animate={animationsEnabled ? (gameHeaderHidden ? { rotate: 180, scale: 1.05 } : { rotate: 0, scale: 1 }) : { rotate: 0, scale: 1 }}
+                        transition={animationsEnabled ? { type: "spring", stiffness: 200, damping: 15 } : { duration: 0 }}
+                        className="flex items-center justify-center"
+                      >
+                        {gameHeaderHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                      </motion.div>
+                      <span className="hidden sm:inline text-[10px] font-bold tracking-tight">
+                        {gameHeaderHidden ? 'SHOW HEADER' : 'HIDE HEADER'}
+                      </span>
+                    </motion.button>
 
+                    {/* Emergency Panic Button */}
+                    <button
+                      onClick={triggerPanicToClassroom}
+                      className="flex items-center gap-1.5 h-7 border-2 border-red-500 hover:border-red-600 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white py-1 px-2 sm:px-2.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shadow-sm active:scale-95 group shrink-0"
+                      title="Emergency Panic: Instantly opens Google Classroom. You can also press: [ , ] , ` , \ , or Double Escape"
+                      aria-label="Emergency Panic Button"
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5 text-red-500 group-hover:text-white shrink-0 animate-pulse" />
+                      <span className="text-[10px] font-black tracking-tight uppercase">Panic</span>
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-red-500/20 group-hover:bg-white/20 border border-red-500/30 text-red-400 group-hover:text-white font-mono font-bold">
+                        Keys: [ ] \
+                      </span>
+                    </button>
 
-                </div>
+                  </div>
 
               </div>
             )}
@@ -8134,9 +8170,10 @@ export default function App() {
                         {...gameFrame}
                         className={`w-full h-full flex-1 border-none block m-0 p-0 ${isDraggingDock ? 'pointer-events-none select-none' : ''}`}
                         title={selectedGame.title}
+                        allow="pointer-lock; fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write; microphone; camera; geolocation; gamepad; gamepads; accelerometer; gyroscope"
                         allowFullScreen
                         referrerPolicy="no-referrer"
-                        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                        sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock allow-modals allow-orientation-lock allow-downloads"
                       />
                     ) : externalActiveGame ? (
                       <div className="flex flex-col items-center justify-center w-full h-full text-center p-4 bg-[#080b12] text-white select-none">
@@ -8320,22 +8357,6 @@ export default function App() {
 
         </main>
       </div>
-
-      {/* GLOBAL BOTTOM COPYRIGHT FOOTER */}
-      {!selectedGame && (
-        <footer className="w-full border-t border-[var(--card-border)] bg-[var(--bg-secondary)]/80 backdrop-blur-md py-4 px-6 select-none shrink-0 mt-auto z-20">
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs text-[var(--text-muted)] font-mono">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-[var(--text-primary)]">TT / Urnperiodic</span>
-              <span>•</span>
-              <span>© {new Date().getFullYear()}</span>
-            </div>
-            <div className="text-xs font-semibold text-[var(--text-primary)]/90 tracking-wide">
-              TT stands for Torin Thorgood 
-            </div>
-          </div>
-        </footer>
-      )}
 
     </div>
 
