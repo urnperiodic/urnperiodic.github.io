@@ -42,6 +42,15 @@ const legacyGameData: Game[] = [
     featured: true,
     isOg: true
   },
+      {
+    title: 'Gambling (Casino) Game',
+    description: 'Fun to gamble with fake money!',
+    url: 'https://urnperiodic.github.io/GAMBLING',
+    thumbnail: 'gambling.png',
+    category: 'Solo or Multiplayer.',
+    featured: true,
+    isOg: true
+  },
   {
     title: 'Beepbox - A song maker',
     description: 'make cool songs',
