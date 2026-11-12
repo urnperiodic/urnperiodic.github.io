@@ -413,7 +413,8 @@ const decoyOptions = [
   { value: 'campus', label: 'Campus', labelLong: 'Infinite Campus', icon: 'https://jerseycitynj.infinitecampus.org/campus/favicon-32x32.png' },
   { value: 'gmail', label: 'Inbox', labelLong: 'Inbox - JCPS', icon: 'https://ssl.gstatic.com/ui/v1/icons/mail/images/favicon_gmail_2026_v2.ico' },
   { value: 'duolingo', label: 'Lingo', labelLong: 'Duolingo', icon: 'https://www.google.com/s2/favicons?sz=64&domain=duolingo.com' },
-  { value: 'ixl', label: 'IXL', labelLong: 'IXL Learning', icon: 'https://www.google.com/s2/favicons?sz=64&domain=ixl.com' }
+  { value: 'ixl', label: 'IXL', labelLong: 'IXL Learning', icon: 'https://www.google.com/s2/favicons?sz=64&domain=ixl.com' },
+  { value: 'savvas', label: 'Savvas', labelLong: 'Savvas Realize', icon: 'https://savvasrealize.com/favicon.ico' }
 ];
 
 const getDefaultDecoyTitle = (type) => {
@@ -430,6 +431,7 @@ const getDefaultDecoyTitle = (type) => {
   if (type === 'gmail') return "Inbox - Jersey City Public Schools";
   if (type === 'duolingo') return "Duolingo - Learn a language for free";
   if (type === 'ixl') return "IXL | Math, Language Arts, Science, Social Studies, and Spanish";
+  if (type === 'savvas' || type === 'savvasrealize') return "Classes | Savvas Realize";
   return "Urnperiodic StudyTools";
 };
 
@@ -443,6 +445,7 @@ const getDecoyFavicon = (type) => {
   if (type === 'deltamath') return "https://www.deltamath.com/favicon-32x32.png";
   if (type === 'studysync') return "https://apps.studysync.com/favicon-studysync.ico";
   if (type === 'commonlit') return "https://cdn.prod.website-files.com/6751e31f9aaa082b0f7234ec/6751e31f9aaa082b0f7235f8_commonlit-favicon.png";
+  if (type === 'savvas' || type === 'savvasrealize') return "https://savvasrealize.com/favicon.ico";
   const found = decoyOptions.find(opt => opt.value === type);
   if (found && found.icon && found.icon !== 'school') return found.icon;
   if (type === 'classroom') return "https://ssl.gstatic.com/classroom/favicon.png";
