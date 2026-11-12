@@ -4535,6 +4535,12 @@ export default function App() {
             </div>
           </header>
 
+          {/* Educational Aspects Deprecation Notice */}
+          <div className="w-full mx-auto px-4 md:px-6 py-2.5 bg-amber-500/15 border-b border-amber-500/30 text-amber-300 text-xs font-mono font-bold flex items-center justify-center gap-2 text-center shrink-0">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 animate-bounce" />
+            <span>(SADLY WE DO NOT UPDATE THE EDUCATIONAL ASPECTS OF THIS WEBSITE ANYMORE. SOME FEATURES MIGHT HAVE BROKE!)</span>
+          </div>
+
           {/* GitHub Hosting Explanation Notification */}
           {showGithubNotice && (
             <div className="w-full mx-auto p-3.5 sm:p-4 bg-[var(--card-bg)] border-b border-[var(--card-border)] shadow-md relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-left transition-all animate-in fade-in duration-300 max-w-none px-4 md:px-6 shrink-0 rounded-none">
