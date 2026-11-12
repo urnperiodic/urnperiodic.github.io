@@ -45,7 +45,7 @@ const legacyGameData: Game[] = [
       {
     title: 'Gambling (Casino) Game',
     description: 'Fun to gamble with fake money!',
-    url: 'https://urnperiodic.github.io/GAMBLING',
+    url: 'https://urnperiodic.github.io/gambling2',
     thumbnail: 'gambling.png',
     category: 'Solo or Multiplayer.',
     featured: true,
@@ -25250,6 +25250,9 @@ export const gameRankings: Record<string, GameTier> = {
   'Tomodachi Collection': 'A',
   'City Skylines copy': 'S',
   'Bloons TD6 copy': 'S',
+  'Bloons TD6 and BTD Battles 2 Copy': 'S',
+  'Gambling (Casino) Game': 'S',
+  'Quoridor': 'S',
   'Suika Watermelon copy': 'S',
   '10 Minutes Till Dawn': 'S',
   '20 Minutes Till Dawn': 'S',

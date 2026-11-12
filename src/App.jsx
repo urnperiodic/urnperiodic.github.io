@@ -2,7 +2,7 @@ import { lazy, Suspense, useDeferredValue, useState, useEffect, useRef, useMemo,
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import { getApps, initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously } from 'firebase/auth';
-import { collection, getFirestore, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, doc, getDocs, deleteDoc, getFirestore, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { PUBLIC_GAMES_BASE_URL } from './data/gameSource';
 import { gameRankings } from './data/gameRankings';
 import { WHATS_NEW_SENTENCE, WHATS_NEW_CHANGES, WHATS_NEW_VERSION } from './whatsNewData';
@@ -209,7 +209,8 @@ import {
   Trophy,
   Medal,
   Calculator,
-  Palette
+  Palette,
+  Trash2
 } from 'lucide-react';
 
 // Safe storage helper to prevent SecurityError crash in sandboxed iframes
@@ -594,6 +595,14 @@ function WhatsNewNotificationDrop({
         {WHATS_NEW_SENTENCE}
       </p>
       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+        <button
+          type="button"
+          onClick={() => onPlayGameCard('Gambling (Casino) Game')}
+          className="rounded-md bg-amber-600 hover:bg-amber-500 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
+        >
+          <Play className="w-2.5 h-2.5 fill-current" />
+          <span>LETS GO GAMBLING</span>
+        </button>
         <button
           type="button"
           onClick={() => onPlayGameCard('Bloons TD6 and BTD Battles 2 Copy')}
@@ -1579,6 +1588,7 @@ export default function App() {
         if (lower === tLower) return true;
         if (target === 'Bloons TD6 and BTD Battles 2 Copy' && (lower.includes('btd6') || lower.includes('bloons td6'))) return true;
         if (target === 'Quoridor' && lower.includes('quoridor')) return true;
+        if (target === 'Gambling (Casino) Game' && lower.includes('gambling')) return true;
         return false;
       });
 
@@ -2548,6 +2558,79 @@ export default function App() {
     setAdminError('');
     if (filter === 'chat') {
       setFilter('all');
+    }
+  };
+
+  const [showAdminDeletePrompt, setShowAdminDeletePrompt] = useState(false);
+  const [adminDeletePassword, setAdminDeletePassword] = useState('');
+  const [adminDeleteStatus, setAdminDeleteStatus] = useState('');
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+
+  const handleAdminDeleteAll = async (e) => {
+    if (e) e.preventDefault();
+    const val = adminDeletePassword.trim();
+    if (val !== 'admin') {
+      setAdminDeleteStatus('Incorrect password');
+      setAdminDeletePassword('');
+      return;
+    }
+
+    setIsDeletingAll(true);
+    setAdminDeleteStatus('Deleting all messages...');
+    try {
+      const channelIds = new Set(['general', 'temporary']);
+      try {
+        const chSnap = await getDocs(collection(lobbyDb, 'channels'));
+        chSnap.forEach((d) => channelIds.add(d.id));
+      } catch {}
+
+      let deletedCount = 0;
+      for (const chId of channelIds) {
+        try {
+          const msgSnap = await getDocs(collection(lobbyDb, 'channels', chId, 'messages'));
+          const tasks = [];
+          msgSnap.forEach((docSnap) => {
+            tasks.push(
+              deleteDoc(doc(lobbyDb, 'channels', chId, 'messages', docSnap.id))
+                .then(() => { deletedCount++; })
+                .catch(() => {})
+            );
+          });
+          await Promise.all(tasks);
+        } catch {}
+        safeStorage.removeItem(`local_messages_${chId}`);
+      }
+
+      try {
+        Object.keys(localStorage).forEach((k) => {
+          if (k.startsWith('local_messages_')) localStorage.removeItem(k);
+        });
+        localStorage.setItem('my_sent_message_ids', JSON.stringify([]));
+      } catch {}
+
+      try {
+        const bus = new BroadcastChannel('urnperiodic_lobby_bus');
+        bus.postMessage({ type: 'admin-delete-all-messages' });
+        setTimeout(() => { try { bus.close(); } catch {} }, 500);
+      } catch {}
+
+      try {
+        const chatIframe = document.getElementById('chat-decoy-iframe');
+        if (chatIframe && chatIframe.contentWindow) {
+          chatIframe.contentWindow.postMessage({ type: 'admin-delete-all-messages' }, '*');
+        }
+      } catch {}
+
+      setAdminDeletePassword('');
+      setAdminDeleteStatus(`Deleted all messages (${deletedCount})`);
+      setTimeout(() => {
+        setShowAdminDeletePrompt(false);
+        setAdminDeleteStatus('');
+      }, 2200);
+    } catch {
+      setAdminDeleteStatus('Error deleting messages');
+    } finally {
+      setIsDeletingAll(false);
     }
   };
 
@@ -5278,6 +5361,68 @@ export default function App() {
                   isLight ? 'text-neutral-500' : 'text-neutral-400'
                 }`} />
               </button>
+
+              {/* Admin Delete All Button & Password Prompt at the bottom */}
+              <div className={`pt-2 mt-1 border-t flex flex-col gap-2 ${isLight ? 'border-neutral-200' : 'border-white/10'}`}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAdminDeletePrompt((prev) => !prev);
+                    setAdminDeleteStatus('');
+                  }}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl border font-semibold text-xs transition-all cursor-pointer group active:scale-98 shadow-sm ${
+                    isLight
+                      ? 'bg-rose-50 hover:bg-rose-100/80 border-rose-200 text-rose-700'
+                      : 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/30 text-rose-400'
+                  }`}
+                  title="Admin: Delete All Messages (Password required)"
+                >
+                  <span className="flex items-center gap-2">
+                    <div className={`p-1 rounded-lg ${
+                      isLight ? 'bg-rose-100 text-rose-700' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                    }`}>
+                      <Trash2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                    </div>
+                    <span>Delete All (Admin)</span>
+                  </span>
+                  <Lock className="w-3.5 h-3.5 opacity-70" />
+                </button>
+
+                {showAdminDeletePrompt && (
+                  <form onSubmit={handleAdminDeleteAll} className="flex flex-col gap-1.5 pt-1 animate-fade-in">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="password"
+                        value={adminDeletePassword}
+                        onChange={(e) => {
+                          setAdminDeletePassword(e.target.value);
+                          if (adminDeleteStatus) setAdminDeleteStatus('');
+                        }}
+                        placeholder="Admin password..."
+                        className={`flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border text-xs font-mono outline-none transition-all ${
+                          isLight
+                            ? 'bg-white border-neutral-300 text-neutral-900 focus:border-rose-500'
+                            : 'bg-black/40 border-white/15 text-white focus:border-rose-500'
+                        }`}
+                      />
+                      <button
+                        type="submit"
+                        disabled={isDeletingAll}
+                        className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer shrink-0 shadow-sm"
+                      >
+                        {isDeletingAll ? '...' : 'Confirm'}
+                      </button>
+                    </div>
+                    {adminDeleteStatus && (
+                      <span className={`text-[10px] font-mono font-bold ${
+                        adminDeleteStatus.startsWith('Deleted') ? 'text-emerald-400' : 'text-rose-400'
+                      }`}>
+                        {adminDeleteStatus}
+                      </span>
+                    )}
+                  </form>
+                )}
+              </div>
             </div>
 
           </div>
