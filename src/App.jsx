@@ -3890,15 +3890,33 @@ export default function App() {
     const map = new Map();
     let currentRank = 1;
 
-    Object.entries(gameRankings).forEach(([tier, titles]) => {
-      titles.forEach((title) => {
-        const rankInfo = { rank: currentRank++, tier, canonicalTitle: title };
-        const normClean = normalizeTierTitle(title);
-        const normLit = normalizeLiteralTitle(title);
-        if (normClean && !map.has(normClean)) map.set(normClean, rankInfo);
-        if (normLit && !map.has(normLit)) map.set(normLit, rankInfo);
+    if (gameRankings && typeof gameRankings === 'object') {
+      Object.entries(gameRankings).forEach(([key, val]) => {
+        if (Array.isArray(val)) {
+          // Format 1: { S: ['Game 1', 'Game 2'] } (tier -> array of game titles)
+          const tier = key;
+          val.forEach((title) => {
+            if (!title || typeof title !== 'string') return;
+            const rankInfo = { rank: currentRank++, tier, canonicalTitle: title };
+            const normClean = normalizeTierTitle(title);
+            const normLit = normalizeLiteralTitle(title);
+            if (normClean && !map.has(normClean)) map.set(normClean, rankInfo);
+            if (normLit && !map.has(normLit)) map.set(normLit, rankInfo);
+          });
+        } else if (typeof val === 'string') {
+          // Format 2: { 'Game Title': 'S' } (game title -> tier string)
+          const title = key;
+          const tier = val;
+          if (title && tier) {
+            const rankInfo = { rank: currentRank++, tier, canonicalTitle: title };
+            const normClean = normalizeTierTitle(title);
+            const normLit = normalizeLiteralTitle(title);
+            if (normClean && !map.has(normClean)) map.set(normClean, rankInfo);
+            if (normLit && !map.has(normLit)) map.set(normLit, rankInfo);
+          }
+        }
       });
-    });
+    }
 
     const aliases = [
       ['minecraft 1 12', 'minecraft'],
@@ -3990,15 +4008,18 @@ export default function App() {
 
   const rankedGamesByTier = useMemo(() => {
     const tiers = { S: [], A: [], B: [], C: [], D: [], F: [] };
-    rankedGamesList.forEach((g) => {
-      if (tiers[g.rankTier]) tiers[g.rankTier].push(g);
-    });
+    if (Array.isArray(rankedGamesList)) {
+      rankedGamesList.forEach((g) => {
+        if (g && tiers[g.rankTier]) tiers[g.rankTier].push(g);
+      });
+    }
     return tiers;
   }, [rankedGamesList]);
 
   const isRankingsActive = filter === 'rankings' || filter.startsWith('tier-');
 
   const tierRankedGames = useMemo(() => {
+    if (!Array.isArray(games) || !Array.isArray(gameTierOrder)) return [];
     return gameTierOrder.map((tier) => {
       const tierGames = games.filter((game) => getGameTier(game) === tier);
       return {
@@ -4006,7 +4027,7 @@ export default function App() {
         games: tierGames
       };
     });
-  }, [games, getGameTier]);
+  }, [games, getGameTier, gameTierOrder]);
 
   const activeRandomRankingPool = useMemo(() => {
     return rankedGameSections.find((section) => section.key === randomRankingPool) || rankedGameSections[0];
