@@ -6,7 +6,7 @@
 // anyone opens the website or the games portal.
 // ============================================================================
 
-export const WHATS_NEW_SENTENCE = "BTD6 and BTD Battles two copy and Quoridor is out. Both games are multiplayer and single player.";
+export const WHATS_NEW_SENTENCE = "LETS GO GAMBLING!!!";
 
 // Version identifier (used if you want to track modal dismissals)
 export const WHATS_NEW_VERSION = '2026-11-03';
