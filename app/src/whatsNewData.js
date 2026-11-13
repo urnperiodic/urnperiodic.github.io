@@ -6,13 +6,22 @@
 // anyone opens the website or the games portal.
 // ============================================================================
 
-export const WHATS_NEW_SENTENCE = "LETS GO GAMBLING!!!";
+export const WHATS_NEW_SENTENCE = "Gambling (Casino) Game, BTD6 & BTD Battles 2 Copy, and Quoridor are out! All games support solo and multiplayer.";
 
 // Version identifier (used if you want to track modal dismissals)
-export const WHATS_NEW_VERSION = '2026-11-03';
+export const WHATS_NEW_VERSION = '2026-11-11';
 
 // Detailed changelog items (viewable in the full "View all changes" modal)
 export const WHATS_NEW_CHANGES = [
+  {
+    id: 'gambling-casino',
+    icon: '🎰',
+    iconBg: 'bg-amber-500/20 text-amber-400',
+    title: 'Gambling (Casino) Game Out Now',
+    description: 'Fun to gamble with fake money! Play solo or multiplayer in the new S-tier casino game.',
+    actionLabel: 'LETS GO GAMBLING',
+    actionGameTitle: 'Gambling (Casino) Game'
+  },
   {
     id: 'btd6-battles-2',
     icon: '🎈',

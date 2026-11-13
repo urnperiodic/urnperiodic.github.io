@@ -199,6 +199,7 @@ Always focus on being genuinely useful and producing high-quality answers.`
   // Vite development middleware integration
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
+      configFile: path.join(process.cwd(), 'app', 'vite.config.js'),
       server: { middlewareMode: true },
       appType: "spa",
     });

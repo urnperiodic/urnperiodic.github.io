@@ -1,8 +1,8 @@
 import { lazy, Suspense, useDeferredValue, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';
-import { getApps, initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously } from 'firebase/auth';
-import { collection, doc, getDocs, deleteDoc, getFirestore, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { signInAnonymously } from 'firebase/auth';
+import { collection, doc, getDocs, deleteDoc, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { lobbyAuth, lobbyDb, handleFirestoreError, isFirestorePermissionError, OperationType } from './firebase';
 import { PUBLIC_GAMES_BASE_URL } from './data/gameSource';
 import { gameRankings } from './data/gameRankings';
 import { WHATS_NEW_SENTENCE, WHATS_NEW_CHANGES, WHATS_NEW_VERSION } from './whatsNewData';
@@ -122,20 +122,23 @@ const NotesWorkspace = lazy(() => import('./components/NotesWorkspace'));
 const StudyTimer = lazy(() => import('./components/StudyTimer'));
 const AiChatWorkspace = lazy(() => import('./components/AiChatWorkspace'));
 import UserChat from './components/UserChat';
+import AccountModal from './components/AccountModal';
+import AdminAccountsModal from './components/AdminAccountsModal';
+import {
+  DEFAULT_WORKSPACE_CONFIG,
+  authenticateAccount,
+  clearAccountSession,
+  getSavedAccountSession,
+  saveAccountSession,
+  subscribeToAccount,
+  subscribeToWorkspaceConfig,
+  syncAccountUserData,
+  syncChatLinkedAccountStorage,
+  verifySessionAccount,
+} from './utils/accountService';
 const MoviesWorkspace = lazy(() => import('./components/MoviesWorkspace'));
 const MoreMoviesWorkspace = lazy(() => import('./components/MoreMoviesWorkspace'));
 import InformationSection from './components/InformationSection';
-const firebaseConfig = {
-  projectId: 'ultra-framework-zw1xt',
-  appId: '1:435315435216:web:b8746108ed875a8d25e0d5',
-  apiKey: 'AIzaSyAu5Oe190oojQUnWPajnzfEF2lNoBrFafs',
-  authDomain: 'ultra-framework-zw1xt.firebaseapp.com',
-  storageBucket: 'ultra-framework-zw1xt.firebasestorage.app',
-  messagingSenderId: '435315435216',
-};
-const firebaseApp = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-const lobbyAuth = getAuth(firebaseApp);
-const lobbyDb = getFirestore(firebaseApp, 'ai-studio-chat1-72af77fd-eebc-43fa-8925-e79796be2d79');
 
 function LobbyUnreadIndicator({ visible }) {
   if (!visible) return null;
@@ -209,7 +212,9 @@ import {
   Medal,
   Calculator,
   Palette,
-  Trash2
+  Trash2,
+  User,
+  LogIn
 } from 'lucide-react';
 
 // Safe storage helper to prevent SecurityError crash in sandboxed iframes
@@ -814,7 +819,7 @@ function DecoyDropdown({
                               ? 'text-neutral-700 hover:text-black hover:bg-neutral-100/70 border border-transparent'
                               : 'text-neutral-300 hover:text-white hover:bg-white/5 border border-transparent'
                       }`}
-                      title={isLockedOption ? "Locked: Enter admin pass (ttt) to unlock all decoys" : opt.labelLong}
+                      title={isLockedOption ? "Locked: Requires Extra Decoys permission or owner pass to unlock all decoys" : opt.labelLong}
                     >
                       {opt.icon === 'school' ? (
                         <School className={`w-3.5 h-3.5 shrink-0 ${isSelected ? (mode === 'light' ? 'text-black' : 'text-[var(--accent-color)]') : 'text-neutral-400'}`} />
@@ -1525,7 +1530,9 @@ export default function App() {
 
     const subscribeToLobby = async () => {
       try {
-        await signInAnonymously(lobbyAuth);
+        try {
+          await signInAnonymously(lobbyAuth);
+        } catch {}
         if (cancelled) return;
         
         const channelsToListen = ['general', 'temporary'];
@@ -1546,6 +1553,9 @@ export default function App() {
               }
               markLobbyUnread(latest);
             }, (error) => {
+              if (isFirestorePermissionError(error)) {
+                handleFirestoreError(error, OperationType.GET, `channels/${chanId}/messages`);
+              }
               console.warn(`Lobby unread listener error for ${chanId}:`, error);
             });
             unsubs.push(unsub);
@@ -2121,7 +2131,7 @@ export default function App() {
   };
 
   const launchGame = (gameToLaunch) => {
-    if (!gameToLaunch) return;
+    if (!gameToLaunch || !canGamesAccess) return;
     recordRecentlyPlayed(gameToLaunch.id);
     safeStorage.setItem('unblocked-last-game', gameToLaunch.id);
     setGameFrame({ src: gameToLaunch.url });
@@ -2130,7 +2140,7 @@ export default function App() {
   launchGameRef.current = launchGame;
 
   const openGameInAboutBlank = (gameToOpen) => {
-    if (!gameToOpen) return;
+    if (!gameToOpen || !canGamesAccess) return;
     const win = window.open("about:blank", "_blank");
     if (!win) {
       alert("Popup blocked. Allow popups for this site.");
@@ -2419,6 +2429,10 @@ export default function App() {
     if (mode === 'articles') {
       safeStorage.removeItem('unblocked-refreshing-session');
       safeStorage.removeItem('unblocked-refresh-timestamp');
+      setIsOwnerAdmin(false);
+      setIsAdminPassUnlocked(false);
+      setIsDecoyPassUnlocked(false);
+      setAdminAccountsModalOpen(false);
     }
     if (mode === 'games') {
       setHeaderOpen(false);
@@ -2521,12 +2535,234 @@ export default function App() {
   const [errorCount, setErrorCount] = useState(0);
   const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
-  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
-  const [isDecoysUnlocked, setIsDecoysUnlocked] = useState(false);
+  const [isAdminPassUnlocked, setIsAdminPassUnlocked] = useState(false);
+  const [isDecoyPassUnlocked, setIsDecoyPassUnlocked] = useState(false);
+  const [isOwnerAdmin, setIsOwnerAdmin] = useState(false);
+  const [activeAccount, setActiveAccount] = useState(null);
+  const [workspaceConfig, setWorkspaceConfig] = useState(DEFAULT_WORKSPACE_CONFIG);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [adminAccountsModalOpen, setAdminAccountsModalOpen] = useState(false);
+  const [lockAuthTab, setLockAuthTab] = useState('passcode');
+  const [lockUsername, setLockUsername] = useState('');
+  const [lockPassword, setLockPassword] = useState('');
+  const [lockAccountError, setLockAccountError] = useState('');
+  const [lockAccountBusy, setLockAccountBusy] = useState(false);
+  const suppressAccountSyncRef = useRef(false);
+  const activeAccountSyncTimerRef = useRef(null);
+
+  const canAccessWorkspace = useCallback(
+    (key) => {
+      if (isOwnerAdmin) return true;
+      if (workspaceConfig?.siteLockdown) return false;
+      if (workspaceConfig && workspaceConfig[key] === false) return false;
+      if (key === 'aiAccess') {
+        return Boolean(isAdminPassUnlocked || (activeAccount?.isActive && activeAccount?.aiAccess));
+      }
+      if (key === 'decoysAccess') {
+        return Boolean(isDecoyPassUnlocked || (activeAccount?.isActive && activeAccount?.decoysAccess));
+      }
+      if (activeAccount?.isActive) {
+        return activeAccount[key] !== false;
+      }
+      return true;
+    },
+    [isOwnerAdmin, isAdminPassUnlocked, isDecoyPassUnlocked, activeAccount, workspaceConfig],
+  );
+
+  const canGamesAccess = canAccessWorkspace('gamesAccess');
+  const canMoviesAccess = canAccessWorkspace('moviesAccess');
+  const canMoreMoviesAccess = canAccessWorkspace('moreMoviesAccess');
+  const canYoutubeAccess = canAccessWorkspace('youtubeAccess');
+  const canLobbyChatAccess = canAccessWorkspace('lobbyChatAccess');
+  const canDownloadAccess = canAccessWorkspace('downloadAccess');
+  const isAdminUnlocked = canAccessWorkspace('aiAccess');
+  const isDecoysUnlocked = canAccessWorkspace('decoysAccess');
+
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [adminError, setAdminError] = useState('');
 
-  // Enforce Classroom-only decoy until ttt is entered
+  const applyAccountProfileToApp = useCallback((account) => {
+    if (!account) return;
+    suppressAccountSyncRef.current = true;
+    if (Array.isArray(account.favorites)) {
+      setFavorites(account.favorites);
+    }
+    if (Array.isArray(account.recentlyPlayed)) {
+      setRecentlyPlayed(account.recentlyPlayed);
+      try {
+        safeStorage.setItem('unblocked-recently-played', JSON.stringify(account.recentlyPlayed));
+      } catch {}
+    }
+    if (account.preferredTheme) {
+      setTheme(account.preferredTheme);
+    }
+    if (account.preferredMode === 'light' || account.preferredMode === 'dark') {
+      setMode(account.preferredMode);
+    }
+    setTimeout(() => {
+      suppressAccountSyncRef.current = false;
+    }, 300);
+  }, []);
+
+  const handleAccountSignIn = useCallback(async (username, password) => {
+    if (workspaceConfig?.siteLockdown && !isOwnerAdmin) {
+      throw new Error(workspaceConfig?.lockdownMessage || 'Workspace access is currently locked by admin.');
+    }
+    const account = await authenticateAccount(lobbyDb, lobbyAuth, username, password);
+    saveAccountSession(account);
+    setActiveAccount(account);
+    applyAccountProfileToApp(account);
+    syncChatLinkedAccountStorage(account);
+    return account;
+  }, [applyAccountProfileToApp, workspaceConfig, isOwnerAdmin]);
+
+  const handleAccountSignOut = useCallback(() => {
+    clearAccountSession();
+    setActiveAccount(null);
+    syncChatLinkedAccountStorage(null);
+    if (filter === 'chat' && !isAdminPassUnlocked) {
+      setFilter('all');
+    }
+  }, [filter, isAdminPassUnlocked]);
+
+  // Restore saved account session on boot
+  useEffect(() => {
+    let cancelled = false;
+    const saved = getSavedAccountSession();
+    if (!saved) {
+      syncChatLinkedAccountStorage(null);
+      return;
+    }
+    verifySessionAccount(lobbyDb, lobbyAuth, saved)
+      .then((acc) => {
+        if (cancelled) return;
+        if (!acc) {
+          clearAccountSession();
+          setActiveAccount(null);
+          return;
+        }
+        setActiveAccount(acc);
+        applyAccountProfileToApp(acc);
+        syncChatLinkedAccountStorage(acc);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [applyAccountProfileToApp]);
+
+  // Live Firestore subscription for signed-in account (permissions, mute/ban, active status, password reset)
+  useEffect(() => {
+    const uname = activeAccount?.usernameLower;
+    if (!uname) {
+      syncChatLinkedAccountStorage(null);
+      return;
+    }
+    const unsub = subscribeToAccount(
+      lobbyDb,
+      uname,
+      (latest) => {
+        const saved = getSavedAccountSession();
+        if (!latest || !latest.isActive || (saved?.verifier && latest.passwordHash !== saved.verifier)) {
+          clearAccountSession();
+          setActiveAccount(null);
+          syncChatLinkedAccountStorage(null);
+          return;
+        }
+        setActiveAccount(latest);
+        syncChatLinkedAccountStorage(latest);
+      },
+      () => {},
+    );
+    return () => unsub();
+  }, [activeAccount?.usernameLower]);
+
+  // Sync user data (bookmarks, recent history, theme/mode) back to Firestore while signed in
+  useEffect(() => {
+    if (!activeAccount?.usernameLower || suppressAccountSyncRef.current) return;
+    if (activeAccountSyncTimerRef.current) {
+      clearTimeout(activeAccountSyncTimerRef.current);
+    }
+    activeAccountSyncTimerRef.current = setTimeout(() => {
+      syncAccountUserData(lobbyDb, lobbyAuth, activeAccount.usernameLower, {
+        favorites,
+        recentlyPlayed,
+        preferredTheme: theme,
+        preferredMode: mode,
+      });
+    }, 600);
+    return () => {
+      if (activeAccountSyncTimerRef.current) {
+        clearTimeout(activeAccountSyncTimerRef.current);
+      }
+    };
+  }, [activeAccount?.usernameLower, favorites, recentlyPlayed, theme, mode]);
+
+  // Subscribe to global workspace access configuration from Firestore
+  useEffect(() => {
+    const unsub = subscribeToWorkspaceConfig(
+      lobbyDb,
+      lobbyAuth,
+      (cfg) => setWorkspaceConfig(cfg),
+      () => {},
+    );
+    return () => unsub();
+  }, []);
+
+  // Enforce global lockdown, shared-passcode restriction, and per-workspace access live
+  useEffect(() => {
+    if (isOwnerAdmin) return;
+    if (viewMode === 'games') {
+      if (workspaceConfig?.siteLockdown) {
+        setViewMode('articles');
+        safeStorage.setItem('classroom-view-mode', 'articles');
+        safeStorage.setItem('classroom-passcode-unlocked', 'false');
+        safeSessionStorage.setItem('classroom-view-mode', 'articles');
+        safeSessionStorage.setItem('classroom-passcode-unlocked', 'false');
+        setSelectedGame(null);
+        return;
+      }
+      if (!activeAccount && workspaceConfig?.allowSharedPasscodes === false) {
+        setViewMode('articles');
+        safeStorage.setItem('classroom-view-mode', 'articles');
+        safeStorage.setItem('classroom-passcode-unlocked', 'false');
+        safeSessionStorage.setItem('classroom-view-mode', 'articles');
+        safeSessionStorage.setItem('classroom-passcode-unlocked', 'false');
+        setSelectedGame(null);
+        return;
+      }
+    }
+    if (selectedGame && !canGamesAccess) {
+      setSelectedGame(null);
+    }
+    const workspaceFilterMap = {
+      movies: canMoviesAccess,
+      moremovies: canMoreMoviesAccess,
+      youtube: canYoutubeAccess,
+      lobbychat: canLobbyChatAccess,
+      chat: isAdminUnlocked,
+      download: canDownloadAccess,
+    };
+    if (filter in workspaceFilterMap && !workspaceFilterMap[filter]) {
+      setFilter('all');
+    }
+  }, [
+    isOwnerAdmin,
+    viewMode,
+    workspaceConfig,
+    activeAccount,
+    selectedGame,
+    filter,
+    canGamesAccess,
+    canMoviesAccess,
+    canMoreMoviesAccess,
+    canYoutubeAccess,
+    canLobbyChatAccess,
+    isAdminUnlocked,
+    canDownloadAccess,
+  ]);
+
+  // Enforce Classroom-only decoy until owner pass or account with decoysAccess is active
   useEffect(() => {
     if (!isDecoysUnlocked) {
       if (decoyType !== 'classroom') {
@@ -2547,14 +2783,20 @@ export default function App() {
   const handleAdminPasswordSubmit = (e) => {
     if (e) e.preventDefault();
     const val = adminPasswordInput.trim();
-    if (val === 'ttt') {
-      setIsAdminUnlocked(true);
-      setIsDecoysUnlocked(true);
+    if (val === '06091006Tt') {
+      setIsOwnerAdmin(true);
+      setIsAdminPassUnlocked(true);
+      setIsDecoyPassUnlocked(true);
       setAdminError('');
       setAdminPasswordInput('');
       setIsAdminPanelOpen(false);
     } else if (val === 'sharp') {
-      setIsAdminUnlocked(true);
+      if (workspaceConfig?.aiAccess === false) {
+        setAdminError('AI Chat disabled by admin');
+        setAdminPasswordInput('');
+        return;
+      }
+      setIsAdminPassUnlocked(true);
       setAdminError('');
       setAdminPasswordInput('');
       setFilter('chat');
@@ -2574,8 +2816,10 @@ export default function App() {
   };
 
   const handleAdminLock = () => {
-    setIsAdminUnlocked(false);
-    setIsDecoysUnlocked(false);
+    setIsOwnerAdmin(false);
+    setIsAdminPassUnlocked(false);
+    setIsDecoyPassUnlocked(false);
+    setAdminAccountsModalOpen(false);
     setDecoyType('classroom');
     setAutoRandomizeDecoy(false);
     setAdminPasswordInput('');
@@ -2606,7 +2850,9 @@ export default function App() {
       try {
         const chSnap = await getDocs(collection(lobbyDb, 'channels'));
         chSnap.forEach((d) => channelIds.add(d.id));
-      } catch {}
+      } catch (err) {
+        if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.GET, 'channels');
+      }
 
       let deletedCount = 0;
       for (const chId of channelIds) {
@@ -2617,11 +2863,17 @@ export default function App() {
             tasks.push(
               deleteDoc(doc(lobbyDb, 'channels', chId, 'messages', docSnap.id))
                 .then(() => { deletedCount++; })
-                .catch(() => {})
+                .catch((delErr) => {
+                  if (isFirestorePermissionError(delErr)) {
+                    handleFirestoreError(delErr, OperationType.DELETE, `channels/${chId}/messages/${docSnap.id}`);
+                  }
+                })
             );
           });
           await Promise.all(tasks);
-        } catch {}
+        } catch (err) {
+          if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.GET, `channels/${chId}/messages`);
+        }
         safeStorage.removeItem(`local_messages_${chId}`);
       }
 
@@ -2839,10 +3091,24 @@ export default function App() {
   }, [viewMode, decoyType]);
 
   const handlePasswordSubmit = (customPass) => {
-    const inputPass = (customPass !== undefined ? customPass : passcode).trim().toLowerCase();
-    if (!inputPass) return;
+    const rawInput = (customPass !== undefined ? customPass : passcode).trim();
+    const inputPass = rawInput.toLowerCase();
+    if (!rawInput) return;
 
-    if (inputPass === 'ttt1234') {
+    const sharedCodesAllowed = !workspaceConfig?.siteLockdown && workspaceConfig?.allowSharedPasscodes !== false;
+
+    if (rawInput === '06091006Tt') {
+      setTimeout(() => {
+        setIsOwnerAdmin(true);
+        setIsAdminPassUnlocked(true);
+        setIsDecoyPassUnlocked(true);
+        setViewModeAndSave('games');
+        setPasscode('');
+      }, 150);
+      return;
+    }
+
+    if (inputPass === 'ttt1234' && sharedCodesAllowed) {
       const win = window.open("about:blank", "_blank");
       if (win) {
         // Automatically save that we are unlocked so the iframe can read it
@@ -2986,14 +3252,7 @@ export default function App() {
         alert("Popup blocked! Please allow popups to open the portals in a cloaked tab.");
       }
       setPasscode('');
-    } else if (inputPass === 'ttt') {
-      setTimeout(() => {
-        setIsAdminUnlocked(true);
-        setIsDecoysUnlocked(true);
-        setViewModeAndSave('games');
-        setPasscode('');
-      }, 150);
-    } else if (inputPass === 'tungtung' || inputPass === '1378') {
+    } else if ((inputPass === 'tungtung' || inputPass === '1378') && sharedCodesAllowed) {
       setTimeout(() => {
         setViewModeAndSave('games');
         setPasscode('');
@@ -3024,8 +3283,10 @@ export default function App() {
     const nextPasscode = passcode + digit;
     setPasscode(nextPasscode);
 
+    const sharedCodesAllowed = !workspaceConfig?.siteLockdown && workspaceConfig?.allowSharedPasscodes !== false;
+
     // Instant matching for rapid-pins (2026, 1212, 1111)
-    if (nextPasscode === '2026') {
+    if (nextPasscode === '2026' && sharedCodesAllowed) {
       setTimeout(() => {
         setViewModeAndSave('games');
         setPasscode('');
@@ -3076,20 +3337,24 @@ export default function App() {
 
   // Automated trigger checks for passwords within the article search tab
   useEffect(() => {
-    const q = articleSearch.trim().toLowerCase();
-    if (q === 'ttt1234') {
-      setArticleSearch('');
-      handlePasswordSubmit(q);
-    } else if (q === 'ttt') {
-      setIsAdminUnlocked(true);
-      setIsDecoysUnlocked(true);
+    const rawQ = articleSearch.trim();
+    const q = rawQ.toLowerCase();
+    const sharedCodesAllowed = !workspaceConfig?.siteLockdown && workspaceConfig?.allowSharedPasscodes !== false;
+
+    if (rawQ === '06091006Tt') {
+      setIsOwnerAdmin(true);
+      setIsAdminPassUnlocked(true);
+      setIsDecoyPassUnlocked(true);
       setViewModeAndSave('games');
       setArticleSearch('');
-    } else if (q === 'tungtung' || q === '2026') {
+    } else if (q === 'ttt1234' && sharedCodesAllowed) {
+      setArticleSearch('');
+      handlePasswordSubmit(q);
+    } else if ((q === 'tungtung' || q === '2026') && sharedCodesAllowed) {
       setViewModeAndSave('games');
       setArticleSearch('');
     }
-  }, [articleSearch]);
+  }, [articleSearch, workspaceConfig]);
 
   // Global keydown listeners for quick keystroke combinations
   useEffect(() => {
@@ -3105,7 +3370,7 @@ export default function App() {
           sequenceBuffer = sequenceBuffer.slice(-4);
         }
         
-        if (sequenceBuffer === '2026') {
+        if (sequenceBuffer === '2026' && !workspaceConfig?.siteLockdown && workspaceConfig?.allowSharedPasscodes !== false) {
           setViewModeAndSave('games');
           setPasscode('');
           sequenceBuffer = '';
@@ -3116,7 +3381,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleGlobalSequence);
     return () => window.removeEventListener('keydown', handleGlobalSequence);
-  }, [viewMode]);
+  }, [viewMode, workspaceConfig]);
 
   // Global Panic Key Handler
   useEffect(() => {
@@ -3173,6 +3438,7 @@ export default function App() {
   }, [panicKeysEnabled]);
 
   const downloadEntireWebsite = () => {
+    if (!canDownloadAccess) return;
     const downloadUrl = `${window.location.origin}/WebsiteUpdated.html`;
 
     try {
@@ -4782,101 +5048,211 @@ export default function App() {
           
           <div className="text-center">
             <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Portals Secured</h2>
-            <p className="text-xs text-[var(--text-muted)] mt-1.5 leading-relaxed">This is a paid Science, Math, ELA, and Social Studies article website. Please enter a correct password to continue to the website.</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1.5 leading-relaxed">
+              {lockAuthTab === 'account'
+                ? 'Sign in with your assigned account username and unique password.'
+                : 'This is a paid Science, Math, ELA, and Social Studies article website. Please enter a correct password to continue to the website.'}
+            </p>
           </div>
 
-          {/* Alphanumeric Text/Passcode Input Field */}
-          <div className="w-full flex flex-col gap-2.5">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Enter password..."
-                value={passcode}
-                onChange={(e) => setPasscode(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handlePasswordSubmit();
-                  }
-                }}
-                className="w-full px-4 py-2.5 border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-center text-sm font-bold font-mono tracking-widest rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] placeholder:text-[10px] placeholder:font-sans placeholder:tracking-normal outline-none transition-all placeholder:opacity-60"
-                autoFocus
-              />
-              {passcode.length > 0 && (
-                <button 
-                  type="button"
-                  onClick={() => setPasscode('')}
-                  className="absolute right-3.5 top-3 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] font-bold cursor-pointer"
-                  title="Clear input"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            
-            <button
-              type="button"
-              onClick={() => handlePasswordSubmit()}
-              className="w-full text-xs font-mono font-bold bg-[var(--accent-color)] text-[var(--bg-color)] py-2.5 rounded-xl hover:opacity-95 active:scale-98 transition-all cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
-            >
-              <Unlock className="w-3.5 h-3.5" />
-              <span>SUBMIT PASSWORD</span>
-            </button>
-          </div>
-
-          {/* Indicators for passcode digits */}
-          {(!passcode || (!isNaN(passcode) && passcode.length <= 4)) && (
-            <div className="flex justify-center gap-4 py-1">
-              {[0, 1, 2, 3].map((index) => {
-                const isFilled = passcode.length > index;
-                return (
-                  <div 
-                    key={index}
-                    className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-150 transform ${
-                      isFilled 
-                        ? 'bg-[var(--accent-color)] border-[var(--accent-color)] scale-110 shadow-[0_0_8px_var(--accent-shadow)]' 
-                        : 'border-[var(--card-border)] bg-[var(--bg-secondary)]'
-                    }`}
-                  />
-                );
-              })}
+          {workspaceConfig?.siteLockdown && (
+            <div className="w-full px-3.5 py-2.5 rounded-xl border border-rose-500/40 bg-rose-500/15 text-rose-300 text-xs font-semibold text-center leading-relaxed flex items-center justify-center gap-2">
+              <ShieldAlert className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{workspaceConfig.lockdownMessage || 'Site temporarily restricted by admin. Sign in with an authorized account or owner password.'}</span>
             </div>
           )}
 
-          {/* Secure Pad Grid */}
-          <div className="grid grid-cols-3 gap-3.5 w-full max-w-[245px] mt-2">
-            {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
-              <button
-                key={num}
-                onClick={() => handleDigitInput(num)}
-                className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] hover:border-[var(--accent-color)] active:scale-95 hover:scale-105 transition-all duration-150 cursor-pointer shadow-sm mx-auto"
-              >
-                {num}
-              </button>
-            ))}
+          {/* Auth Mode Switcher: Passcode vs Account Login */}
+          <div className="w-full grid grid-cols-2 gap-1 p-1 rounded-xl border border-[var(--card-border)] bg-[var(--bg-secondary)]">
             <button
-              onClick={() => setPasscode('')}
-              className="w-14 h-14 rounded-full flex items-center justify-center text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent hover:border-[var(--card-border)] hover:bg-[var(--bg-secondary)] active:scale-90 transition-all duration-150 cursor-pointer mx-auto"
+              type="button"
+              onClick={() => {
+                setLockAuthTab('passcode');
+                setLockAccountError('');
+              }}
+              className={`py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                lockAuthTab === 'passcode'
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+              }`}
             >
-              Clear
+              Passcode
             </button>
             <button
-              onClick={() => handleDigitInput('0')}
-              className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] hover:border-[var(--accent-color)] active:scale-95 hover:scale-105 transition-all duration-150 cursor-pointer shadow-sm mx-auto"
+              type="button"
+              onClick={() => {
+                setLockAuthTab('account');
+                setLockAccountError('');
+              }}
+              className={`py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                lockAuthTab === 'account'
+                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+              }`}
             >
-              0
-            </button>
-            <button
-              onClick={() => setPasscode(prev => prev.slice(0, -1))}
-              className="w-14 h-14 rounded-full flex items-center justify-center text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent hover:border-[var(--card-border)] hover:bg-[var(--bg-secondary)] active:scale-90 transition-all duration-150 cursor-pointer mx-auto"
-            >
-              Del
+              <User className="w-3 h-3" />
+              <span>Account</span>
             </button>
           </div>
 
-          {errorCount > 0 && (
-            <span className="text-[10.5px] text-red-500 font-medium font-mono animate-bounce mt-1">
-              Access Denied! Attempt #{errorCount}
-            </span>
+          {lockAuthTab === 'account' ? (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (lockAccountBusy) return;
+                setLockAccountError('');
+                setLockAccountBusy(true);
+                try {
+                  await handleAccountSignIn(lockUsername, lockPassword);
+                  setLockUsername('');
+                  setLockPassword('');
+                  setViewModeAndSave('games');
+                } catch (err) {
+                  setIsShake(true);
+                  setLockAccountError(err?.message || 'Invalid username or password.');
+                  setTimeout(() => setIsShake(false), 500);
+                } finally {
+                  setLockAccountBusy(false);
+                }
+              }}
+              className="w-full flex flex-col gap-3"
+            >
+              {lockAccountError && (
+                <div className="px-3 py-2 rounded-xl border border-rose-500/40 bg-rose-500/15 text-rose-400 text-xs font-semibold text-center">
+                  {lockAccountError}
+                </div>
+              )}
+              <input
+                type="text"
+                required
+                value={lockUsername}
+                onChange={(e) => setLockUsername(e.target.value)}
+                placeholder="Username"
+                autoFocus
+                className="w-full px-3.5 py-2.5 border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-sm font-semibold rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] transition-all"
+              />
+              <input
+                type="password"
+                required
+                value={lockPassword}
+                onChange={(e) => setLockPassword(e.target.value)}
+                placeholder="Unique password"
+                className="w-full px-3.5 py-2.5 border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-sm font-mono rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] transition-all"
+              />
+              <button
+                type="submit"
+                disabled={lockAccountBusy}
+                className="w-full text-xs font-mono font-bold bg-[var(--accent-color)] text-[var(--bg-color)] py-2.5 rounded-xl hover:opacity-95 disabled:opacity-50 active:scale-98 transition-all cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>{lockAccountBusy ? 'SIGNING IN...' : 'SIGN IN WITH ACCOUNT'}</span>
+              </button>
+              <p className="text-[10.5px] text-center text-[var(--text-muted)] leading-relaxed">
+                Accounts are created by the admin. Signing in syncs your bookmarks, theme, and Lobby Chat identity.
+              </p>
+            </form>
+          ) : (
+            <>
+              {!workspaceConfig?.siteLockdown && workspaceConfig?.allowSharedPasscodes === false && (
+                <div className="w-full px-3 py-2 rounded-xl border border-amber-500/35 bg-amber-500/10 text-amber-300 text-[11px] font-semibold text-center leading-relaxed">
+                  Shared passcodes are disabled by the admin. Use Account Sign In or Owner Password.
+                </div>
+              )}
+
+              {/* Alphanumeric Text/Passcode Input Field */}
+              <div className="w-full flex flex-col gap-2.5">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Enter password..."
+                    value={passcode}
+                    onChange={(e) => setPasscode(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handlePasswordSubmit();
+                      }
+                    }}
+                    className="w-full px-4 py-2.5 border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-center text-sm font-bold font-mono tracking-widest rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] placeholder:text-[10px] placeholder:font-sans placeholder:tracking-normal outline-none transition-all placeholder:opacity-60"
+                    autoFocus
+                  />
+                  {passcode.length > 0 && (
+                    <button 
+                      type="button"
+                      onClick={() => setPasscode('')}
+                      className="absolute right-3.5 top-3 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] font-bold cursor-pointer"
+                      title="Clear input"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => handlePasswordSubmit()}
+                  className="w-full text-xs font-mono font-bold bg-[var(--accent-color)] text-[var(--bg-color)] py-2.5 rounded-xl hover:opacity-95 active:scale-98 transition-all cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+                >
+                  <Unlock className="w-3.5 h-3.5" />
+                  <span>SUBMIT PASSWORD</span>
+                </button>
+              </div>
+
+              {/* Indicators for passcode digits */}
+              {(!passcode || (!isNaN(passcode) && passcode.length <= 4)) && (
+                <div className="flex justify-center gap-4 py-1">
+                  {[0, 1, 2, 3].map((index) => {
+                    const isFilled = passcode.length > index;
+                    return (
+                      <div 
+                        key={index}
+                        className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-150 transform ${
+                          isFilled 
+                            ? 'bg-[var(--accent-color)] border-[var(--accent-color)] scale-110 shadow-[0_0_8px_var(--accent-shadow)]' 
+                            : 'border-[var(--card-border)] bg-[var(--bg-secondary)]'
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Secure Pad Grid */}
+              <div className="grid grid-cols-3 gap-3.5 w-full max-w-[245px] mt-2">
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
+                  <button
+                    key={num}
+                    onClick={() => handleDigitInput(num)}
+                    className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] hover:border-[var(--accent-color)] active:scale-95 hover:scale-105 transition-all duration-150 cursor-pointer shadow-sm mx-auto"
+                  >
+                    {num}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPasscode('')}
+                  className="w-14 h-14 rounded-full flex items-center justify-center text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent hover:border-[var(--card-border)] hover:bg-[var(--bg-secondary)] active:scale-90 transition-all duration-150 cursor-pointer mx-auto"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={() => handleDigitInput('0')}
+                  className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] hover:border-[var(--accent-color)] active:scale-95 hover:scale-105 transition-all duration-150 cursor-pointer shadow-sm mx-auto"
+                >
+                  0
+                </button>
+                <button
+                  onClick={() => setPasscode(prev => prev.slice(0, -1))}
+                  className="w-14 h-14 rounded-full flex items-center justify-center text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent hover:border-[var(--card-border)] hover:bg-[var(--bg-secondary)] active:scale-90 transition-all duration-150 cursor-pointer mx-auto"
+                >
+                  Del
+                </button>
+              </div>
+
+              {errorCount > 0 && (
+                <span className="text-[10.5px] text-red-500 font-medium font-mono animate-bounce mt-1">
+                  Access Denied! Attempt #{errorCount}
+                </span>
+              )}
+            </>
           )}
 
         </div>
@@ -5275,7 +5651,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => {
-                  downloadEntireWebsite();
+                  setAccountModalOpen(true);
                   setIsGlobalSettingsOpen(false);
                 }}
                 className={`w-full flex items-center justify-between p-2.5 rounded-xl border font-semibold text-xs transition-all cursor-pointer group active:scale-98 shadow-sm ${
@@ -5283,20 +5659,78 @@ export default function App() {
                     ? 'bg-neutral-100 hover:bg-neutral-200/80 border-neutral-200 text-neutral-900'
                     : 'bg-white/10 hover:bg-white/15 border-white/15 text-white'
                 }`}
-                title="Download Website"
+                title={activeAccount ? `Signed in as @${activeAccount.username}` : 'Sign in to an assigned account'}
               >
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-2 min-w-0">
                   <div className={`p-1 rounded-lg ${
-                    isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    isLight ? 'bg-cyan-100 text-cyan-700' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                   }`}>
-                    <Download className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                    <User className="w-3.5 h-3.5 shrink-0" />
                   </div>
-                  <span>Download Website</span>
+                  <span className="truncate">
+                    {activeAccount ? `@${activeAccount.username} (Account)` : 'Account Sign In'}
+                  </span>
                 </span>
-                <ChevronRight className={`w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 ${
+                <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 ${
                   isLight ? 'text-neutral-500' : 'text-neutral-400'
                 }`} />
               </button>
+
+              {isOwnerAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminAccountsModalOpen(true);
+                    setIsGlobalSettingsOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl border font-semibold text-xs transition-all cursor-pointer group active:scale-98 shadow-sm ${
+                    isLight
+                      ? 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-900'
+                      : 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/35 text-amber-300'
+                  }`}
+                  title="Manage user accounts, passwords, chat moderation, and permissions"
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <div className={`p-1 rounded-lg ${
+                      isLight ? 'bg-amber-200 text-amber-800' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    }`}>
+                      <Users className="w-3.5 h-3.5 shrink-0" />
+                    </div>
+                    <span className="truncate">Manage Accounts (Admin)</span>
+                  </span>
+                  <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 ${
+                    isLight ? 'text-amber-700' : 'text-amber-300'
+                  }`} />
+                </button>
+              )}
+
+              {canDownloadAccess && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    downloadEntireWebsite();
+                    setIsGlobalSettingsOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl border font-semibold text-xs transition-all cursor-pointer group active:scale-98 shadow-sm ${
+                    isLight
+                      ? 'bg-neutral-100 hover:bg-neutral-200/80 border-neutral-200 text-neutral-900'
+                      : 'bg-white/10 hover:bg-white/15 border-white/15 text-white'
+                  }`}
+                  title="Download Website"
+                >
+                  <span className="flex items-center gap-2">
+                    <div className={`p-1 rounded-lg ${
+                      isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    }`}>
+                      <Download className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                    </div>
+                    <span>Download Website</span>
+                  </span>
+                  <ChevronRight className={`w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 ${
+                    isLight ? 'text-neutral-500' : 'text-neutral-400'
+                  }`} />
+                </button>
+              )}
 
               {/* Admin Delete All Button & Password Prompt at the bottom */}
               <div className={`pt-2 mt-1 border-t flex flex-col gap-2 ${isLight ? 'border-neutral-200' : 'border-white/10'}`}>
@@ -5408,72 +5842,80 @@ export default function App() {
           {/* Workspaces & Icons Group (moves left for extra space) */}
           <div className="flex flex-wrap items-center gap-1.5 shrink min-w-0 justify-start">
             {/* Movies Button */}
-            <motion.button
-              whileHover={animationsEnabled ? { scale: 1.05 } : undefined}
-              whileTap={animationsEnabled ? { scale: 0.95 } : undefined}
-              onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
-              className={`relative px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${
-                filter === 'movies'
-                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
-                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
-              }`}
-              title="Movies Workspace"
-            >
-              <Tv className="w-3.5 h-3.5" />
-              <span style={{ fontSize: '9px', lineHeight: '18px', textAlign: 'center', fontStyle: 'normal', fontWeight: 'normal', fontFamily: 'Inter' }}>movies</span>
-            </motion.button>
+            {canMoviesAccess && (
+              <motion.button
+                whileHover={animationsEnabled ? { scale: 1.05 } : undefined}
+                whileTap={animationsEnabled ? { scale: 0.95 } : undefined}
+                onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
+                className={`relative px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${
+                  filter === 'movies'
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
+                }`}
+                title="Movies Workspace"
+              >
+                <Tv className="w-3.5 h-3.5" />
+                <span style={{ fontSize: '9px', lineHeight: '18px', textAlign: 'center', fontStyle: 'normal', fontWeight: 'normal', fontFamily: 'Inter' }}>movies</span>
+              </motion.button>
+            )}
 
             {/* More Movies Button */}
-            <motion.button
-              whileHover={animationsEnabled ? { scale: 1.05 } : undefined}
-              whileTap={animationsEnabled ? { scale: 0.95 } : undefined}
-              onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); }}
-              className={`relative px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${
-                filter === 'moremovies'
-                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
-                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
-              }`}
-              title="More Movies (Atlantic.st)"
-            >
-              <Film className="w-3.5 h-3.5" />
-              <span style={{ fontSize: '9px', lineHeight: '18px', textAlign: 'center', fontStyle: 'normal', fontWeight: 'normal', fontFamily: 'Inter' }}>more movies</span>
-            </motion.button>
+            {canMoreMoviesAccess && (
+              <motion.button
+                whileHover={animationsEnabled ? { scale: 1.05 } : undefined}
+                whileTap={animationsEnabled ? { scale: 0.95 } : undefined}
+                onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); }}
+                className={`relative px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${
+                  filter === 'moremovies'
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
+                }`}
+                title="More Movies (Atlantic.st)"
+              >
+                <Film className="w-3.5 h-3.5" />
+                <span style={{ fontSize: '9px', lineHeight: '18px', textAlign: 'center', fontStyle: 'normal', fontWeight: 'normal', fontFamily: 'Inter' }}>more movies</span>
+              </motion.button>
+            )}
 
             {/* Lobby Chat Button */}
-            <motion.button
-              whileHover={animationsEnabled ? { scale: 1.05 } : undefined}
-              whileTap={animationsEnabled ? { scale: 0.95 } : undefined}
-              onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); }}
-              className={`relative px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${
-                filter === 'lobbychat'
-                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)] font-bold'
-                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
-              }`}
-              title="Lobby Chat"
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <LobbyUnreadIndicator visible={hasUnreadLobby} />
-              <span>Lobby Chat</span>
-            </motion.button>
+            {canLobbyChatAccess && (
+              <motion.button
+                whileHover={animationsEnabled ? { scale: 1.05 } : undefined}
+                whileTap={animationsEnabled ? { scale: 0.95 } : undefined}
+                onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); }}
+                className={`relative px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${
+                  filter === 'lobbychat'
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)] font-bold'
+                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
+                }`}
+                title="Lobby Chat"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <LobbyUnreadIndicator visible={hasUnreadLobby} />
+                <span>Lobby Chat</span>
+              </motion.button>
+            )}
 
             {/* YouTube Workspace Button */}
-            <motion.button
-              whileHover={animationsEnabled ? { scale: 1.05 } : undefined}
-              whileTap={animationsEnabled ? { scale: 0.95 } : undefined}
-              onClick={() => { setFilter(filter === 'youtube' ? 'all' : 'youtube'); setSelectedGame(null); }}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${
-                filter === 'youtube'
-                  ? 'bg-red-600 text-white border-red-600 shadow-[0_2px_8px_rgba(220,38,38,0.5)] font-bold'
-                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-red-500/50 hover:text-red-500'
-              }`}
-              title="YouTube Workspace"
-            >
-              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837z" fill={filter === 'youtube' ? "#FFFFFF" : "#FF0000"} />
-                <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill={filter === 'youtube' ? "#FF0000" : "#FFFFFF"} />
-              </svg>
-              <span>YouTube</span>
-            </motion.button>
+            {canYoutubeAccess && (
+              <motion.button
+                whileHover={animationsEnabled ? { scale: 1.05 } : undefined}
+                whileTap={animationsEnabled ? { scale: 0.95 } : undefined}
+                onClick={() => { setFilter(filter === 'youtube' ? 'all' : 'youtube'); setSelectedGame(null); }}
+                className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${
+                  filter === 'youtube'
+                    ? 'bg-red-600 text-white border-red-600 shadow-[0_2px_8px_rgba(220,38,38,0.5)] font-bold'
+                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-red-500/50 hover:text-red-500'
+                }`}
+                title="YouTube Workspace"
+              >
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837z" fill={filter === 'youtube' ? "#FFFFFF" : "#FF0000"} />
+                  <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill={filter === 'youtube' ? "#FF0000" : "#FFFFFF"} />
+                </svg>
+                <span>YouTube</span>
+              </motion.button>
+            )}
 
             {/* Decoy Selector */}
             <div className="flex items-center gap-1.5">
@@ -5665,29 +6107,33 @@ export default function App() {
           >
             {/* Quick Sections with backgrounds for mobile/tablet wrapped cleanly */}
             <div className="flex md:hidden items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--card-border)]/50 p-0.5 rounded-lg shadow-sm shrink-0">
-              <button
-                onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
-                className={`relative p-1 rounded-md text-xs transition-all duration-200 ${
-                  filter === 'movies'
-                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
-                    : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
-                }`}
-                title="Movies"
-              >
-                <Tv className="w-3.5 h-3.5" />
-              </button>
+              {canMoviesAccess && (
+                <button
+                  onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
+                  className={`relative p-1 rounded-md text-xs transition-all duration-200 ${
+                    filter === 'movies'
+                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
+                      : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
+                  }`}
+                  title="Movies"
+                >
+                  <Tv className="w-3.5 h-3.5" />
+                </button>
+              )}
 
-              <button
-                onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); }}
-                className={`relative p-1 rounded-md text-xs transition-all duration-200 ${
-                  filter === 'moremovies'
-                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
-                    : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
-                }`}
-                title="More Movies (Atlantic.st)"
-              >
-                <Film className="w-3.5 h-3.5" />
-              </button>
+              {canMoreMoviesAccess && (
+                <button
+                  onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); }}
+                  className={`relative p-1 rounded-md text-xs transition-all duration-200 ${
+                    filter === 'moremovies'
+                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
+                      : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
+                  }`}
+                  title="More Movies (Atlantic.st)"
+                >
+                  <Film className="w-3.5 h-3.5" />
+                </button>
+              )}
 
               {isAdminUnlocked && (
                 <button
@@ -5705,33 +6151,37 @@ export default function App() {
                 </button>
               )}
 
-              <button
-                onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); }}
-                className={`p-1 rounded-md text-xs transition-all duration-200 ${
-                  filter === 'lobbychat'
-                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
-                    : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
-                }`}
-                title="Lobby Chat"
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <LobbyUnreadIndicator visible={hasUnreadLobby} />
-              </button>
+              {canLobbyChatAccess && (
+                <button
+                  onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); }}
+                  className={`p-1 rounded-md text-xs transition-all duration-200 ${
+                    filter === 'lobbychat'
+                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
+                      : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
+                  }`}
+                  title="Lobby Chat"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <LobbyUnreadIndicator visible={hasUnreadLobby} />
+                </button>
+              )}
 
-              <button
-                onClick={() => { setFilter(filter === 'youtube' ? 'all' : 'youtube'); setSelectedGame(null); }}
-                className={`p-1 rounded-md text-xs transition-all duration-200 ${
-                  filter === 'youtube'
-                    ? 'bg-red-600 text-white shadow-[0_1px_5px_rgba(220,38,38,0.5)] font-bold'
-                    : 'bg-transparent text-[var(--text-primary)] hover:text-red-500'
-                }`}
-                title="YouTube"
-              >
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837z" fill={filter === 'youtube' ? "#FFFFFF" : "#FF0000"} />
-                  <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill={filter === 'youtube' ? "#FF0000" : "#FFFFFF"} />
-                </svg>
-              </button>
+              {canYoutubeAccess && (
+                <button
+                  onClick={() => { setFilter(filter === 'youtube' ? 'all' : 'youtube'); setSelectedGame(null); }}
+                  className={`p-1 rounded-md text-xs transition-all duration-200 ${
+                    filter === 'youtube'
+                      ? 'bg-red-600 text-white shadow-[0_1px_5px_rgba(220,38,38,0.5)] font-bold'
+                      : 'bg-transparent text-[var(--text-primary)] hover:text-red-500'
+                  }`}
+                  title="YouTube"
+                >
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837z" fill={filter === 'youtube' ? "#FFFFFF" : "#FF0000"} />
+                    <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill={filter === 'youtube' ? "#FF0000" : "#FFFFFF"} />
+                  </svg>
+                </button>
+              )}
 
               {/* Decoy Selector & Auto Randomize */}
               {isDecoysUnlocked && (
@@ -5821,6 +6271,7 @@ export default function App() {
             {/* Middle: Section Icons with Background (Visible on medium+ screens) */}
             <div className="hidden md:flex items-center gap-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)]/50 p-1 rounded-xl shadow-sm">
               {/* Movies Button */}
+              {canMoviesAccess && (
               <div className="relative">
                 <button
                   onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
@@ -5906,21 +6357,24 @@ export default function App() {
                   </div>
                 )}
               </div>
+              )}
 
               {/* More Movies Button */}
-              <div className="relative">
-                <button
-                  onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); }}
-                  className={`p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                    filter === 'moremovies'
-                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
-                      : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
-                  }`}
-                  title="More Movies (Atlantic.st)"
-                >
-                  <Film className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              {canMoreMoviesAccess && (
+                <div className="relative">
+                  <button
+                    onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); }}
+                    className={`p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                      filter === 'moremovies'
+                        ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                        : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
+                    }`}
+                    title="More Movies (Atlantic.st)"
+                  >
+                    <Film className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
 
               {/* Socratic Tutor Button (Admin Only) */}
               {isAdminUnlocked && (
@@ -5940,34 +6394,38 @@ export default function App() {
               )}
 
               {/* Lobby Chat Button */}
-              <button
-                onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); }}
-                className={`relative p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                  filter === 'lobbychat'
-                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
-                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
-                }`}
-                title="Lobby Chat"
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <LobbyUnreadIndicator visible={hasUnreadLobby} />
-              </button>
+              {canLobbyChatAccess && (
+                <button
+                  onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); }}
+                  className={`relative p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                    filter === 'lobbychat'
+                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                      : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
+                  }`}
+                  title="Lobby Chat"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <LobbyUnreadIndicator visible={hasUnreadLobby} />
+                </button>
+              )}
 
               {/* YouTube Workspace Button */}
-              <button
-                onClick={() => { setFilter(filter === 'youtube' ? 'all' : 'youtube'); setSelectedGame(null); }}
-                className={`p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                  filter === 'youtube'
-                    ? 'bg-red-600 text-white border-red-600 shadow-[0_2px_8px_rgba(220,38,38,0.5)] font-bold'
-                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-red-500/50 hover:text-red-500'
-                }`}
-                title="YouTube"
-              >
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837z" fill={filter === 'youtube' ? "#FFFFFF" : "#FF0000"} />
-                  <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill={filter === 'youtube' ? "#FF0000" : "#FFFFFF"} />
-                </svg>
-              </button>
+              {canYoutubeAccess && (
+                <button
+                  onClick={() => { setFilter(filter === 'youtube' ? 'all' : 'youtube'); setSelectedGame(null); }}
+                  className={`p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                    filter === 'youtube'
+                      ? 'bg-red-600 text-white border-red-600 shadow-[0_2px_8px_rgba(220,38,38,0.5)] font-bold'
+                      : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-red-500/50 hover:text-red-500'
+                  }`}
+                  title="YouTube"
+                >
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837z" fill={filter === 'youtube' ? "#FFFFFF" : "#FF0000"} />
+                    <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill={filter === 'youtube' ? "#FF0000" : "#FFFFFF"} />
+                  </svg>
+                </button>
+              )}
 
               {/* Decoy Selector & Auto Randomize */}
               <div className="relative flex items-center gap-1">
@@ -6261,6 +6719,53 @@ export default function App() {
               {/* Admin Panel Button with AI Pass Notification */}
               {renderPadlockWithNotice(false)}
 
+              {/* Account Sign In / Profile Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountModalOpen(true);
+                  setIsAdminPanelOpen(false);
+                  setIsGlobalSettingsOpen(false);
+                }}
+                className={`px-1.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 shrink-0 text-[10px] font-mono font-bold ${
+                  activeAccount
+                    ? 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] border border-[var(--accent-color)]/30 hover:bg-[var(--accent-color)]/25'
+                    : mode === 'light'
+                      ? 'text-black hover:bg-black/5'
+                      : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
+                }`}
+                title={activeAccount ? `Signed in as @${activeAccount.username}` : 'Account Sign In'}
+                aria-label="Account"
+              >
+                <User className="w-3 h-3 shrink-0" />
+                {activeAccount && (
+                  <span className="hidden lg:inline truncate max-w-[78px]">@{activeAccount.username}</span>
+                )}
+              </button>
+
+              {/* Admin Accounts Manager Button (visible when owner pass entered) */}
+              {isOwnerAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminAccountsModalOpen(true);
+                    setIsAdminPanelOpen(false);
+                    setIsGlobalSettingsOpen(false);
+                  }}
+                  className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                    adminAccountsModalOpen
+                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)]'
+                      : mode === 'light'
+                        ? 'text-amber-700 hover:bg-amber-100'
+                        : 'text-amber-400 hover:bg-[var(--card-bg)]'
+                  }`}
+                  title="Manage User Accounts (Admin)"
+                  aria-label="Manage User Accounts"
+                >
+                  <Users className="w-3 h-3" />
+                </button>
+              )}
+
               {/* AI Button near Settings (Only visible after pass is entered) */}
               {isAdminUnlocked && (
                 <button
@@ -6299,6 +6804,7 @@ export default function App() {
               </button>
 
               {/* Download website button */}
+              {canDownloadAccess && (
               <div className="relative">
                 <button
                   onClick={downloadEntireWebsite}
@@ -6381,6 +6887,7 @@ export default function App() {
                   </div>
                 )}
               </div>
+              )}
 
               {renderSystemSettingsPopover(false)}
 
@@ -6488,42 +6995,48 @@ export default function App() {
             )}
 
             {/* Movies Workspace button */}
-            <button
-              onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
-              className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
-                filter === 'movies'
-                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
-                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
-              }`}
-              title="Toggle Movies - Stream Movies and TV Shows"
-            >
-              <Tv className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-              <span>Movies</span>
-            </button>
+            {canMoviesAccess && (
+              <button
+                onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
+                className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
+                  filter === 'movies'
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
+                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
+                }`}
+                title="Toggle Movies - Stream Movies and TV Shows"
+              >
+                <Tv className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                <span>Movies</span>
+              </button>
+            )}
 
             {/* More Movies Workspace button (Atlantic.st) */}
-            <button
-              onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); }}
-              className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
-                filter === 'moremovies'
-                  ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
-                  : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
-              }`}
-              title="More Movies - Atlantic Stream (atlantic.st)"
-            >
-              <Film className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-              <span>More Movies</span>
-            </button>
+            {canMoreMoviesAccess && (
+              <button
+                onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); }}
+                className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
+                  filter === 'moremovies'
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
+                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
+                }`}
+                title="More Movies - Atlantic Stream (atlantic.st)"
+              >
+                <Film className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                <span>More Movies</span>
+              </button>
+            )}
 
             {/* Quick Random Game button (Curated S-C Pool) */}
-            <button
-              onClick={pickRandomRankedGame}
-              className="text-xs border py-1.5 px-3 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-95 bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] shrink-0"
-              title={`Roll a random game from ${randomEligibleCount} curated classics (S-C Tier)`}
-            >
-              <Dices className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-              <span className="hidden sm:inline">Random</span>
-            </button>
+            {canGamesAccess && (
+              <button
+                onClick={pickRandomRankedGame}
+                className="text-xs border py-1.5 px-3 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-95 bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] shrink-0"
+                title={`Roll a random game from ${randomEligibleCount} curated classics (S-C Tier)`}
+              >
+                <Dices className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                <span className="hidden sm:inline">Random</span>
+              </button>
+            )}
 
             {/* Decoy Mode Selector */}
             {isDecoysUnlocked && (
@@ -6612,6 +7125,53 @@ export default function App() {
               {/* Admin Panel Button with AI Pass Notification */}
               {renderPadlockWithNotice(true)}
 
+              {/* Account Sign In / Profile Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountModalOpen(true);
+                  setIsAdminPanelOpen(false);
+                  setIsGlobalSettingsOpen(false);
+                }}
+                className={`px-2 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1 shrink-0 text-[10px] font-mono font-bold ${
+                  activeAccount
+                    ? 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] border border-[var(--accent-color)]/30 hover:bg-[var(--accent-color)]/25'
+                    : mode === 'light'
+                      ? 'text-black hover:bg-black/5'
+                      : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
+                }`}
+                title={activeAccount ? `Signed in as @${activeAccount.username}` : 'Account Sign In'}
+                aria-label="Account"
+              >
+                <User className="w-3.5 h-3.5 shrink-0" />
+                {activeAccount && (
+                  <span className="hidden lg:inline truncate max-w-[78px]">@{activeAccount.username}</span>
+                )}
+              </button>
+
+              {/* Admin Accounts Manager Button (visible when owner pass entered) */}
+              {isOwnerAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminAccountsModalOpen(true);
+                    setIsAdminPanelOpen(false);
+                    setIsGlobalSettingsOpen(false);
+                  }}
+                  className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                    adminAccountsModalOpen
+                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)]'
+                      : mode === 'light'
+                        ? 'text-amber-700 hover:bg-amber-100'
+                        : 'text-amber-400 hover:bg-[var(--card-bg)]'
+                  }`}
+                  title="Manage User Accounts (Admin)"
+                  aria-label="Manage User Accounts"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                </button>
+              )}
+
               {/* AI Button near Settings (Only visible after pass is entered) */}
               {isAdminUnlocked && (
                 <button
@@ -6650,20 +7210,22 @@ export default function App() {
               </button>
 
               {/* Download website button */}
-              <div className="relative">
-                <button
-                  onClick={downloadEntireWebsite}
-                  className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
-                    filter === 'download' 
-                      ? mode === 'light' ? 'bg-black text-white font-bold' : 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_2px_8px_var(--accent-shadow)] font-bold' 
-                      : mode === 'light' ? 'text-black hover:text-black hover:bg-black/5' : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
-                  }`}
-                  title={filter === 'download' ? "Back to Portals" : "Download Website"}
-                  aria-label="Download Website"
-                >
-                  <Download className="w-3.5 h-3.5" style={{ color: mode === 'light' ? (filter === 'download' ? '#ffffff' : '#000000') : undefined }} />
-                </button>
-              </div>
+              {canDownloadAccess && (
+                <div className="relative">
+                  <button
+                    onClick={downloadEntireWebsite}
+                    className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                      filter === 'download' 
+                        ? mode === 'light' ? 'bg-black text-white font-bold' : 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_2px_8px_var(--accent-shadow)] font-bold' 
+                        : mode === 'light' ? 'text-black hover:text-black hover:bg-black/5' : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
+                    }`}
+                    title={filter === 'download' ? "Back to Portals" : "Download Website"}
+                    aria-label="Download Website"
+                  >
+                    <Download className="w-3.5 h-3.5" style={{ color: mode === 'light' ? (filter === 'download' ? '#ffffff' : '#000000') : undefined }} />
+                  </button>
+                </div>
+              )}
 
               {renderSystemSettingsPopover(true)}
 
@@ -6753,7 +7315,7 @@ export default function App() {
       }`}>
         
         {/* LEFT NAV PANEL - CAT SIDEBAR */}
-        {filter !== 'chat' && filter !== 'movies' && filter !== 'moremovies' && filter !== 'youtube' && filter !== 'lobbychat' && filter !== 'download' && filter !== 'info' && !selectedGame && (
+        {canGamesAccess && filter !== 'chat' && filter !== 'movies' && filter !== 'moremovies' && filter !== 'youtube' && filter !== 'lobbychat' && filter !== 'download' && filter !== 'info' && !selectedGame && (
           <aside className={`transition-all duration-300 ease-in-out shrink-0 flex flex-col gap-1.5 overflow-hidden ${
             sidebarOpen ? 'w-full md:w-40' : 'w-full md:w-12'
           }`}>
@@ -7421,7 +7983,7 @@ export default function App() {
                     </div>
                   )}
                 </motion.div>
-              ) : filter === 'lobbychat' ? (
+              ) : filter === 'lobbychat' && canLobbyChatAccess ? (
                 <motion.div 
                   key="lobbychat"
                   initial={animationsEnabled ? { opacity: 0, y: 15 } : false}
@@ -7443,18 +8005,18 @@ export default function App() {
                 >
                   <InformationSection 
                     onClose={() => setFilter('all')} 
-                    games={games}
+                    games={canGamesAccess ? games : []}
                     onPlayGame={(game) => {
-                      launchGame(game);
+                      if (canGamesAccess) launchGame(game);
                     }}
                     onGoToFeatured={() => {
                       setFilter('featured');
                       setSelectedGame(null);
                     }}
-                    onDownloadWebsite={downloadEntireWebsite}
+                    onDownloadWebsite={canDownloadAccess ? downloadEntireWebsite : undefined}
                   />
                 </motion.div>
-              ) : filter === 'movies' ? (
+              ) : filter === 'movies' && canMoviesAccess ? (
                 <motion.div 
                   key="movies"
                   initial={animationsEnabled ? { opacity: 0, y: 15 } : false}
@@ -7465,7 +8027,7 @@ export default function App() {
                 >
                   <MoviesWorkspace onClose={() => setFilter('all')} />
                 </motion.div>
-              ) : filter === 'moremovies' ? (
+              ) : filter === 'moremovies' && canMoreMoviesAccess ? (
                 <motion.div 
                   key="moremovies"
                   initial={animationsEnabled ? { opacity: 0, y: 15 } : false}
@@ -7476,7 +8038,7 @@ export default function App() {
                 >
                   <MoreMoviesWorkspace onClose={() => setFilter('all')} />
                 </motion.div>
-              ) : filter === 'youtube' ? (
+              ) : filter === 'youtube' && canYoutubeAccess ? (
                 <motion.div 
                   key="youtube"
                   initial={animationsEnabled ? { opacity: 0, y: 15 } : false}
@@ -7492,7 +8054,7 @@ export default function App() {
                     referrerPolicy="no-referrer"
                   />
                 </motion.div>
-              ) : filter === 'download' ? (
+              ) : filter === 'download' && canDownloadAccess ? (
                 <motion.div 
                   key="download"
                   initial={animationsEnabled ? { opacity: 0, y: 15 } : false}
@@ -7517,6 +8079,23 @@ export default function App() {
                     allow="fullscreen; autoplay; clipboard-write; encrypted-media"
                     referrerPolicy="no-referrer"
                   />
+                </motion.div>
+              ) : !canGamesAccess ? (
+                <motion.div
+                  key="games-restricted"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex flex-col items-center justify-center py-20 px-6 text-center border border-dashed border-[var(--card-border)] rounded-2xl bg-[var(--bg-secondary)] max-w-xl mx-auto my-8"
+                >
+                  <Lock className="w-12 h-12 text-rose-400/80 mb-3" />
+                  <h2 className="text-base font-black uppercase tracking-wider text-[var(--text-primary)]">
+                    Games Catalog Restricted
+                  </h2>
+                  <p className="text-xs text-[var(--text-muted)] mt-1.5 leading-relaxed max-w-md">
+                    Access to Games &amp; Portals has been disabled for this workspace or your account by the administrator. Use another enabled workspace from the header above or contact the admin.
+                  </p>
                 </motion.div>
               ) : (
                 <motion.div 
@@ -8214,21 +8793,23 @@ export default function App() {
                     </button>
 
                     {/* Lobby Chat (Slideout Chat) Toggle Button - icon only */}
-                    <button
-                      onClick={() => {
-                        setDockedChatCollapsed(!dockedChatCollapsed);
-                        if (dockedChatCollapsed) setHasUnreadLobby(false);
-                      }}
-                      className={`relative flex items-center gap-1.5 h-7 border py-1 px-2 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer shrink-0 ${
-                        !dockedChatCollapsed 
-                          ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)] font-bold shadow-[0_0_8px_rgba(0,229,176,0.15)]' 
-                          : 'border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)]'
-                      }`}
-                      title="Toggle Slideout Chat inside Portal Arena"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <LobbyUnreadIndicator visible={hasUnreadLobby} />
-                    </button>
+                    {canLobbyChatAccess && (
+                      <button
+                        onClick={() => {
+                          setDockedChatCollapsed(!dockedChatCollapsed);
+                          if (dockedChatCollapsed) setHasUnreadLobby(false);
+                        }}
+                        className={`relative flex items-center gap-1.5 h-7 border py-1 px-2 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer shrink-0 ${
+                          !dockedChatCollapsed 
+                            ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)] font-bold shadow-[0_0_8px_rgba(0,229,176,0.15)]' 
+                            : 'border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)]'
+                        }`}
+                        title="Toggle Slideout Chat inside Portal Arena"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <LobbyUnreadIndicator visible={hasUnreadLobby} />
+                      </button>
+                    )}
 
                     {/* Hide / Show Header Button */}
                     <motion.button
@@ -8464,7 +9045,7 @@ export default function App() {
                 </div>
 
                 {/* DOCKED LIVE LOBBY CHAT */}
-                {!dockedChatCollapsed && (
+                {canLobbyChatAccess && !dockedChatCollapsed && (
                   <div 
                     style={{ width: window.innerWidth >= 1024 ? '235px' : '100%' }}
                     className="w-full lg:h-full h-[320px] shrink-0 flex flex-col bg-[#070a11] border-t lg:border-t-0 lg:border-l border-[var(--card-border)]/50 rounded-none overflow-hidden"
@@ -8595,6 +9176,27 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+        <AccountModal
+          isOpen={accountModalOpen}
+          onClose={() => setAccountModalOpen(false)}
+          activeAccount={activeAccount}
+          workspaceConfig={workspaceConfig}
+          onLogin={handleAccountSignIn}
+          onLogout={handleAccountSignOut}
+          mode={mode}
+        />
+
+        {isOwnerAdmin && (
+          <AdminAccountsModal
+            isOpen={adminAccountsModalOpen}
+            onClose={() => setAdminAccountsModalOpen(false)}
+            db={lobbyDb}
+            auth={lobbyAuth}
+            mode={mode}
+            activeAccount={activeAccount}
+            workspaceConfig={workspaceConfig}
+          />
+        )}
       </Suspense>
     </MotionConfig>
   );

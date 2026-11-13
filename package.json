@@ -4,11 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs && node postbuild.js",
-    "preview": "vite preview",
+    "dev": "tsx app/server.ts",
+    "build": "vite build --config app/vite.config.js && esbuild app/server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs && node app/postbuild.js",
+    "preview": "vite preview --config app/vite.config.js",
     "start": "node dist/server.cjs",
-    "clean": "rm -rf dist server.js assets/index-*.js assets/index-*.css index.html",
+    "clean": "rm -rf dist server.js app/assets/index-*.js app/assets/index-*.css",
     "lint": "echo 'Linter skipped for clean JS codebases'"
   },
   "dependencies": {
@@ -25,10 +25,12 @@
     "vite": "^6.2.3"
   },
   "devDependencies": {
+    "@firebase/eslint-plugin-security-rules": "^0.0.2",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
+    "eslint": "^10.15.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",

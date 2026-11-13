@@ -1,0 +1,188 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOptionalString(data, field, maxLen) {
+      return !(field in data) || data[field] == null || (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    function isOptionalBool(data, field) {
+      return !(field in data) || data[field] is bool;
+    }
+
+    function isOptionalNumber(data, field) {
+      return !(field in data) || data[field] == null || data[field] is number;
+    }
+
+    function isValidAccountCreate(data, accountId) {
+      return data.keys().hasAll([
+          'username', 'usernameLower', 'passwordSalt', 'passwordHash',
+          'isActive', 'gamesAccess', 'moviesAccess', 'moreMoviesAccess',
+          'youtubeAccess', 'lobbyChatAccess', 'aiAccess', 'decoysAccess',
+          'downloadAccess', 'chatMuted', 'chatBanned', 'roleBadge',
+          'badgeColor', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'username', 'usernameLower', 'passwordSalt', 'passwordHash',
+          'isActive', 'gamesAccess', 'moviesAccess', 'moreMoviesAccess',
+          'youtubeAccess', 'lobbyChatAccess', 'aiAccess', 'decoysAccess',
+          'downloadAccess', 'chatMuted', 'chatBanned', 'roleBadge',
+          'badgeColor', 'favorites', 'recentlyPlayed', 'preferredTheme',
+          'preferredMode', 'createdAt', 'updatedAt', 'lastLoginAt'
+        ])
+        && data.username is string && data.username.size() >= 2 && data.username.size() <= 20
+        && data.username.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.usernameLower is string && data.usernameLower.size() >= 2 && data.usernameLower.size() <= 20
+        && data.usernameLower == accountId
+        && data.passwordSalt is string && data.passwordSalt.size() >= 1 && data.passwordSalt.size() <= 128
+        && data.passwordHash is string && data.passwordHash.size() >= 1 && data.passwordHash.size() <= 256
+        && data.isActive is bool
+        && data.gamesAccess is bool
+        && data.moviesAccess is bool
+        && data.moreMoviesAccess is bool
+        && data.youtubeAccess is bool
+        && data.lobbyChatAccess is bool
+        && data.aiAccess is bool
+        && data.decoysAccess is bool
+        && data.downloadAccess is bool
+        && data.chatMuted is bool
+        && data.chatBanned is bool
+        && data.roleBadge is string && data.roleBadge.size() <= 20
+        && data.badgeColor in ['cyan', 'amber', 'emerald', 'rose', 'violet', 'neutral']
+        && (!('favorites' in data) || (data.favorites is list && data.favorites.size() <= 500 && (data.favorites.size() == 0 || data.favorites[0] is string)))
+        && (!('recentlyPlayed' in data) || (data.recentlyPlayed is list && data.recentlyPlayed.size() <= 30 && (data.recentlyPlayed.size() == 0 || data.recentlyPlayed[0] is string)))
+        && isOptionalString(data, 'preferredTheme', 64)
+        && (!('preferredMode' in data) || data.preferredMode == null || data.preferredMode in ['light', 'dark'])
+        && data.createdAt is number
+        && data.updatedAt is number
+        && isOptionalNumber(data, 'lastLoginAt');
+    }
+
+    function isValidAccountUpdate(data, accountId) {
+      return isValidAccountCreate(data, accountId)
+        && data.createdAt == existing().createdAt
+        && data.usernameLower == existing().usernameLower
+        && data.updatedAt >= existing().updatedAt;
+    }
+
+    function isValidWorkspaceConfig(data) {
+      return data.keys().hasAll([
+          'siteLockdown', 'lockdownMessage', 'allowSharedPasscodes',
+          'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'youtubeAccess',
+          'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'siteLockdown', 'lockdownMessage', 'allowSharedPasscodes',
+          'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'youtubeAccess',
+          'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess', 'updatedAt'
+        ])
+        && data.siteLockdown is bool
+        && data.lockdownMessage is string && data.lockdownMessage.size() <= 200
+        && data.allowSharedPasscodes is bool
+        && data.gamesAccess is bool
+        && data.moviesAccess is bool
+        && data.moreMoviesAccess is bool
+        && data.youtubeAccess is bool
+        && data.lobbyChatAccess is bool
+        && data.aiAccess is bool
+        && data.decoysAccess is bool
+        && data.downloadAccess is bool
+        && data.updatedAt is number;
+    }
+
+    function isValidChannel(data) {
+      return data.keys().hasAll(['name', 'description', 'isPasswordProtected', 'createdAt'])
+        && data.keys().hasOnly(['name', 'description', 'password', 'isPasswordProtected', 'createdAt'])
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 64
+        && data.name.matches('^[a-z0-9_\\-]+$')
+        && data.description is string && data.description.size() <= 240
+        && isOptionalString(data, 'password', 128)
+        && data.isPasswordProtected is bool
+        && data.createdAt is number;
+    }
+
+    function isValidMessage(data, chanId) {
+      return data.keys().hasAll(['name', 'text', 'timestamp', 'channelId'])
+        && data.keys().hasOnly([
+          'name', 'userId', 'senderId', 'accountId', 'roleBadge', 'badgeColor',
+          'isRegistered', 'text', 'imageUrl', 'replyTo', 'isEncrypted', 'timestamp', 'channelId'
+        ])
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 40
+        && isOptionalString(data, 'userId', 128)
+        && isOptionalString(data, 'senderId', 128)
+        && isOptionalString(data, 'accountId', 20)
+        && isOptionalString(data, 'roleBadge', 20)
+        && isOptionalString(data, 'badgeColor', 24)
+        && isOptionalBool(data, 'isRegistered')
+        && data.text is string && data.text.size() <= 20000
+        && isOptionalString(data, 'imageUrl', 900000)
+        && (!('replyTo' in data) || data.replyTo == null || data.replyTo is map)
+        && isOptionalBool(data, 'isEncrypted')
+        && data.timestamp is number
+        && data.channelId is string && data.channelId == chanId && data.channelId.size() <= 128;
+    }
+
+    // Managed user accounts
+    match /siteAccounts/{accountId} {
+      allow get: if isValidId(accountId);
+      allow list: if true;
+      allow create: if isValidId(accountId) && isValidAccountCreate(incoming(), accountId);
+      allow update: if isValidId(accountId)
+        && isValidAccountUpdate(incoming(), accountId)
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'username', 'passwordSalt', 'passwordHash', 'isActive',
+          'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'youtubeAccess',
+          'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess',
+          'chatMuted', 'chatBanned', 'roleBadge', 'badgeColor',
+          'favorites', 'recentlyPlayed', 'preferredTheme', 'preferredMode',
+          'updatedAt', 'lastLoginAt'
+        ]);
+      allow delete: if isValidId(accountId);
+    }
+
+    // Global workspace configuration
+    match /siteConfig/{configId} {
+      allow get: if isValidId(configId) && configId == 'workspaceAccess';
+      allow create, update: if isValidId(configId) && configId == 'workspaceAccess' && isValidWorkspaceConfig(incoming());
+      allow delete: if false;
+    }
+
+    // Lobby Chat channels & messages
+    match /channels/{channelId} {
+      allow get: if isValidId(channelId);
+      allow list: if true;
+      allow create: if isValidId(channelId) && isValidChannel(incoming());
+      allow update: if false;
+      allow delete: if isValidId(channelId);
+
+      match /messages/{messageId} {
+        allow get: if isValidId(channelId) && isValidId(messageId);
+        allow list: if isValidId(channelId);
+        allow create: if isValidId(channelId) && isValidId(messageId) && isValidMessage(incoming(), channelId);
+        allow update: if false;
+        allow delete: if isValidId(channelId) && isValidId(messageId);
+      }
+    }
+
+    // Firestore connectivity check document
+    match /test/connection {
+      allow get: if true;
+    }
+  }
+}

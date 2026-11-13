@@ -9,6 +9,8 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   base: './',
+  root: __dirname,
+  publicDir: path.resolve(__dirname, '../public'),
 
   plugins: [
     react(),
@@ -17,7 +19,7 @@ export default defineConfig({
 
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '.'),
+      '@': path.resolve(__dirname, '..'),
     },
   },
 
@@ -35,6 +37,8 @@ export default defineConfig({
 
   // Don't allow these files to be pulled into the Vite bundle
   build: {
+    outDir: path.resolve(__dirname, '../dist'),
+    emptyOutDir: true,
     rollupOptions: {
       external: [
         /^\/Gmfiles\//,
