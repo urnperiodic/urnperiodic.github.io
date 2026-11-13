@@ -20,6 +20,27 @@ export const WORKSPACE_CONFIG_COLLECTION = 'siteConfig';
 export const WORKSPACE_CONFIG_DOC_ID = 'workspaceAccess';
 export const ACCOUNT_SESSION_KEY = 'urnperiodic-account-session';
 export const CHAT_LINKED_ACCOUNT_KEY = 'urnperiodic_chat_account';
+export const ONLINE_TIMEOUT_MS = 90 * 1000;
+
+export function isAccountOnline(account, now = Date.now()) {
+  if (!account || account.isActive === false) return false;
+  if (!account.isOnline || !account.lastSeenAt) return false;
+  return now - Number(account.lastSeenAt) < ONLINE_TIMEOUT_MS;
+}
+
+export function formatLastSeen(lastSeenAt, now = Date.now()) {
+  const ts = Number(lastSeenAt || 0);
+  if (!ts) return 'Never active';
+  const diff = Math.max(0, now - ts);
+  if (diff < 60 * 1000) return 'Active now';
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(ts).toLocaleDateString();
+}
 
 export const WORKSPACE_ACCESS_KEYS = [
   { key: 'gamesAccess', label: 'Games', description: 'Games & Portals catalog', defaultForAccount: true, defaultGlobal: true },
@@ -257,6 +278,8 @@ export function sanitizeAccountDoc(docId, data) {
     createdAt: Number(data.createdAt || 0),
     updatedAt: Number(data.updatedAt || 0),
     lastLoginAt: data.lastLoginAt ? Number(data.lastLoginAt) : null,
+    isOnline: Boolean(data.isOnline),
+    lastSeenAt: data.lastSeenAt ? Number(data.lastSeenAt) : null,
   };
 }
 
@@ -267,6 +290,7 @@ export function toPublicChatAccount(account) {
     usernameLower: account.usernameLower,
     isActive: account.isActive !== false,
     isAdmin: Boolean(account.isAdmin),
+    lobbyChatAccess: account.lobbyChatAccess !== false,
     roleBadge: account.roleBadge || '',
     badgeColor: account.badgeColor || 'cyan',
     chatMuted: Boolean(account.chatMuted),
@@ -323,6 +347,10 @@ export function syncChatLinkedAccountStorage(account) {
   } catch {}
 
   try {
+    window.dispatchEvent(new CustomEvent('urnperiodic-account-sync', { detail: payload }));
+  } catch {}
+
+  try {
     const iframe = document.getElementById('chat-decoy-iframe');
     if (iframe && iframe.contentWindow) {
       iframe.contentWindow.postMessage(
@@ -369,12 +397,23 @@ export async function authenticateAccount(db, auth, rawUsername, rawPassword) {
 
   const now = Date.now();
   try {
-    await updateDoc(ref, { lastLoginAt: now });
+    await updateDoc(ref, {
+      lastLoginAt: now,
+      lastSeenAt: now,
+      isOnline: true,
+      updatedAt: now,
+    });
   } catch (err) {
     if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.UPDATE, path);
   }
 
-  return sanitizeAccountDoc(snap.id, { ...data, lastLoginAt: now });
+  return sanitizeAccountDoc(snap.id, {
+    ...data,
+    lastLoginAt: now,
+    lastSeenAt: now,
+    isOnline: true,
+    updatedAt: now,
+  });
 }
 
 export async function verifySessionAccount(db, auth, session) {
@@ -521,6 +560,8 @@ export async function createManagedAccount(db, auth, payload) {
     createdAt: now,
     updatedAt: now,
     lastLoginAt: null,
+    isOnline: false,
+    lastSeenAt: null,
   };
 
   try {
@@ -659,6 +700,24 @@ export async function syncAccountUserData(db, auth, usernameLower, data) {
       handleFirestoreError(err, OperationType.UPDATE, path);
     }
     console.warn('Account user data sync warning:', err);
+  }
+}
+
+export async function updateAccountPresence(db, auth, usernameLower, isOnline = true) {
+  if (!db || !usernameLower) return;
+  const path = `${ACCOUNTS_COLLECTION}/${usernameLower}`;
+  try {
+    await ensureFirebaseAnonAuth(auth);
+    const now = Date.now();
+    await updateDoc(doc(db, ACCOUNTS_COLLECTION, usernameLower), {
+      isOnline: Boolean(isOnline),
+      lastSeenAt: now,
+      updatedAt: now,
+    });
+  } catch (err) {
+    if (isFirestorePermissionError(err)) {
+      handleFirestoreError(err, OperationType.UPDATE, path);
+    }
   }
 }
 

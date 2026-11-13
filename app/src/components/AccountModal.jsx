@@ -192,8 +192,15 @@ export default function AccountModal({
                   </div>
 
                   <div className={`p-3 rounded-xl border space-y-2 ${isLight ? 'border-neutral-200 bg-neutral-50' : 'border-white/10 bg-white/[0.02]'}`}>
-                    <div className="text-[10px] font-mono uppercase text-[var(--text-muted)]">
-                      Workspace Access
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-mono uppercase text-[var(--text-muted)]">
+                        Workspace Access
+                      </span>
+                      {activeAccount.isAdmin && (
+                        <span className="text-[9.5px] font-mono font-bold text-amber-300">
+                          Admin Bypass Active
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {WORKSPACE_ACCESS_KEYS.map(({ key, label }) => {

@@ -134,6 +134,7 @@ import {
   subscribeToWorkspaceConfig,
   syncAccountUserData,
   syncChatLinkedAccountStorage,
+  updateAccountPresence,
   verifySessionAccount,
 } from './utils/accountService';
 const MoviesWorkspace = lazy(() => import('./components/MoviesWorkspace'));
@@ -265,6 +266,33 @@ const safeSessionStorage = {
       // Ignore security errors
     }
   }
+};
+
+const OWNER_SESSION_KEY = 'urnperiodic-owner-session';
+const getSavedOwnerSession = () => {
+  try {
+    if (safeSessionStorage.getItem(OWNER_SESSION_KEY) === 'true') return true;
+    const raw = safeStorage.getItem(OWNER_SESSION_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (parsed?.active && Date.now() - Number(parsed.ts || 0) < 12 * 60 * 60 * 1000) {
+      safeSessionStorage.setItem(OWNER_SESSION_KEY, 'true');
+      return true;
+    }
+  } catch {}
+  return false;
+};
+
+const saveOwnerSessionFlag = () => {
+  safeSessionStorage.setItem(OWNER_SESSION_KEY, 'true');
+  try {
+    safeStorage.setItem(OWNER_SESSION_KEY, JSON.stringify({ active: true, ts: Date.now() }));
+  } catch {}
+};
+
+const clearOwnerSessionFlag = () => {
+  safeSessionStorage.removeItem(OWNER_SESSION_KEY);
+  safeStorage.removeItem(OWNER_SESSION_KEY);
 };
 
 const isLocalGame = (url) => {
@@ -1914,7 +1942,7 @@ export default function App() {
     } else if (currentFilter === 'youtube') {
       url = 'https://urnperiodic.github.io/youtube1/';
     } else if (currentFilter === 'lobbychat') {
-      url = window.location.origin + '/USERCHAT.html';
+      url = window.location.origin + '?filter=lobbychat&view=games';
     } else if (currentFilter === 'download') {
       url = 'https://urnperiodic.github.io/download/';
     } else {
@@ -2419,6 +2447,7 @@ export default function App() {
     if (mode === 'articles') {
       safeStorage.removeItem('unblocked-refreshing-session');
       safeStorage.removeItem('unblocked-refresh-timestamp');
+      clearOwnerSessionFlag();
       setIsOwnerAdmin(false);
       setIsAdminPassUnlocked(false);
       setIsDecoyPassUnlocked(false);
@@ -2508,6 +2537,7 @@ export default function App() {
       if (autoLockOnClose) {
         safeStorage.setItem('classroom-view-mode', 'articles');
         safeStorage.setItem('classroom-passcode-unlocked', 'false');
+        clearOwnerSessionFlag();
       }
     };
 
@@ -2524,10 +2554,9 @@ export default function App() {
   const [isShake, setIsShake] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
   const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
-  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
-  const [isAdminPassUnlocked, setIsAdminPassUnlocked] = useState(false);
-  const [isDecoyPassUnlocked, setIsDecoyPassUnlocked] = useState(false);
-  const [isOwnerAdmin, setIsOwnerAdmin] = useState(false);
+  const [isAdminPassUnlocked, setIsAdminPassUnlocked] = useState(() => getSavedOwnerSession());
+  const [isDecoyPassUnlocked, setIsDecoyPassUnlocked] = useState(() => getSavedOwnerSession());
+  const [isOwnerAdmin, setIsOwnerAdmin] = useState(() => getSavedOwnerSession());
   const [activeAccount, setActiveAccount] = useState(null);
   const [accountSessionChecked, setAccountSessionChecked] = useState(() => !getSavedAccountSession());
   const [workspaceConfig, setWorkspaceConfig] = useState(DEFAULT_WORKSPACE_CONFIG);
@@ -2604,6 +2633,7 @@ export default function App() {
       rawPass.trim() === '06091006Tt' &&
       (!trimmedUser || ['admin', 'owner'].includes(trimmedUser.toLowerCase()))
     ) {
+      saveOwnerSessionFlag();
       setIsOwnerAdmin(true);
       setIsAdminPassUnlocked(true);
       setIsDecoyPassUnlocked(true);
@@ -2625,6 +2655,11 @@ export default function App() {
   }, [applyAccountProfileToApp, workspaceConfig, isOwnerAdmin, setViewModeAndSave]);
 
   const handleAccountSignOut = useCallback(() => {
+    const signingOutUsername = activeAccount?.usernameLower;
+    if (signingOutUsername) {
+      updateAccountPresence(lobbyDb, lobbyAuth, signingOutUsername, false);
+    }
+    clearOwnerSessionFlag();
     clearAccountSession();
     setActiveAccount(null);
     setIsOwnerAdmin(false);
@@ -2637,7 +2672,7 @@ export default function App() {
     setSelectedGame(null);
     setFilter('all');
     setViewModeAndSave('articles');
-  }, [setViewModeAndSave]);
+  }, [setViewModeAndSave, activeAccount?.usernameLower]);
 
   // Restore saved account session on boot
   useEffect(() => {
@@ -2673,7 +2708,9 @@ export default function App() {
   useEffect(() => {
     const uname = activeAccount?.usernameLower;
     if (!uname) {
-      syncChatLinkedAccountStorage(null);
+      if (accountSessionChecked) {
+        syncChatLinkedAccountStorage(null);
+      }
       return;
     }
     const unsub = subscribeToAccount(
@@ -2693,6 +2730,52 @@ export default function App() {
       () => {},
     );
     return () => unsub();
+  }, [activeAccount?.usernameLower, accountSessionChecked]);
+
+  // Track real-time Online / Offline presence in Firestore for signed-in accounts
+  useEffect(() => {
+    const uname = activeAccount?.usernameLower;
+    if (!uname) return;
+
+    let active = true;
+    const markOnline = () => {
+      if (!active) return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      updateAccountPresence(lobbyDb, lobbyAuth, uname, true);
+    };
+
+    markOnline();
+    const heartbeat = setInterval(markOnline, 30000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        markOnline();
+      }
+    };
+
+    const handlePresenceUnload = () => {
+      if (isRefreshingRef.current) return;
+      try {
+        const refreshingSession = safeStorage.getItem('unblocked-refreshing-session') === 'true';
+        const refreshTime = Number(safeStorage.getItem('unblocked-refresh-timestamp') || 0);
+        if (refreshingSession && Date.now() - refreshTime < 15000) {
+          return;
+        }
+      } catch {}
+      updateAccountPresence(lobbyDb, lobbyAuth, uname, false);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('beforeunload', handlePresenceUnload);
+    window.addEventListener('pagehide', handlePresenceUnload);
+
+    return () => {
+      active = false;
+      clearInterval(heartbeat);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('beforeunload', handlePresenceUnload);
+      window.removeEventListener('pagehide', handlePresenceUnload);
+    };
   }, [activeAccount?.usernameLower]);
 
   // Sync user data (bookmarks, recent history, theme/mode) back to Firestore while signed in
@@ -2803,14 +2886,14 @@ export default function App() {
     if (e) e.preventDefault();
     const val = adminPasswordInput.trim();
     if (val === '06091006Tt') {
+      saveOwnerSessionFlag();
       setIsOwnerAdmin(true);
       setIsAdminPassUnlocked(true);
       setIsDecoyPassUnlocked(true);
       setAdminError('');
       setAdminPasswordInput('');
-      setIsAdminPanelOpen(false);
     } else if (val === 'sharp') {
-      if (workspaceConfig?.aiAccess === false) {
+      if (!hasAdminAccess && workspaceConfig?.aiAccess === false) {
         setAdminError('AI Chat disabled by admin');
         setAdminPasswordInput('');
         return;
@@ -2820,14 +2903,11 @@ export default function App() {
       setAdminPasswordInput('');
       setFilter('chat');
       setSelectedGame(null);
-      setIsAdminPanelOpen(false);
     } else if (val === 'lock') {
       handleAdminLock();
-      setIsAdminPanelOpen(false);
     } else if (isAdminUnlocked && !val) {
       setFilter('chat');
       setSelectedGame(null);
-      setIsAdminPanelOpen(false);
     } else {
       setAdminError('Incorrect password');
       setAdminPasswordInput('');
@@ -2835,6 +2915,7 @@ export default function App() {
   };
 
   const handleAdminLock = () => {
+    clearOwnerSessionFlag();
     setIsOwnerAdmin(false);
     setIsAdminPassUnlocked(false);
     setIsDecoyPassUnlocked(false);
@@ -2929,74 +3010,7 @@ export default function App() {
     }
   };
 
-  const renderAdminPanelPopover = () => {
-    if (!isAdminPanelOpen) return null;
-    return (
-      <>
-        <div 
-          className="fixed inset-0 z-[99998] cursor-default" 
-          onClick={() => {
-            setIsAdminPanelOpen(false);
-            setAdminError('');
-          }} 
-        />
-        <form
-          onSubmit={handleAdminPasswordSubmit}
-          className="absolute top-full right-0 mt-2 z-[99999] select-none animate-fade-in"
-        >
-          <input
-            type="password"
-            value={adminPasswordInput}
-            onChange={(e) => {
-              setAdminPasswordInput(e.target.value);
-              if (adminError) setAdminError('');
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                setIsAdminPanelOpen(false);
-                setAdminPasswordInput('');
-                setAdminError('');
-              }
-            }}
-            placeholder={adminError || "Enter password..."}
-            autoFocus
-            className={`w-44 rounded-lg px-3 py-1.5 text-xs outline-none ring-0 border-0 focus:outline-none focus:ring-0 font-mono shadow-lg ${
-              mode === 'light'
-                ? 'bg-white text-neutral-900 placeholder-neutral-400'
-                : 'bg-[#0f0e17] text-white placeholder-neutral-400'
-            } ${adminError ? 'text-red-400 placeholder-red-400' : ''}`}
-          />
-        </form>
-      </>
-    );
-  };
 
-  const renderPadlockWithNotice = (isAltBar = false) => {
-    return (
-      <div className="relative inline-flex items-center justify-center">
-        {/* Admin Panel Button */}
-        <button
-          onClick={() => {
-            setIsAdminPanelOpen((prev) => !prev);
-            setIsGlobalSettingsOpen(false);
-          }}
-          className={`${isAltBar ? 'p-1.5 rounded-full' : 'p-1 rounded-md'} transition-all cursor-pointer flex items-center justify-center shrink-0 relative ${
-            isAdminPanelOpen
-              ? 'bg-[var(--accent-color)] text-[var(--bg-color)]'
-              : mode === 'light'
-                ? 'text-black hover:text-black hover:bg-black/5'
-                : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
-          }`}
-          title={isAdminUnlocked ? "Admin Pass Unlocked (All Decoys & AI)" : "Admin Panel - Unlock All Decoys & AI"}
-          aria-label="Admin Panel"
-        >
-          <Lock className={isAltBar ? "w-3.5 h-3.5" : "w-3 h-3"} style={{ color: !isAdminPanelOpen && mode === 'light' ? '#000000' : undefined }} />
-        </button>
-
-        {renderAdminPanelPopover()}
-      </div>
-    );
-  };
   // Animations state: disabled by default at start for Chromebook performance
   const [animationsEnabled, setAnimationsEnabled] = useState(() => {
     try {
@@ -3034,7 +3048,7 @@ export default function App() {
     }
   }, [animationsEnabled]);
   const [showNotices, setShowNotices] = useState(false);
-  const [noticeStep, setNoticeStep] = useState(0); // 0: Download, 1: Movies, 2: Cloak, 3: Decoy
+  const [noticeStep, setNoticeStep] = useState(1); // 1: Movies, 2: Cloak, 3: Decoy
   const [noticeCountdown, setNoticeCountdown] = useState(20);
 
   const closeNotices = () => {
@@ -3051,7 +3065,7 @@ export default function App() {
           setNoticeStep((step) => {
             if (step >= 3) {
               closeNotices();
-              return 0;
+              return 1;
             }
             return step + 1;
           });
@@ -3073,7 +3087,7 @@ export default function App() {
   };
 
   const prevNoticeStep = () => {
-    if (noticeStep > 0) {
+    if (noticeStep > 1) {
       setNoticeStep((prev) => prev - 1);
       setNoticeCountdown(20);
     }
@@ -3115,6 +3129,7 @@ export default function App() {
     if (!rawInput) return;
 
     if (rawInput === '06091006Tt') {
+      saveOwnerSessionFlag();
       setTimeout(() => {
         setIsOwnerAdmin(true);
         setIsAdminPassUnlocked(true);
@@ -3199,6 +3214,7 @@ export default function App() {
   useEffect(() => {
     const rawQ = articleSearch.trim();
     if (rawQ === '06091006Tt') {
+      saveOwnerSessionFlag();
       setIsOwnerAdmin(true);
       setIsAdminPassUnlocked(true);
       setIsDecoyPassUnlocked(true);
@@ -4936,7 +4952,7 @@ export default function App() {
           {workspaceConfig?.siteLockdown && (
             <div className="w-full px-3.5 py-2.5 rounded-xl border border-rose-500/40 bg-rose-500/15 text-rose-300 text-xs font-semibold text-center leading-relaxed flex items-center justify-center gap-2">
               <ShieldAlert className="w-4 h-4 shrink-0 text-rose-400" />
-              <span>{workspaceConfig.lockdownMessage || 'Site temporarily restricted by admin. Sign in with an authorized account or owner password.'}</span>
+              <span>{workspaceConfig.lockdownMessage || 'Site temporarily restricted by admin. Only admin accounts or the owner password can sign in.'}</span>
             </div>
           )}
 
@@ -5864,7 +5880,7 @@ export default function App() {
 
               {/* Open Link Button */}
               {(() => {
-                const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? '/USERCHAT.html' : '';
+                const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
                 const hasUrl = !!url;
                 return (
                   <motion.button
@@ -6070,7 +6086,7 @@ export default function App() {
                     customTitles={customDecoyTitles} 
                     onCustomTitleChange={handleCustomTitleChange}
                     isUnlocked={isDecoysUnlocked}
-                    onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                    onRequestUnlock={() => { setAccountModalOpen(true); setIsGlobalSettingsOpen(false); }}
                   />
 
                   <AutoRandomizeDecoyButton
@@ -6087,7 +6103,7 @@ export default function App() {
                     mode={mode}
                     compact={true}
                     isUnlocked={isDecoysUnlocked}
-                    onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                    onRequestUnlock={() => { setAccountModalOpen(true); setIsGlobalSettingsOpen(false); }}
                   />
                 </>
               )}
@@ -6115,7 +6131,7 @@ export default function App() {
                   </button>
 
                   {(() => {
-                    const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? '/USERCHAT.html' : '';
+                    const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
                     const hasUrl = !!url;
                     return (
                       <button
@@ -6316,7 +6332,7 @@ export default function App() {
                         customTitles={customDecoyTitles}
                         onCustomTitleChange={handleCustomTitleChange}
                         isUnlocked={isDecoysUnlocked}
-                        onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                        onRequestUnlock={() => { setAccountModalOpen(true); setIsGlobalSettingsOpen(false); }}
                       />
                     </div>
 
@@ -6334,7 +6350,7 @@ export default function App() {
                       mode={mode}
                       compact={true}
                       isUnlocked={isDecoysUnlocked}
-                      onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                      onRequestUnlock={() => { setAccountModalOpen(true); setIsGlobalSettingsOpen(false); }}
                     />
                   </>
                 )}
@@ -6436,7 +6452,7 @@ export default function App() {
 
                 {/* Open Link Button */}
                 {(() => {
-                  const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? '/USERCHAT.html' : '';
+                  const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
                   const hasUrl = !!url;
                   return (
                     <button
@@ -6592,15 +6608,11 @@ export default function App() {
               {/* Subtle divider */}
               <div className="w-px h-3.5 bg-[var(--card-border)]/60" />
 
-              {/* Admin Panel Button with AI Pass Notification */}
-              {renderPadlockWithNotice(false)}
-
               {/* Account Sign In / Profile Button */}
               <button
                 type="button"
                 onClick={() => {
                   setAccountModalOpen(true);
-                  setIsAdminPanelOpen(false);
                   setIsGlobalSettingsOpen(false);
                 }}
                 className={`px-1.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 shrink-0 text-[10px] font-mono font-bold ${
@@ -6625,7 +6637,6 @@ export default function App() {
                   type="button"
                   onClick={() => {
                     setAdminAccountsModalOpen(true);
-                    setIsAdminPanelOpen(false);
                     setIsGlobalSettingsOpen(false);
                   }}
                   className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
@@ -6642,32 +6653,10 @@ export default function App() {
                 </button>
               )}
 
-              {/* AI Button near Settings (Only visible after pass is entered) */}
-              {isAdminUnlocked && (
-                <button
-                  onClick={() => {
-                    setFilter(filter === 'chat' ? 'all' : 'chat');
-                    setSelectedGame(null);
-                  }}
-                  className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
-                    filter === 'chat'
-                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)]'
-                      : mode === 'light'
-                        ? 'text-black hover:text-black hover:bg-black/5'
-                        : 'text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
-                  }`}
-                  title="AI Chat"
-                  aria-label="AI Chat"
-                >
-                  <Sparkles className="w-3 h-3" />
-                </button>
-              )}
-
               {/* Settings Gear Button */}
               <button
                 onClick={() => {
                   setIsGlobalSettingsOpen(!isGlobalSettingsOpen);
-                  setIsAdminPanelOpen(false);
                 }}
                 className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                   mode === 'light' 
@@ -6678,92 +6667,6 @@ export default function App() {
               >
                 <Settings className="w-3 h-3" style={{ color: mode === 'light' ? '#000000' : undefined }} />
               </button>
-
-              {/* Download website button */}
-              {canDownloadAccess && (
-              <div className="relative">
-                <button
-                  onClick={downloadEntireWebsite}
-                  className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
-                    mode === 'light'
-                      ? 'text-black hover:text-black hover:bg-black/5'
-                      : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
-                  } ${showNotices && noticeStep === 0 ? 'ring-2 ring-[var(--accent-color)] ring-offset-2 ring-offset-[#0d0d12] animate-pulse' : ''}`}
-                  title="Download Website"
-                  aria-label="Download Website"
-                >
-                  <Download className="w-3.5 h-3.5" style={{ color: mode === 'light' ? '#000000' : undefined }} />
-                </button>
-
-                {showNotices && noticeStep === 0 && (
-                  <div className="absolute top-full right-0 mt-3 w-80 bg-[#13111c] border-2 border-amber-500/80 text-white rounded-xl p-3.5 shadow-[0_0_30px_rgba(245,158,11,0.4)] z-[3000] animate-fade-in select-none text-left text-xs font-medium">
-                    {/* Pointer arrow pointing UP to download icon */}
-                    <div className="absolute -top-2.5 right-2.5 w-3.5 h-3.5 bg-[#13111c] border-t-2 border-l-2 border-amber-500/80 transform rotate-45" />
-
-                    {/* IMPORTANT WARNING HEADER BANNER */}
-                    <div className="bg-amber-500/15 border border-amber-500/40 rounded-lg px-2.5 py-1.5 mb-2.5 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 text-amber-400 font-black text-[11px] uppercase tracking-wider">
-                        <AlertTriangle className="w-4 h-4 text-amber-400 animate-bounce shrink-0" />
-                        <span>IMPORTANT WARNING</span>
-                      </div>
-                      <button
-                        onClick={closeNotices}
-                        className="px-2 py-0.5 text-[10px] text-neutral-300 hover:text-white bg-white/10 hover:bg-red-500/80 rounded-md transition-all cursor-pointer shrink-0 font-sans font-bold flex items-center gap-1 border border-white/10"
-                        title="Close Notifications"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                        <span>Close</span>
-                      </button>
-                    </div>
-
-                    <div className="mb-2 text-[10px] font-bold text-amber-300 bg-amber-500/10 px-2 py-1 rounded-md border border-amber-500/20 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-                      <span>You need to read this only once</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-[10px] text-[var(--accent-color)] font-mono font-bold uppercase tracking-wider">
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Tip 1 of 4 • Offline Website</span>
-                    </div>
-
-                    <p className="mt-2 text-[11px] leading-relaxed text-neutral-200 font-semibold">
-                      You can download the entire games website into a single file that go guardian can't block for everyone.
-                    </p>
-
-                    <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[10px]">
-                      <span className="flex items-center gap-1 text-amber-400 font-mono font-bold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-                        {noticeCountdown}s
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={closeNotices}
-                          className="px-2.5 py-1 rounded bg-red-500/20 hover:bg-red-600 text-red-200 hover:text-white font-bold transition-all cursor-pointer font-sans border border-red-500/40 flex items-center gap-1"
-                          title="Close notifications"
-                        >
-                          <X className="w-3 h-3" />
-                          <span>Close</span>
-                        </button>
-                        <button
-                          onClick={nextNoticeStep}
-                          className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-black font-black transition-all cursor-pointer font-sans shadow-md"
-                        >
-                          Next →
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Animated Progress bar at bottom */}
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10 rounded-b-xl overflow-hidden">
-                      <div
-                        className="h-full bg-amber-500 transition-all duration-1000 ease-linear"
-                        style={{ width: `${(noticeCountdown / 20) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-              )}
 
               {renderSystemSettingsPopover(false)}
 
@@ -6925,7 +6828,7 @@ export default function App() {
                   customTitles={customDecoyTitles}
                   onCustomTitleChange={handleCustomTitleChange}
                   isUnlocked={isDecoysUnlocked}
-                  onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                  onRequestUnlock={() => { setAccountModalOpen(true); setIsGlobalSettingsOpen(false); }}
                 />
                 <AutoRandomizeDecoyButton
                   autoRandomize={autoRandomizeDecoy}
@@ -6940,7 +6843,7 @@ export default function App() {
                   currentDecoy={decoyType}
                   mode={mode}
                   isUnlocked={isDecoysUnlocked}
-                  onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                  onRequestUnlock={() => { setAccountModalOpen(true); setIsGlobalSettingsOpen(false); }}
                 />
               </div>
             )}
@@ -6998,15 +6901,11 @@ export default function App() {
               </div>
             </div>{/* Unified Settings, Colors & Sign Out Group */}
             <div className="relative flex items-center gap-2 border border-[var(--card-border)] bg-[var(--bg-secondary)] p-1 rounded-full shadow-sm">
-              {/* Admin Panel Button with AI Pass Notification */}
-              {renderPadlockWithNotice(true)}
-
               {/* Account Sign In / Profile Button */}
               <button
                 type="button"
                 onClick={() => {
                   setAccountModalOpen(true);
-                  setIsAdminPanelOpen(false);
                   setIsGlobalSettingsOpen(false);
                 }}
                 className={`px-2 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1 shrink-0 text-[10px] font-mono font-bold ${
@@ -7031,7 +6930,6 @@ export default function App() {
                   type="button"
                   onClick={() => {
                     setAdminAccountsModalOpen(true);
-                    setIsAdminPanelOpen(false);
                     setIsGlobalSettingsOpen(false);
                   }}
                   className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
@@ -7048,32 +6946,10 @@ export default function App() {
                 </button>
               )}
 
-              {/* AI Button near Settings (Only visible after pass is entered) */}
-              {isAdminUnlocked && (
-                <button
-                  onClick={() => {
-                    setFilter(filter === 'chat' ? 'all' : 'chat');
-                    setSelectedGame(null);
-                  }}
-                  className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
-                    filter === 'chat'
-                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)]'
-                      : mode === 'light'
-                        ? 'text-black hover:text-black hover:bg-black/5'
-                        : 'text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
-                  }`}
-                  title="AI Chat"
-                  aria-label="AI Chat"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                </button>
-              )}
-
               {/* Settings Gear Button (opens System Settings Dropdown) */}
               <button
                 onClick={() => {
                   setIsGlobalSettingsOpen(!isGlobalSettingsOpen);
-                  setIsAdminPanelOpen(false);
                 }}
                 className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                   mode === 'light'
@@ -7084,24 +6960,6 @@ export default function App() {
               >
                 <Settings className="w-3.5 h-3.5" style={{ color: mode === 'light' ? '#000000' : undefined }} />
               </button>
-
-              {/* Download website button */}
-              {canDownloadAccess && (
-                <div className="relative">
-                  <button
-                    onClick={downloadEntireWebsite}
-                    className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
-                      filter === 'download' 
-                        ? mode === 'light' ? 'bg-black text-white font-bold' : 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_2px_8px_var(--accent-shadow)] font-bold' 
-                        : mode === 'light' ? 'text-black hover:text-black hover:bg-black/5' : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
-                    }`}
-                    title={filter === 'download' ? "Back to Portals" : "Download Website"}
-                    aria-label="Download Website"
-                  >
-                    <Download className="w-3.5 h-3.5" style={{ color: mode === 'light' ? (filter === 'download' ? '#ffffff' : '#000000') : undefined }} />
-                  </button>
-                </div>
-              )}
 
               {renderSystemSettingsPopover(true)}
 
@@ -7868,7 +7726,12 @@ export default function App() {
                   transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
                   className={`flex flex-col w-full min-h-[550px] bg-[var(--bg-secondary)] ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}
                 >
-                  <UserChat onClose={() => setFilter('all')} />
+                  <UserChat
+                    onClose={() => setFilter('all')}
+                    activeAccount={activeAccount}
+                    isOwnerAdmin={isOwnerAdmin}
+                    onOpenAccountModal={() => setAccountModalOpen(true)}
+                  />
                 </motion.div>
               ) : filter === 'info' ? (
                 <motion.div 
@@ -8927,7 +8790,13 @@ export default function App() {
                     className="w-full lg:h-full h-[320px] shrink-0 flex flex-col bg-[#070a11] border-t lg:border-t-0 lg:border-l border-[var(--card-border)]/50 rounded-none overflow-hidden"
                   >
                     <div className="flex-1 min-h-0">
-                      <UserChat onClose={() => {}} isMini={true} />
+                      <UserChat
+                        onClose={() => {}}
+                        isMini={true}
+                        activeAccount={activeAccount}
+                        isOwnerAdmin={isOwnerAdmin}
+                        onOpenAccountModal={() => setAccountModalOpen(true)}
+                      />
                     </div>
                   </div>
                 )}

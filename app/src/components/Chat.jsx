@@ -1,0 +1,2796 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { signInAnonymously } from 'firebase/auth';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  limitToLast,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+} from 'firebase/firestore';
+import {
+  BadgeCheck,
+  Ban,
+  Check,
+  ChevronDown,
+  Clock,
+  Copy,
+  Hash,
+  Info,
+  Key,
+  Link as LinkIcon,
+  Lock,
+  MessageCircle,
+  MessageSquare,
+  Palette,
+  Plus,
+  Reply,
+  Search,
+  Send,
+  Settings,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  Trash2,
+  Unlock,
+  UserPlus,
+  Users,
+  VolumeX,
+  X,
+} from 'lucide-react';
+import {
+  OperationType,
+  handleFirestoreError,
+  isFirestorePermissionError,
+  lobbyAuth,
+  lobbyDb,
+} from '../firebase';
+import { isAccountOnline } from '../utils/accountService';
+
+const DEFAULT_CHANNELS = [
+  {
+    id: 'general',
+    name: 'general',
+    description: 'Default section — messages are permanently saved (no 1-hour deletion)',
+    isPermanent: true,
+  },
+  {
+    id: 'temporary',
+    name: '1h-ephemeral',
+    description: 'Temporary public room (messages auto-delete after 1 hour)',
+    isPermanent: false,
+  },
+];
+
+const ROOM_TTL_MS = 60 * 60 * 1000;
+const MESSAGE_TTL_MS = 60 * 60 * 1000;
+const DISALLOWED_ROOM_NAMES = ['gaming-hub', 'cinema-club', 'memes', 'gaming', 'cinema'];
+const MAX_PASTED_IMAGE_BYTES = 180 * 1024;
+const SYSTEM_CRYPTO_SECRET = 'PortalChat_E2E_AlwaysEncrypted_2026';
+const LINKED_ACCOUNT_STORAGE_KEY = 'urnperiodic_chat_account';
+
+const THEMES = {
+  mono: { label: 'Black & White', swatch: ['#000000', '#1c1c1c'], accent: '#ffffff' },
+  midnight: { label: 'Midnight', swatch: ['#111625', '#1B2336'], accent: '#00e5b0' },
+  slate: { label: 'Slate', swatch: ['#1C212E', '#252C3B'], accent: '#93a4bd' },
+  ocean: { label: 'Ocean', swatch: ['#0E273B', '#143B59'], accent: '#4fb0e6' },
+  emerald: { label: 'Emerald', swatch: ['#0C2B1B', '#154C2D'], accent: '#3ddc84' },
+  sunset: { label: 'Sunset', swatch: ['#331F16', '#6E351C'], accent: '#ff8a4c' },
+  lavender: { label: 'Lavender', swatch: ['#241C3B', '#493975'], accent: '#a78bfa' },
+  light: { label: 'Light', swatch: ['#eaf0f6', '#ffffff'], accent: '#2563eb' },
+  amoled: { label: 'AMOLED', swatch: ['#080808', '#000000'], accent: '#00e5b0' },
+};
+const THEME_ORDER = ['mono', 'midnight', 'slate', 'ocean', 'emerald', 'sunset', 'lavender', 'light', 'amoled'];
+
+const BADGE_STYLE_MAP = {
+  cyan: { bg: 'rgba(6,182,212,0.16)', border: 'rgba(6,182,212,0.45)', text: '#67e8f9' },
+  amber: { bg: 'rgba(245,158,11,0.16)', border: 'rgba(245,158,11,0.45)', text: '#fcd34d' },
+  emerald: { bg: 'rgba(16,185,129,0.16)', border: 'rgba(16,185,129,0.45)', text: '#6ee7b7' },
+  rose: { bg: 'rgba(244,63,94,0.16)', border: 'rgba(244,63,94,0.45)', text: '#fda4af' },
+  violet: { bg: 'rgba(139,92,246,0.16)', border: 'rgba(139,92,246,0.45)', text: '#c4b5fd' },
+  neutral: { bg: 'rgba(255,255,255,0.10)', border: 'rgba(255,255,255,0.24)', text: '#e5e5e5' },
+};
+
+const cryptoKeyCache = new Map();
+
+function safeParse(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function getStoredTempNickname() {
+  try {
+    let name = (localStorage.getItem('chat_name') || '').trim();
+    if (
+      name &&
+      (name.toLowerCase().startsWith('user') ||
+        name.toLowerCase().startsWith('guest') ||
+        name === 'anonymous')
+    ) {
+      name = '';
+      localStorage.removeItem('chat_name');
+    }
+    return name;
+  } catch {
+    return '';
+  }
+}
+
+function normalizeLinkedAccount(account) {
+  if (!account || !account.username || account.isActive === false) return null;
+  return {
+    username: String(account.username),
+    usernameLower: String(account.usernameLower || account.username).toLowerCase(),
+    isActive: account.isActive !== false,
+    isAdmin: Boolean(account.isAdmin),
+    lobbyChatAccess: account.lobbyChatAccess !== false,
+    roleBadge: String(account.roleBadge || '').trim(),
+    badgeColor: String(account.badgeColor || 'cyan'),
+    chatMuted: Boolean(account.chatMuted),
+    chatBanned: Boolean(account.chatBanned),
+  };
+}
+
+function filterValidRooms(channelList, now = Date.now()) {
+  return (channelList || []).filter((c) => {
+    if (!c || !c.name) return false;
+    if (DISALLOWED_ROOM_NAMES.includes(String(c.name).toLowerCase())) return false;
+    if (c.createdAt && now - c.createdAt >= ROOM_TTL_MS) return false;
+    return true;
+  });
+}
+
+function getClientId() {
+  try {
+    let cid = localStorage.getItem('chat_client_id');
+    if (!cid) {
+      cid = 'c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+      localStorage.setItem('chat_client_id', cid);
+    }
+    return cid;
+  } catch {
+    return 'c_session_' + Math.random().toString(36).substring(2, 10);
+  }
+}
+
+function getMySentMessageIds() {
+  return safeParse('my_sent_message_ids', []);
+}
+
+function recordMySentMessage(msgIdOrKey) {
+  if (!msgIdOrKey) return;
+  try {
+    const list = getMySentMessageIds();
+    const strId = String(msgIdOrKey);
+    if (!list.includes(strId)) {
+      list.push(strId);
+      localStorage.setItem('my_sent_message_ids', JSON.stringify(list.slice(-500)));
+    }
+  } catch {}
+}
+
+function getLocalMessages(channelId) {
+  return safeParse(`local_messages_${channelId}`, []);
+}
+
+function getUsernameHue(name) {
+  let h = 0;
+  const n = name || 'anonymous';
+  for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) & 0xffff;
+  return [160, 180, 200, 260, 290, 320, 340][h % 7];
+}
+
+function formatDateLabel(ts) {
+  const d = new Date(ts);
+  const t = new Date();
+  if (d.toDateString() === t.toDateString()) return 'Today';
+  const y = new Date(t);
+  y.setDate(t.getDate() - 1);
+  if (d.toDateString() === y.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatTime(ts) {
+  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function safeChatImageUrl(url) {
+  return typeof url === 'string' && /^data:image\/(?:png|jpeg|webp|gif);base64,[a-z0-9+/=]+$/i.test(url)
+    ? url
+    : '';
+}
+
+function getReplyInfo(m) {
+  if (m.replyTo && m.replyTo.name) {
+    return {
+      replyToName: m.replyTo.name,
+      replyToText: m.replyTo.text || '',
+      cleanBody: m.text || '',
+    };
+  }
+  if (m.text) {
+    let currentText = m.text;
+    let extractedName = null;
+    let extractedText = null;
+    while (true) {
+      const match = currentText.match(/^>\s*@([^:]+):\s*"([^"]*)"\s*(.*)$/s);
+      if (match) {
+        extractedName = match[1].trim();
+        extractedText = match[2].trim();
+        currentText = match[3].trim();
+      } else {
+        break;
+      }
+    }
+    if (extractedName) {
+      return {
+        replyToName: extractedName,
+        replyToText: extractedText,
+        cleanBody: currentText,
+      };
+    }
+  }
+  return null;
+}
+
+async function getChannelCryptoKey(channelId) {
+  if (cryptoKeyCache.has(channelId)) return cryptoKeyCache.get(channelId);
+  try {
+    const enc = new TextEncoder();
+    const rawSecret = enc.encode(`${SYSTEM_CRYPTO_SECRET}_${channelId || 'global'}`);
+    const keyMaterial = await crypto.subtle.importKey('raw', rawSecret, { name: 'PBKDF2' }, false, ['deriveKey']);
+    const derivedKey = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: enc.encode(`salt_${channelId}`), iterations: 1000, hash: 'SHA-256' },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+    cryptoKeyCache.set(channelId, derivedKey);
+    return derivedKey;
+  } catch {
+    return null;
+  }
+}
+
+function bufToHex(buf) {
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function hexToBuf(hex) {
+  const bytes = new Uint8Array(Math.ceil(hex.length / 2));
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+  }
+  return bytes;
+}
+
+async function encryptPayload(text, channelId) {
+  if (!text) return '';
+  try {
+    const key = await getChannelCryptoKey(channelId);
+    if (!key) return text;
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const enc = new TextEncoder();
+    const encryptedBuf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(text));
+    return `ENC:v1:${bufToHex(iv)}:${bufToHex(encryptedBuf)}`;
+  } catch {
+    return text;
+  }
+}
+
+async function decryptPayload(cipherText, channelId) {
+  if (typeof cipherText !== 'string' || !cipherText.startsWith('ENC:v1:')) {
+    return { text: cipherText || '', encrypted: false };
+  }
+  try {
+    const parts = cipherText.split(':');
+    if (parts.length !== 4) return { text: cipherText, encrypted: false };
+    const iv = hexToBuf(parts[2]);
+    const encryptedData = hexToBuf(parts[3]);
+    const key = await getChannelCryptoKey(channelId);
+    if (!key) return { text: cipherText, encrypted: false };
+    const decryptedBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, encryptedData);
+    return { text: new TextDecoder().decode(decryptedBuf), encrypted: true };
+  } catch {
+    return { text: '[Encrypted Message]', encrypted: true };
+  }
+}
+
+async function preparePastedImage(file) {
+  if (file.size > 25 * 1024 * 1024) throw new Error('Image too large. Maximum source size is 25 MB.');
+  if (!/^image\/(png|jpe?g|webp|gif|bmp|avif)$/i.test(file.type)) {
+    throw new Error('Paste a PNG, JPEG, WebP, GIF, BMP or AVIF image.');
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('This image could not be read.'));
+      image.src = url;
+    });
+    let scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement('canvas');
+    for (let attempt = 0; attempt < 9; attempt++) {
+      canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Image processing is unavailable in this browser.');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/webp', Math.max(0.45, 0.85 - attempt * 0.05));
+      const bytes = Math.ceil(((dataUrl.length - dataUrl.indexOf(',') - 1) * 3) / 4);
+      if (bytes <= MAX_PASTED_IMAGE_BYTES) {
+        return { dataUrl, width: canvas.width, height: canvas.height, bytes };
+      }
+      scale *= 0.78;
+    }
+    throw new Error('Image is too complex. Try a smaller image or crop.');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function copyTextToClipboard(text) {
+  if (!text) return false;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {}
+  }
+  try {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.setAttribute('readonly', '');
+    el.style.position = 'fixed';
+    el.style.left = '-9999px';
+    el.style.top = '-9999px';
+    el.style.opacity = '0';
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(el);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+function renderChannelGlyph(ch, locked, className = 'w-4 h-4 shrink-0') {
+  if (ch.isDirectMessage) return <MessageCircle className={className} />;
+  if (ch.id === 'general') return <MessageSquare className={className} />;
+  if (ch.isPasswordProtected) {
+    return locked ? (
+      <Lock className={`${className} text-amber-400`} />
+    ) : (
+      <Unlock className={className} />
+    );
+  }
+  return <Hash className={className} />;
+}
+
+export default function Chat({
+  onClose,
+  isMini = false,
+  activeAccount = null,
+  isOwnerAdmin = false,
+  onOpenAccountModal = null,
+}) {
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem('chat_theme');
+      if (saved && THEMES[saved]) return saved;
+      localStorage.setItem('chat_theme', 'mono');
+      return 'mono';
+    } catch {
+      return 'mono';
+    }
+  });
+
+  const [linkedAccount, setLinkedAccount] = useState(() =>
+    normalizeLinkedAccount(activeAccount) || normalizeLinkedAccount(safeParse(LINKED_ACCOUNT_STORAGE_KEY, null))
+  );
+  const [onlineAccounts, setOnlineAccounts] = useState([]);
+  const [tempNick, setTempNick] = useState(() => getStoredTempNickname());
+  const [nickInput, setNickInput] = useState(() => {
+    const initialAcc =
+      normalizeLinkedAccount(activeAccount) || normalizeLinkedAccount(safeParse(LINKED_ACCOUNT_STORAGE_KEY, null));
+    return initialAcc ? initialAcc.username : isOwnerAdmin ? 'Owner' : getStoredTempNickname();
+  });
+
+  const [activeChannelId, setActiveChannelId] = useState('general');
+  const [fallbackInviteChannel, setFallbackInviteChannel] = useState(null);
+  const [customChannels, setCustomChannels] = useState([]);
+  const [localChannels, setLocalChannels] = useState(() => filterValidRooms(safeParse('local_custom_channels', [])));
+  const [unlockedChannels, setUnlockedChannels] = useState(() => safeParse('unlocked_chat_channels', {}));
+
+  const [messages, setMessages] = useState([]);
+  const [searchFilter, setSearchFilter] = useState('');
+  const [composeText, setComposeText] = useState('');
+  const [replyTo, setReplyTo] = useState(null);
+  const [pastedImage, setPastedImage] = useState(null);
+  const [imageProcessing, setImageProcessing] = useState(false);
+  const [imagePasteStatus, setImagePasteStatus] = useState('Paste an image with Ctrl+V / ⌘V');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [copiedMsgId, setCopiedMsgId] = useState(null);
+
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [themeModalOpen, setThemeModalOpen] = useState(false);
+  const [deleteAllModalOpen, setDeleteAllModalOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+
+  const [tipDismissed, setTipDismissed] = useState(() => {
+    try {
+      return localStorage.getItem('chat_tip_dismissed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [newChanName, setNewChanName] = useState('');
+  const [newChanDesc, setNewChanDesc] = useState('');
+  const [newChanPass, setNewChanPass] = useState('');
+  const [unlockCode, setUnlockCode] = useState('');
+
+  const [deleteAllAcrossChannels, setDeleteAllAcrossChannels] = useState(false);
+  const [deletingMyMessages, setDeletingMyMessages] = useState(false);
+  const [adminPassModalInput, setAdminPassModalInput] = useState('');
+  const [adminPassSettingsInput, setAdminPassSettingsInput] = useState('');
+  const [deletingAllAdmin, setDeletingAllAdmin] = useState(false);
+
+  const [toastMsg, setToastMsg] = useState('');
+  const [tickNow, setTickNow] = useState(() => Date.now());
+
+  const messagesPanelRef = useRef(null);
+  const composeInputRef = useRef(null);
+  const dropdownRef = useRef(null);
+  const toastTimerRef = useRef(null);
+  const imagePasteRevRef = useRef(0);
+  const latestLobbyTsRef = useRef(0);
+  const clientId = useMemo(() => getClientId(), []);
+
+  const showToast = useCallback((msg) => {
+    setToastMsg(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMsg(''), 2800);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  // Sync linked account from parent prop, storage, and custom events
+  useEffect(() => {
+    if (activeAccount !== undefined) {
+      const normalized = normalizeLinkedAccount(activeAccount);
+      const cached = normalizeLinkedAccount(safeParse(LINKED_ACCOUNT_STORAGE_KEY, null));
+      const resolved = normalized || cached;
+      setLinkedAccount(resolved);
+      if (resolved) {
+        setNickInput(resolved.username);
+      } else {
+        setNickInput(isOwnerAdmin ? 'Owner' : getStoredTempNickname());
+      }
+    }
+  }, [activeAccount, isOwnerAdmin]);
+
+  useEffect(() => {
+    const applyAccountSync = (acc) => {
+      const normalized = normalizeLinkedAccount(acc);
+      setLinkedAccount(normalized);
+      setNickInput(normalized ? normalized.username : getStoredTempNickname());
+    };
+
+    const handleCustomSync = (event) => applyAccountSync(event.detail || null);
+    const handleStorage = (event) => {
+      if (event.key === LINKED_ACCOUNT_STORAGE_KEY) {
+        applyAccountSync(safeParse(LINKED_ACCOUNT_STORAGE_KEY, null));
+      }
+    };
+    const handleWindowMsg = (event) => {
+      const data = event.data;
+      if (!data) return;
+      if (data.type === 'urnperiodic-account-sync') {
+        applyAccountSync(data.account || null);
+      } else if (data.type === 'admin-delete-all-messages') {
+        try {
+          Object.keys(localStorage).forEach((k) => {
+            if (k.startsWith('local_messages_')) localStorage.removeItem(k);
+          });
+        } catch {}
+        setMessages([]);
+        showToast('🗑️ Admin deleted all messages');
+      }
+    };
+
+    window.addEventListener('urnperiodic-account-sync', handleCustomSync);
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('message', handleWindowMsg);
+
+    let bus;
+    try {
+      bus = new BroadcastChannel('urnperiodic_lobby_bus');
+      bus.onmessage = (e) => handleWindowMsg({ data: e.data });
+    } catch {}
+
+    return () => {
+      window.removeEventListener('urnperiodic-account-sync', handleCustomSync);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('message', handleWindowMsg);
+      if (bus) {
+        try {
+          bus.close();
+        } catch {}
+      }
+    };
+  }, [showToast]);
+
+  // Anonymous Firebase auth + live siteAccounts listener for instant moderation sync
+  useEffect(() => {
+    signInAnonymously(lobbyAuth).catch(() => {});
+  }, []);
+
+  const linkedUsernameLower = linkedAccount?.usernameLower || null;
+  useEffect(() => {
+    if (!linkedUsernameLower) return;
+    const ref = doc(lobbyDb, 'siteAccounts', linkedUsernameLower);
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        if (!snap.exists()) {
+          setLinkedAccount(null);
+          return;
+        }
+        const d = snap.data();
+        if (d.isActive === false) {
+          setLinkedAccount(null);
+          showToast('Your account was disabled by an administrator.');
+          return;
+        }
+        setLinkedAccount(
+          normalizeLinkedAccount({
+            username: d.username || snap.id,
+            usernameLower: d.usernameLower || snap.id,
+            isActive: d.isActive !== false,
+            isAdmin: Boolean(d.isAdmin),
+            lobbyChatAccess: d.lobbyChatAccess !== false,
+            roleBadge: d.roleBadge || '',
+            badgeColor: d.badgeColor || 'cyan',
+            chatMuted: Boolean(d.chatMuted),
+            chatBanned: Boolean(d.chatBanned),
+          })
+        );
+      },
+      (err) => {
+        if (isFirestorePermissionError(err)) {
+          handleFirestoreError(err, OperationType.GET, `siteAccounts/${linkedUsernameLower}`);
+        }
+      }
+    );
+    return () => unsub();
+  }, [linkedUsernameLower, showToast]);
+
+  // Live listener for online account presence
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(lobbyDb, 'siteAccounts'),
+      (snapshot) => {
+        const list = [];
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          if (d && d.isActive !== false) {
+            list.push({
+              username: String(d.username || docSnap.id),
+              usernameLower: String(d.usernameLower || docSnap.id).toLowerCase(),
+              isActive: d.isActive !== false,
+              isAdmin: Boolean(d.isAdmin),
+              isOnline: Boolean(d.isOnline),
+              lastSeenAt: d.lastSeenAt ? Number(d.lastSeenAt) : null,
+            });
+          }
+        });
+        setOnlineAccounts(list);
+      },
+      () => {}
+    );
+    return () => unsub();
+  }, []);
+
+  const onlineUserSet = useMemo(() => {
+    const set = new Set();
+    onlineAccounts.forEach((acc) => {
+      if (isAccountOnline(acc, tickNow) || acc.usernameLower === linkedUsernameLower) {
+        set.add(acc.usernameLower);
+      }
+    });
+    return set;
+  }, [onlineAccounts, tickNow, linkedUsernameLower]);
+
+  const onlineUsernames = useMemo(() => {
+    const names = onlineAccounts
+      .filter((acc) => onlineUserSet.has(acc.usernameLower))
+      .map((acc) => `@${acc.username}`);
+    if (isOwnerAdmin && !linkedUsernameLower) {
+      names.unshift('Owner');
+    }
+    return names;
+  }, [onlineAccounts, onlineUserSet, isOwnerAdmin, linkedUsernameLower]);
+
+  // Combined valid channel list
+  const allChannels = useMemo(() => {
+    const validLocals = filterValidRooms(localChannels, tickNow);
+    const validCustoms = filterValidRooms(customChannels, tickNow);
+    const base = [
+      ...DEFAULT_CHANNELS,
+      ...validLocals,
+      ...validCustoms.filter((c) => !validLocals.some((lc) => lc.id === c.id || lc.name === c.name)),
+    ];
+    if (fallbackInviteChannel && !base.some((c) => c.id === fallbackInviteChannel.id)) {
+      base.push(fallbackInviteChannel);
+    }
+    return base;
+  }, [localChannels, customChannels, fallbackInviteChannel, tickNow]);
+
+  const currentChannel = useMemo(() => {
+    return allChannels.find((c) => c.id === activeChannelId) || DEFAULT_CHANNELS[0];
+  }, [allChannels, activeChannelId]);
+
+  const isPermanentChannel = useCallback(
+    (chId) => {
+      const ch = allChannels.find((c) => c.id === chId) || currentChannel;
+      return Boolean(ch?.isPermanent || ch?.id === 'general');
+    },
+    [allChannels, currentChannel]
+  );
+
+  const isCurrentLocked = Boolean(currentChannel.isPasswordProtected && !unlockedChannels[currentChannel.id]);
+  const isAccountLinked = Boolean(linkedAccount && linkedAccount.username && linkedAccount.isActive !== false);
+  const isOwnerSession = Boolean(isOwnerAdmin && !isAccountLinked);
+  const isChatAdmin = Boolean(isOwnerAdmin || linkedAccount?.isAdmin);
+  const hasAccountIdentity = isAccountLinked || isOwnerSession;
+  const effectiveChatName = isAccountLinked
+    ? linkedAccount.username
+    : isOwnerSession
+      ? 'Owner'
+      : tempNick.trim();
+
+  // Check invite query params (?channel=...&invite=true)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const channelParam = params.get('channel') || params.get('room');
+      const isInvite =
+        params.get('invite') === '1' || params.get('invite') === 'true' || params.get('invite') === 'code';
+      if (channelParam && isInvite) {
+        setUnlockedChannels((prev) => {
+          const next = { ...prev, [channelParam]: true };
+          try {
+            localStorage.setItem('unlocked_chat_channels', JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+        params.delete('channel');
+        params.delete('room');
+        params.delete('invite');
+        const nextQuery = params.toString();
+        const cleanUrl = `${window.location.origin}${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`;
+        window.history.replaceState({}, document.title, cleanUrl);
+
+        setTimeout(() => {
+          const found = DEFAULT_CHANNELS.find(
+            (c) => c.id === channelParam || c.name.toLowerCase() === channelParam.toLowerCase()
+          );
+          if (found) {
+            setActiveChannelId(found.id);
+            showToast(`🔓 Joined #${found.name} via invite link!`);
+          } else {
+            setFallbackInviteChannel({
+              id: channelParam,
+              name: channelParam,
+              description: 'Private room via invite link',
+              isPasswordProtected: true,
+            });
+            setActiveChannelId(channelParam);
+            showToast('🔓 Joined private room via invite link!');
+          }
+        }, 250);
+      }
+    } catch {}
+  }, [showToast]);
+
+  // Firestore real-time listener for custom channels
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(lobbyDb, 'channels'),
+      (snapshot) => {
+        const list = [];
+        const now = Date.now();
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data.isDirectMessage) return;
+          const lowerName = (data.name || '').toLowerCase();
+          if (DISALLOWED_ROOM_NAMES.includes(lowerName)) {
+            deleteDoc(doc(lobbyDb, 'channels', docSnap.id)).catch(() => {});
+            return;
+          }
+          const createdAt = data.createdAt || now;
+          if (now - createdAt >= ROOM_TTL_MS) {
+            deleteDoc(doc(lobbyDb, 'channels', docSnap.id)).catch(() => {});
+          } else {
+            list.push({
+              id: docSnap.id,
+              name: data.name,
+              description: data.description || 'Custom chat room',
+              isPasswordProtected: !!data.isPasswordProtected,
+              password: data.password || null,
+              createdAt,
+            });
+          }
+        });
+        setCustomChannels(list);
+      },
+      (err) => {
+        if (isFirestorePermissionError(err)) {
+          handleFirestoreError(err, OperationType.LIST, 'channels');
+        }
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  // Periodic purge timer for ephemeral rooms & countdown refresh
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setTickNow(now);
+
+      setLocalChannels((prev) => {
+        const valid = filterValidRooms(prev, now);
+        if (valid.length !== prev.length) {
+          try {
+            localStorage.setItem('local_custom_channels', JSON.stringify(valid));
+          } catch {}
+          return valid;
+        }
+        return prev;
+      });
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Redirect to #general if active custom room expired
+  useEffect(() => {
+    if (
+      activeChannelId !== 'general' &&
+      activeChannelId !== 'temporary' &&
+      customChannels.length + localChannels.length > 0 &&
+      !allChannels.some((c) => c.id === activeChannelId)
+    ) {
+      setActiveChannelId('general');
+      showToast('⏰ The custom room expired after 1 hour.');
+    }
+  }, [allChannels, activeChannelId, customChannels.length, localChannels.length, showToast]);
+
+  // Close mobile channel dropdown on outside click
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const onDocClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, [dropdownOpen]);
+
+  // Firestore messages subscription for active channel
+  useEffect(() => {
+    const cId = currentChannel.id;
+    const isPerm = isPermanentChannel(cId);
+
+    if (isCurrentLocked) {
+      setMessages([]);
+      return;
+    }
+
+    let cancelled = false;
+    setMessages([]);
+
+    // Load cached local messages first
+    const rawLocals = getLocalMessages(cId);
+    const now = Date.now();
+    const validLocals = isPerm
+      ? rawLocals
+      : rawLocals.filter((m) => now - (m.timestamp || now) < MESSAGE_TTL_MS);
+
+    Promise.all(
+      validLocals.map(async (m) => {
+        const decText = await decryptPayload(m.text || '', cId);
+        const decImg = m.imageUrl ? await decryptPayload(m.imageUrl, cId) : { text: null };
+        return {
+          ...m,
+          text: decText.text,
+          isEncrypted: decText.encrypted,
+          imageUrl: decImg.text,
+        };
+      })
+    ).then((decryptedLocals) => {
+      if (!cancelled && decryptedLocals.length > 0) {
+        setMessages((prev) => (prev.length === 0 ? decryptedLocals : prev));
+      }
+    });
+
+    const colRef = collection(lobbyDb, 'channels', cId, 'messages');
+    const q = query(colRef, orderBy('timestamp', 'asc'), limitToLast(150));
+
+    const unsub = onSnapshot(
+      q,
+      async (snapshot) => {
+        const msgs = [];
+        const currentNow = Date.now();
+        const expiredDocIds = [];
+
+        for (const docSnap of snapshot.docs) {
+          const data = docSnap.data();
+          const ts = data.timestamp || currentNow;
+
+          if (!isPerm && currentNow - ts >= MESSAGE_TTL_MS) {
+            expiredDocIds.push(docSnap.id);
+            continue;
+          }
+
+          const decTextObj = await decryptPayload(data.text || '', cId);
+          const decImgObj = data.imageUrl ? await decryptPayload(data.imageUrl, cId) : { text: null };
+
+          msgs.push({
+            id: docSnap.id,
+            key: docSnap.id,
+            name: data.name || 'anonymous',
+            userId: data.userId || null,
+            senderId: data.senderId || null,
+            accountId: data.accountId || null,
+            roleBadge: data.roleBadge || '',
+            badgeColor: data.badgeColor || 'cyan',
+            isRegistered: !!data.isRegistered,
+            isAdmin: !!data.isAdmin,
+            text: decTextObj.text,
+            isEncrypted: decTextObj.encrypted,
+            imageUrl: decImgObj.text,
+            timestamp: ts,
+            replyTo: data.replyTo || null,
+          });
+        }
+
+        if (!isPerm && expiredDocIds.length > 0) {
+          expiredDocIds.forEach((expiredId) => {
+            deleteDoc(doc(lobbyDb, 'channels', cId, 'messages', expiredId)).catch(() => {});
+          });
+        }
+
+        if (cancelled) return;
+        setMessages(msgs);
+
+        if (msgs.length === 0 && !snapshot.metadata.fromCache) {
+          try {
+            localStorage.removeItem(`local_messages_${cId}`);
+          } catch {}
+        }
+
+        if (msgs.length > 0) {
+          const latestMsg = msgs.reduce((latest, m) => Math.max(latest, Number(m.timestamp || 0)), 0);
+          if (latestMsg > latestLobbyTsRef.current) {
+            const wasInitialized = latestLobbyTsRef.current > 0;
+            latestLobbyTsRef.current = latestMsg;
+            if (wasInitialized) {
+              try {
+                localStorage.setItem('lobby-chat-latest', String(latestMsg));
+                localStorage.setItem('lobby-chat-notification', String(latestMsg));
+                const lobbyBus = new BroadcastChannel('urnperiodic_lobby_bus');
+                lobbyBus.postMessage({ type: 'lobby-chat-message', timestamp: latestMsg, channel: cId });
+                setTimeout(() => {
+                  try {
+                    lobbyBus.close();
+                  } catch {}
+                }, 400);
+              } catch {}
+            }
+          }
+        }
+      },
+      (err) => {
+        if (isFirestorePermissionError(err)) {
+          handleFirestoreError(err, OperationType.LIST, `channels/${cId}/messages`);
+        }
+      }
+    );
+
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [currentChannel.id, isCurrentLocked, isPermanentChannel]);
+
+  const displayedMessages = useMemo(() => {
+    const isPerm = isPermanentChannel(currentChannel.id);
+    const validMsgs = isPerm
+      ? messages
+      : messages.filter((m) => tickNow - (m.timestamp || tickNow) < MESSAGE_TTL_MS);
+    const q = searchFilter.trim().toLowerCase();
+    if (!q) return validMsgs;
+    return validMsgs.filter(
+      (m) => (m.name || '').toLowerCase().includes(q) || (m.text || '').toLowerCase().includes(q)
+    );
+  }, [messages, currentChannel.id, isPermanentChannel, tickNow, searchFilter]);
+
+  useEffect(() => {
+    const panel = messagesPanelRef.current;
+    if (panel) {
+      panel.scrollTop = panel.scrollHeight;
+    }
+  }, [displayedMessages.length, currentChannel.id]);
+
+  const isMyMessage = useCallback(
+    (m) => {
+      if (!m) return false;
+      const myAuthUid = lobbyAuth.currentUser?.uid;
+      const mySentIds = getMySentMessageIds();
+
+      if (m.id && mySentIds.includes(String(m.id))) return true;
+      if (m.key && mySentIds.includes(String(m.key))) return true;
+      if (m.senderId && String(m.senderId) === String(clientId)) return true;
+      if (myAuthUid && m.userId && String(m.userId) === String(myAuthUid)) return true;
+      if (
+        linkedAccount?.usernameLower &&
+        m.accountId &&
+        String(m.accountId) === String(linkedAccount.usernameLower)
+      ) {
+        return true;
+      }
+      if (isOwnerSession && m.accountId === '__owner__') return true;
+      if (m.isLocalTemp) return true;
+      return false;
+    },
+    [clientId, linkedAccount, isOwnerSession]
+  );
+
+  const handleApplyTheme = (key) => {
+    setTheme(key);
+    try {
+      localStorage.setItem('chat_theme', key);
+    } catch {}
+  };
+
+  const clearPastedImage = () => {
+    imagePasteRevRef.current += 1;
+    setPastedImage(null);
+    setImageProcessing(false);
+    setImagePasteStatus('Paste an image with Ctrl+V / ⌘V');
+  };
+
+  const switchChannel = (id) => {
+    const target = allChannels.find((c) => c.id === id);
+    if (!target) return;
+    if (target.isDirectMessage && !isAccountLinked) {
+      showToast('🔒 Sign in with an assigned account to access direct messages.');
+      return;
+    }
+    clearPastedImage();
+    setActiveChannelId(id);
+    setSearchFilter('');
+    setDropdownOpen(false);
+  };
+
+  const copyInviteLink = async (channelId) => {
+    const c = allChannels.find((x) => x.id === channelId) || currentChannel;
+    const url = `${window.location.origin}${window.location.pathname}?filter=lobbychat&channel=${encodeURIComponent(c.id)}&invite=true`;
+    const ok = await copyTextToClipboard(url);
+    if (ok) {
+      showToast(`📋 Invite link for #${c.name} copied! Bypasses password.`);
+    } else {
+      showToast('Copy failed — browser blocked clipboard access.');
+    }
+  };
+
+  const saveNickname = (rawVal) => {
+    if (isAccountLinked) {
+      showToast(`Chat name is locked to @${linkedAccount.username}`);
+      return true;
+    }
+    const trimmed = (rawVal || '').trim();
+    if (trimmed.length < 2) {
+      showToast('⚠️ Nickname must be at least 2 characters');
+      return false;
+    }
+    setTempNick(trimmed);
+    setNickInput(trimmed);
+    try {
+      localStorage.setItem('chat_name', trimmed);
+    } catch {}
+    showToast(`✓ Nickname set to "${trimmed}"`);
+    composeInputRef.current?.focus();
+    return true;
+  };
+
+  const handleImagePaste = async (event) => {
+    const items = Array.from(event.clipboardData?.items || []);
+    const file =
+      items.find((item) => item.kind === 'file' && item.type.startsWith('image/'))?.getAsFile() ||
+      Array.from(event.clipboardData?.files || []).find((f) => f.type.startsWith('image/'));
+    if (!file) return;
+    event.preventDefault();
+    if (sendingMessage) return;
+    if (!isChatAdmin && linkedAccount?.lobbyChatAccess === false) {
+      showToast('Lobby Chat access is disabled for your account.');
+      return;
+    }
+    if (!isChatAdmin && linkedAccount?.chatBanned) {
+      showToast('Your account is banned from Lobby Chat.');
+      return;
+    }
+    if (!isChatAdmin && linkedAccount?.chatMuted) {
+      showToast('You are currently muted in Lobby Chat.');
+      return;
+    }
+    if (!hasAccountIdentity && onOpenAccountModal) {
+      showToast('Sign in with your account to share images in Chat.');
+      onOpenAccountModal();
+      return;
+    }
+    if (isCurrentLocked) {
+      showToast('Unlock this channel before attaching an image.');
+      return;
+    }
+
+    const revision = ++imagePasteRevRef.current;
+    setImageProcessing(true);
+    setImagePasteStatus('Preparing pasted image…');
+    try {
+      const image = await preparePastedImage(file);
+      if (revision !== imagePasteRevRef.current) return;
+      setPastedImage(image);
+      setImagePasteStatus('Ready to send · paste again to replace · GIFs send as still images');
+    } catch (error) {
+      if (revision === imagePasteRevRef.current) {
+        showToast(error.message || 'Could not paste this image.');
+        setImagePasteStatus('Could not prepare image. Try another image.');
+      }
+    } finally {
+      if (revision === imagePasteRevRef.current) {
+        setImageProcessing(false);
+      }
+    }
+  };
+
+  const handleSendMessage = async (e) => {
+    if (e) e.preventDefault();
+    if (sendingMessage || imageProcessing) return;
+    if (!isChatAdmin && linkedAccount?.lobbyChatAccess === false) {
+      showToast('Lobby Chat access is disabled for your account.');
+      return;
+    }
+    if (!isChatAdmin && linkedAccount?.chatBanned) {
+      showToast('Your account is banned from Lobby Chat.');
+      return;
+    }
+    if (!isChatAdmin && linkedAccount?.chatMuted) {
+      showToast('You are muted in Lobby Chat and cannot send messages.');
+      return;
+    }
+    if (!hasAccountIdentity && onOpenAccountModal) {
+      showToast('Sign in with an account to send messages.');
+      onOpenAccountModal();
+      return;
+    }
+    if (isCurrentLocked) {
+      showToast('Unlock this channel before sending.');
+      return;
+    }
+
+    const text = composeText.trim();
+    const imageUrl = pastedImage?.dataUrl || null;
+    if (!text && !imageUrl) return;
+
+    setSendingMessage(true);
+    try {
+      let currentName = isAccountLinked
+        ? linkedAccount.username
+        : isOwnerSession
+          ? 'Owner'
+          : tempNick.trim();
+      if (!hasAccountIdentity && currentName.length < 2) {
+        const pendingNick = nickInput.trim();
+        if (pendingNick.length >= 2) {
+          saveNickname(pendingNick);
+          currentName = pendingNick;
+        } else {
+          const autoNick = 'Agent_' + Math.floor(100 + Math.random() * 900);
+          saveNickname(autoNick);
+          currentName = autoNick;
+          showToast(`Chatting as ${autoNick} (edit above)`);
+        }
+      }
+
+      const cId = currentChannel.id;
+      const ts = Date.now();
+      const replyTarget = replyTo ? { name: replyTo.name, text: replyTo.text } : null;
+
+      const encryptedText = await encryptPayload(text, cId);
+      const encryptedImage = imageUrl ? await encryptPayload(imageUrl, cId) : null;
+
+      const myAuthUid = lobbyAuth.currentUser?.uid || clientId;
+      const localKey = `local_${ts}_${Math.random().toString(36).substring(2, 9)}`;
+
+      const msgData = {
+        name: currentName,
+        userId: myAuthUid,
+        senderId: clientId,
+        accountId: isAccountLinked ? linkedAccount.usernameLower : isOwnerSession ? '__owner__' : null,
+        roleBadge: isAccountLinked ? linkedAccount.roleBadge || '' : isOwnerSession ? 'Owner' : '',
+        badgeColor: isAccountLinked ? linkedAccount.badgeColor || 'cyan' : isOwnerSession ? 'amber' : 'cyan',
+        isRegistered: hasAccountIdentity,
+        isAdmin: isChatAdmin,
+        text,
+        imageUrl,
+        replyTo: replyTarget,
+        isEncrypted: true,
+        timestamp: ts,
+        isLocalTemp: true,
+        key: localKey,
+      };
+
+      recordMySentMessage(localKey);
+
+      const localEncryptedMsg = { ...msgData, text: encryptedText, imageUrl: encryptedImage };
+      const validLocals = [...getLocalMessages(cId), localEncryptedMsg].filter(
+        (m) => ts - (m.timestamp || ts) < MESSAGE_TTL_MS
+      );
+      try {
+        localStorage.setItem(`local_messages_${cId}`, JSON.stringify(validLocals.slice(-100)));
+      } catch {
+        showToast('Local cache is full; still attempting to send online.');
+      }
+      if (cId === 'general') {
+        try {
+          localStorage.setItem('lobby-chat-notification', String(ts));
+        } catch {}
+      }
+
+      setMessages((prev) =>
+        prev.some((m) => m.timestamp === ts && m.name === msgData.name) ? prev : [...prev, msgData]
+      );
+
+      setReplyTo(null);
+      setComposeText('');
+      clearPastedImage();
+      composeInputRef.current?.focus();
+
+      try {
+        const docRef = await addDoc(collection(lobbyDb, 'channels', cId, 'messages'), {
+          name: msgData.name,
+          userId: msgData.userId,
+          senderId: msgData.senderId,
+          accountId: msgData.accountId,
+          roleBadge: msgData.roleBadge,
+          badgeColor: msgData.badgeColor,
+          isRegistered: hasAccountIdentity,
+          isAdmin: isChatAdmin,
+          text: encryptedText,
+          imageUrl: encryptedImage,
+          replyTo: replyTarget,
+          isEncrypted: true,
+          timestamp: ts,
+          channelId: cId,
+        });
+        if (docRef?.id) {
+          recordMySentMessage(docRef.id);
+        }
+      } catch (err) {
+        if (isFirestorePermissionError(err)) {
+          handleFirestoreError(err, OperationType.CREATE, `channels/${cId}/messages`);
+        }
+        showToast('Not synced online. Your message is kept locally where storage is available.');
+      }
+    } catch {
+      showToast('Could not send this message. Please try again.');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const handleCreateChannel = async (e) => {
+    e.preventDefault();
+    const raw = newChanName.trim();
+    if (!raw) {
+      showToast('Channel name is required!');
+      return;
+    }
+    const clean = raw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+    if (!clean) {
+      showToast('Invalid channel name.');
+      return;
+    }
+    if (DISALLOWED_ROOM_NAMES.includes(clean)) {
+      showToast('That room topic is not permitted.');
+      return;
+    }
+    if (allChannels.some((c) => c.name.toLowerCase() === clean)) {
+      showToast('Channel name already exists!');
+      return;
+    }
+
+    const pass = newChanPass.trim();
+    const desc = newChanDesc.trim() || 'A custom chat room';
+    const now = Date.now();
+
+    let createdObj;
+    try {
+      const docRef = await addDoc(collection(lobbyDb, 'channels'), {
+        name: clean,
+        description: desc,
+        password: pass || null,
+        isPasswordProtected: !!pass,
+        createdAt: now,
+      });
+      createdObj = {
+        id: docRef.id,
+        name: clean,
+        description: desc,
+        isPasswordProtected: !!pass,
+        password: pass,
+        createdAt: now,
+      };
+    } catch {
+      const id = `local_chan_${now}_${Math.random().toString(36).substring(2, 11)}`;
+      createdObj = {
+        id,
+        name: clean,
+        description: desc,
+        isPasswordProtected: !!pass,
+        password: pass,
+        createdAt: now,
+      };
+    }
+
+    setLocalChannels((prev) => {
+      const next = [...prev, createdObj];
+      try {
+        localStorage.setItem('local_custom_channels', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    if (pass) {
+      setUnlockedChannels((prev) => {
+        const next = { ...prev, [createdObj.id]: true };
+        try {
+          localStorage.setItem('unlocked_chat_channels', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    }
+
+    setActiveChannelId(createdObj.id);
+    setNewChanName('');
+    setNewChanDesc('');
+    setNewChanPass('');
+    setCreateModalOpen(false);
+    if (pass) {
+      await copyInviteLink(createdObj.id);
+    } else {
+      showToast(`Channel #${clean} created! (Auto-deletes in 1 hour)`);
+    }
+  };
+
+  const handleUnlockChannel = (e) => {
+    e.preventDefault();
+    if (unlockCode === currentChannel.password) {
+      setUnlockedChannels((prev) => {
+        const next = { ...prev, [currentChannel.id]: true };
+        try {
+          localStorage.setItem('unlocked_chat_channels', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      setUnlockCode('');
+      showToast('🔓 Channel unlocked!');
+    } else {
+      showToast('❌ Incorrect passcode!');
+    }
+  };
+
+  const handleDeleteSingleMessage = async (msg) => {
+    const msgId = msg.id || msg.key;
+    if (!msgId) return;
+    if (!isMyMessage(msg) && !isChatAdmin) {
+      showToast('⚠️ You can only delete your own messages!');
+      return;
+    }
+    const cId = currentChannel.id;
+    if (msg.id) {
+      try {
+        await deleteDoc(doc(lobbyDb, 'channels', cId, 'messages', String(msg.id)));
+      } catch {}
+    }
+    setMessages((prev) => prev.filter((m) => String(m.id || m.key) !== String(msgId)));
+    const locals = getLocalMessages(cId).filter((m) => String(m.id || m.key) !== String(msgId));
+    try {
+      localStorage.setItem(`local_messages_${cId}`, JSON.stringify(locals));
+    } catch {}
+    showToast('🗑️ Message deleted');
+  };
+
+  const handleCopyMessage = async (msg, copyContent) => {
+    if (!copyContent) {
+      showToast('Nothing to copy in this message');
+      return;
+    }
+    const ok = await copyTextToClipboard(copyContent);
+    if (ok) {
+      const id = msg.id || msg.key;
+      setCopiedMsgId(id);
+      showToast('📋 Message copied to clipboard!');
+      setTimeout(() => {
+        setCopiedMsgId((cur) => (cur === id ? null : cur));
+      }, 1500);
+    } else {
+      showToast('Clipboard copy blocked by browser');
+    }
+  };
+
+  const handleReplyClick = (name, bodyText) => {
+    let cleanSnippet = bodyText || '';
+    const match = cleanSnippet.match(/^>\s*@[^:]+:\s*"[^"]*"\s*(.*)$/s);
+    if (match) cleanSnippet = match[3];
+    cleanSnippet = cleanSnippet.replace(/[\r\n]+/g, ' ').trim();
+    if (cleanSnippet.length > 80) cleanSnippet = cleanSnippet.substring(0, 80) + '…';
+    setReplyTo({ name, text: cleanSnippet });
+    composeInputRef.current?.focus();
+  };
+
+  const myMessageCountInCurrent = useMemo(() => {
+    return messages.filter((m) => isMyMessage(m)).length;
+  }, [messages, isMyMessage]);
+
+  const executeDeleteAllMyMessages = async () => {
+    setDeletingMyMessages(true);
+    try {
+      const targetChannels = deleteAllAcrossChannels ? allChannels : [currentChannel];
+      let totalDeleted = 0;
+      const myAuthUid = lobbyAuth.currentUser?.uid;
+      const mySentIds = getMySentMessageIds();
+
+      for (const ch of targetChannels) {
+        const chId = ch.id;
+        const isTargetActive = chId === currentChannel.id;
+        const msgsInScope = isTargetActive ? [...messages] : getLocalMessages(chId);
+        const docIdsToDelete = new Set();
+
+        msgsInScope.forEach((m) => {
+          if (isMyMessage(m)) {
+            if (m.id) docIdsToDelete.add(String(m.id));
+            if (m.key) docIdsToDelete.add(String(m.key));
+          }
+        });
+        mySentIds.forEach((id) => {
+          if (id && !id.startsWith('local_')) docIdsToDelete.add(String(id));
+        });
+
+        try {
+          if (clientId) {
+            const snapSender = await getDocs(
+              query(collection(lobbyDb, 'channels', chId, 'messages'), where('senderId', '==', clientId))
+            );
+            snapSender.forEach((d) => docIdsToDelete.add(d.id));
+          }
+        } catch {}
+
+        try {
+          if (myAuthUid) {
+            const snapUser = await getDocs(
+              query(collection(lobbyDb, 'channels', chId, 'messages'), where('userId', '==', myAuthUid))
+            );
+            snapUser.forEach((d) => docIdsToDelete.add(d.id));
+          }
+        } catch {}
+
+        try {
+          if (linkedAccount?.usernameLower) {
+            const snapAcc = await getDocs(
+              query(
+                collection(lobbyDb, 'channels', chId, 'messages'),
+                where('accountId', '==', linkedAccount.usernameLower)
+              )
+            );
+            snapAcc.forEach((d) => docIdsToDelete.add(d.id));
+          }
+        } catch {}
+
+        for (const docId of docIdsToDelete) {
+          if (docId.startsWith('local_')) continue;
+          try {
+            await deleteDoc(doc(lobbyDb, 'channels', chId, 'messages', docId));
+            totalDeleted += 1;
+          } catch {}
+        }
+
+        if (isTargetActive) {
+          const remaining = messages.filter(
+            (m) =>
+              !isMyMessage(m) &&
+              !docIdsToDelete.has(String(m.id)) &&
+              !docIdsToDelete.has(String(m.key))
+          );
+          if (totalDeleted === 0) totalDeleted = messages.length - remaining.length;
+          setMessages(remaining);
+        }
+
+        const locals = getLocalMessages(chId).filter(
+          (m) =>
+            !isMyMessage(m) &&
+            !docIdsToDelete.has(String(m.id)) &&
+            !docIdsToDelete.has(String(m.key))
+        );
+        try {
+          localStorage.setItem(`local_messages_${chId}`, JSON.stringify(locals));
+        } catch {}
+      }
+
+      if (deleteAllAcrossChannels) {
+        try {
+          localStorage.setItem('my_sent_message_ids', JSON.stringify([]));
+        } catch {}
+      }
+
+      setDeleteAllModalOpen(false);
+      showToast(
+        totalDeleted > 0
+          ? `🗑️ Successfully deleted ${totalDeleted} of your messages!`
+          : 'No sent messages found to delete.'
+      );
+    } finally {
+      setDeletingMyMessages(false);
+    }
+  };
+
+  const executeAdminDeleteAll = async (passwordValue) => {
+    const val = (passwordValue || '').trim();
+    const isAuthorizedAdmin =
+      val === 'admin' ||
+      val === '06091006Tt' ||
+      (!val && (isOwnerAdmin || linkedAccount?.isAdmin));
+
+    if (!isAuthorizedAdmin) {
+      showToast('⚠️ Incorrect admin password!');
+      return;
+    }
+
+    setDeletingAllAdmin(true);
+    let totalDeleted = 0;
+    try {
+      const channelIds = new Set(['general', 'temporary']);
+      allChannels.forEach((ch) => {
+        if (ch?.id) channelIds.add(ch.id);
+      });
+      try {
+        const chSnap = await getDocs(collection(lobbyDb, 'channels'));
+        chSnap.forEach((d) => channelIds.add(d.id));
+      } catch {}
+
+      for (const chId of channelIds) {
+        try {
+          const msgSnap = await getDocs(collection(lobbyDb, 'channels', chId, 'messages'));
+          const tasks = [];
+          msgSnap.forEach((docSnap) => {
+            tasks.push(
+              deleteDoc(doc(lobbyDb, 'channels', chId, 'messages', docSnap.id))
+                .then(() => {
+                  totalDeleted += 1;
+                })
+                .catch(() => {})
+            );
+          });
+          await Promise.all(tasks);
+        } catch {}
+        try {
+          localStorage.removeItem(`local_messages_${chId}`);
+        } catch {}
+      }
+
+      try {
+        Object.keys(localStorage).forEach((k) => {
+          if (k.startsWith('local_messages_')) localStorage.removeItem(k);
+        });
+        localStorage.setItem('my_sent_message_ids', JSON.stringify([]));
+        const bus = new BroadcastChannel('urnperiodic_lobby_bus');
+        bus.postMessage({ type: 'admin-delete-all-messages' });
+        setTimeout(() => {
+          try {
+            bus.close();
+          } catch {}
+        }, 400);
+      } catch {}
+
+      setMessages([]);
+      setAdminPassModalInput('');
+      setAdminPassSettingsInput('');
+      setDeleteAllModalOpen(false);
+      setSettingsModalOpen(false);
+      showToast(`🗑️ Admin: Deleted all messages (${totalDeleted} removed)!`);
+    } finally {
+      setDeletingAllAdmin(false);
+    }
+  };
+
+  const isMuted = !isChatAdmin && Boolean(linkedAccount?.chatMuted);
+  const isBanned = !isChatAdmin && Boolean(linkedAccount?.chatBanned);
+  const isLobbyDisabledForUser = !isChatAdmin && linkedAccount?.lobbyChatAccess === false;
+  const validName = hasAccountIdentity || effectiveChatName.length >= 2;
+  const hasContent = Boolean(composeText.trim() || pastedImage);
+  const sendDisabled =
+    isMuted ||
+    isBanned ||
+    isLobbyDisabledForUser ||
+    (!hasAccountIdentity && Boolean(onOpenAccountModal)) ||
+    !hasContent ||
+    imageProcessing ||
+    sendingMessage;
+  const isPerm = isPermanentChannel(currentChannel.id);
+
+  return (
+    <div
+      id="portal-chat-root"
+      data-chat-theme={theme}
+      data-scheme={theme === 'light' ? 'light' : 'dark'}
+      className="w-full h-full flex chat-surface chat-txt overflow-hidden select-none relative"
+    >
+      {/* ============ LEFT SIDEBAR: CHANNEL RAIL ============ */}
+      {!isMini && (
+        <aside className="hidden md:flex flex-col w-14 border-r chat-bd chat-surface-deep shrink-0 items-center py-3 gap-2">
+          <nav className="flex flex-col gap-1.5 w-full px-1 items-center justify-start overflow-y-auto max-h-[60vh] no-scrollbar">
+            {allChannels.map((ch) => {
+              const active = currentChannel.id === ch.id;
+              const locked = Boolean(ch.isPasswordProtected && !unlockedChannels[ch.id]);
+              const isCustom = ch.id !== 'general' && !ch.isDirectMessage;
+              const remainingMins =
+                isCustom && ch.createdAt
+                  ? Math.max(1, Math.ceil(Math.max(0, ROOM_TTL_MS - (tickNow - ch.createdAt)) / 60000))
+                  : null;
+
+              return (
+                <button
+                  key={ch.id}
+                  type="button"
+                  onClick={() => switchChannel(ch.id)}
+                  className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all relative group cursor-pointer shrink-0 ${
+                    active
+                      ? 'chat-accent border chat-accent-bd chat-accent-soft'
+                      : 'chat-txt-mute hover:chat-txt hover:bg-white/5'
+                  }`}
+                  title={`${ch.name} — ${ch.description || ''}`}
+                >
+                  {renderChannelGlyph(ch, locked)}
+                  {isCustom && ch.createdAt && (
+                    <span className="absolute -top-1 -right-1 text-[7px] font-mono font-black bg-rose-500/20 text-rose-400 border border-rose-500/30 px-1 rounded-full">
+                      1h
+                    </span>
+                  )}
+                  <span className="absolute left-11 top-1/2 -translate-y-1/2 chat-surface border chat-bd2 text-[9px] chat-txt font-semibold rounded px-2 py-1 shadow-lg whitespace-nowrap hidden group-hover:block z-50">
+                    <span className="font-extrabold uppercase chat-accent">
+                      {ch.isDirectMessage ? '' : '#'}
+                      {ch.name}
+                    </span>
+                    {ch.isPasswordProtected && (
+                      <span className="text-[7px] text-amber-500 font-bold ml-1">(Protected)</span>
+                    )}
+                    <span className="block text-[8px] chat-txt-mute font-normal max-w-[160px] truncate">
+                      {ch.description}
+                    </span>
+                    {remainingMins !== null && (
+                      <span className="block text-[7px] font-mono text-rose-400 font-bold mt-0.5">
+                        <Clock className="inline w-2 h-2 mr-0.5" />
+                        Auto-deletes in {remainingMins}m
+                      </span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="w-6 h-px bg-white/10 my-1" />
+
+          <button
+            type="button"
+            onClick={() => setCreateModalOpen(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl transition-all border border-dashed border-white/20 hover:chat-accent-bd chat-txt-mute hover:chat-accent hover:bg-white/5 cursor-pointer shrink-0"
+            title="Create Custom Channel"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setThemeModalOpen(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl transition-all chat-txt-mute hover:chat-accent hover:bg-white/5 cursor-pointer shrink-0"
+            title="Change Theme"
+          >
+            <Palette className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSettingsModalOpen(true)}
+            className="mt-auto w-9 h-9 flex items-center justify-center rounded-xl transition-all border border-white/10 hover:chat-accent-bd chat-txt-mute hover:chat-accent hover:bg-white/5 cursor-pointer shrink-0"
+            title="Settings & Admin Controls"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        </aside>
+      )}
+
+      {/* ============ MAIN PANEL ============ */}
+      <section className="flex-1 flex flex-col h-full overflow-hidden chat-surface min-w-0">
+        {/* HEADER */}
+        <header className="px-3 py-2 border-b chat-bd chat-surface-deep flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            {!isMini && <span className="chat-txt-mute font-extrabold text-[11px] hidden md:inline">#</span>}
+            {!isMini && (
+              <>
+                <h1 className="text-[11px] font-black chat-txt tracking-tight flex items-center gap-1 uppercase truncate">
+                  {currentChannel.isPasswordProtected && <Lock className="w-3 h-3 text-amber-500 shrink-0" />}
+                  {currentChannel.isDirectMessage && <MessageCircle className="w-3.5 h-3.5 chat-accent shrink-0" />}
+                  <span className="truncate">
+                    {currentChannel.isDirectMessage ? '' : '#'}
+                    {currentChannel.name}
+                  </span>
+                  {!currentChannel.isDirectMessage && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyInviteLink(currentChannel.id);
+                      }}
+                      title="Share invite link (bypasses password)"
+                      className="ml-2 px-2 py-0.5 rounded-lg chat-accent-bg text-[9px] font-bold flex items-center gap-1 shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0"
+                    >
+                      <UserPlus className="w-3 h-3" />
+                      <span className="hidden sm:inline">Invite</span>
+                    </button>
+                  )}
+                </h1>
+                {isPerm ? (
+                  <span
+                    className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded shrink-0"
+                    title="Default section: Messages are saved and never deleted"
+                  >
+                    <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
+                    <span className="hidden sm:inline">Saved (No 1h delete)</span>
+                  </span>
+                ) : (
+                  <span
+                    className="inline-flex items-center gap-1 text-[9px] font-mono text-rose-400 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded shrink-0"
+                    title="Messages are automatically deleted 1 hour after sending"
+                  >
+                    <Clock className="w-2.5 h-2.5 text-rose-400" />
+                    <span className="hidden sm:inline">1h auto-delete</span>
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+
+          {!isMini && (
+            <div className="hidden sm:flex items-center gap-2 shrink-0">
+              {onlineUsernames.length > 0 && (
+                <div
+                  className="flex items-center gap-1.5 chat-surface-elev border border-emerald-500/30 bg-emerald-500/10 rounded-lg px-2 py-1 text-[10px] font-mono font-bold text-emerald-400"
+                  title={`Online now: ${onlineUsernames.join(', ')}`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                  <Users className="w-3 h-3 shrink-0" />
+                  <span>{onlineUsernames.length} online</span>
+                </div>
+              )}
+
+              {hasAccountIdentity ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenAccountModal) onOpenAccountModal();
+                  }}
+                  className={`flex items-center gap-1.5 chat-surface-elev border chat-accent-bd rounded-lg px-2.5 py-1 ${
+                    onOpenAccountModal ? 'cursor-pointer hover:bg-white/5' : ''
+                  }`}
+                  title={
+                    isOwnerSession
+                      ? 'Signed in as Owner Admin'
+                      : 'Signed in via assigned account — chat identity is synced with your account'
+                  }
+                >
+                  <ShieldCheck className="w-3 h-3 chat-accent shrink-0" />
+                  <span className="text-[11px] font-black chat-txt font-mono">
+                    {isAccountLinked ? `@${linkedAccount.username}` : 'Owner'}
+                  </span>
+                  {isChatAdmin && (
+                    <span className="text-[8.5px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-500/20 border-amber-500/50 text-amber-300 flex items-center gap-0.5">
+                      <Shield className="w-2.5 h-2.5" />
+                      <span>Admin</span>
+                    </span>
+                  )}
+                  {isAccountLinked && linkedAccount.roleBadge && (
+                    <span
+                      className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded border"
+                      style={BADGE_STYLE_MAP[linkedAccount.badgeColor] || BADGE_STYLE_MAP.cyan}
+                    >
+                      {linkedAccount.roleBadge}
+                    </span>
+                  )}
+                  {isMuted && (
+                    <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      Muted
+                    </span>
+                  )}
+                </button>
+              ) : onOpenAccountModal ? (
+                <button
+                  type="button"
+                  onClick={onOpenAccountModal}
+                  className="flex items-center gap-1.5 chat-accent-bg rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-wider cursor-pointer hover:opacity-90 transition-all"
+                  title="Sign in with your account to chat"
+                >
+                  <Lock className="w-3 h-3 shrink-0" />
+                  <span>Account Sign In</span>
+                </button>
+              ) : (
+                <div
+                  className="flex items-center gap-1.5 chat-surface-elev border chat-bd rounded-lg px-2.5 py-1 focus-within:chat-accent-bd"
+                  title="Your temporary chat nickname"
+                >
+                  <span className="text-[9px] uppercase font-black chat-txt-mute tracking-wider">Nick:</span>
+                  <input
+                    type="text"
+                    value={nickInput}
+                    onChange={(e) => setNickInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        saveNickname(nickInput);
+                      }
+                    }}
+                    onBlur={() => {
+                      const trimmed = nickInput.trim();
+                      if (trimmed.length >= 2 && !tempNick) saveNickname(trimmed);
+                      else if (tempNick && trimmed.length < 2) setNickInput(tempNick);
+                    }}
+                    placeholder="Set nickname"
+                    minLength={2}
+                    maxLength={16}
+                    className="bg-transparent text-[11px] chat-txt outline-none w-24 chat-placeholder-mute font-bold focus:chat-accent"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center gap-1 chat-surface-elev border chat-bd rounded-lg px-2 py-1">
+                <Search className="w-3 h-3 chat-txt-mute shrink-0" />
+                <input
+                  type="text"
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  placeholder="Filter…"
+                  className="bg-transparent text-[10px] chat-txt-dim outline-none w-16 md:w-20 chat-placeholder-mute"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setDeleteAllAcrossChannels(false);
+                setDeleteAllModalOpen(true);
+              }}
+              className="chat-surface-elev border border-rose-500/30 hover:border-rose-500/60 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm shrink-0"
+              title="Delete all messages you have sent"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSettingsModalOpen(true)}
+              className="chat-surface-elev border chat-bd hover:chat-accent-bd chat-txt-dim hover:chat-accent w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm shrink-0"
+              title="Settings & Admin Controls"
+            >
+              <Settings className="w-3.5 h-3.5 shrink-0" />
+            </button>
+
+            {/* Mobile / Mini Channel Dropdown */}
+            <div ref={dropdownRef} className={`${isMini ? 'block' : 'md:hidden'} relative shrink-0`}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDropdownOpen((prev) => !prev);
+                }}
+                className="chat-surface-elev border chat-bd py-1 px-2.5 rounded-lg text-[10px] font-extrabold uppercase outline-none chat-accent flex items-center gap-1.5 cursor-pointer hover:bg-white/5 active:scale-95 transition-all shadow-sm"
+              >
+                <span className="truncate max-w-[95px] font-mono">
+                  {isCurrentLocked ? '🔒 ' : ''}#{currentChannel.name}
+                </span>
+                <ChevronDown className="w-3 h-3 chat-txt-mute shrink-0" />
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-60 chat-surface-elev border chat-bd rounded-xl shadow-2xl p-1.5 z-50 flex flex-col gap-1">
+                  {allChannels.map((c) => {
+                    const active = currentChannel.id === c.id;
+                    const locked = Boolean(c.isPasswordProtected && !unlockedChannels[c.id]);
+                    const isCustom = c.id !== 'general' && !c.isDirectMessage;
+                    const remMins =
+                      isCustom && c.createdAt
+                        ? Math.max(1, Math.ceil((ROOM_TTL_MS - (tickNow - c.createdAt)) / 60000))
+                        : null;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => switchChannel(c.id)}
+                        className={`w-full text-left px-2.5 py-2 rounded-lg flex items-center justify-between text-[11px] font-bold transition-all cursor-pointer ${
+                          active ? 'chat-accent-bg shadow-sm' : 'chat-txt-dim hover:chat-txt hover:bg-white/5'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 truncate">
+                          {renderChannelGlyph(c, locked, 'w-3.5 h-3.5 shrink-0 opacity-85')}
+                          <span className="truncate font-mono uppercase tracking-wide">#{c.name}</span>
+                        </div>
+                        {remMins !== null && (
+                          <span className="text-[8.5px] font-mono text-rose-400 font-bold ml-auto shrink-0 px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">
+                            {remMins}m left
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                  <div className="my-1 border-t chat-bd opacity-30" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      setCreateModalOpen(true);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 text-[10.5px] font-black uppercase text-white bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-white" />
+                    <span>CREATE CHANNEL (1H TTL)</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {!isMini && (
+              <button
+                type="button"
+                onClick={() => setThemeModalOpen(true)}
+                className="md:hidden p-1.5 hover:bg-white/10 chat-txt-dim rounded transition-all cursor-pointer"
+                title="Theme"
+              >
+                <Palette className="w-4 h-4" />
+              </button>
+            )}
+
+            {onClose && !isMini && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="md:hidden p-1.5 hover:bg-white/10 chat-txt-dim rounded transition-all cursor-pointer"
+                title="Close Chat"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* MOBILE / MINI LINKED ACCOUNT BAR */}
+        {hasAccountIdentity && (
+          <div
+            className={`${isMini ? 'flex' : 'flex sm:hidden'} items-center justify-between gap-2 px-3 py-1.5 border-b chat-bd chat-surface-elev shrink-0`}
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              <ShieldCheck className="w-3 h-3 chat-accent shrink-0" />
+              <span className="text-[11px] font-black chat-txt font-mono truncate">
+                {isAccountLinked ? `@${linkedAccount.username}` : 'Owner'}
+              </span>
+              {isChatAdmin && (
+                <span className="text-[8.5px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-500/20 border-amber-500/50 text-amber-300 shrink-0">
+                  Admin
+                </span>
+              )}
+              {isAccountLinked && linkedAccount.roleBadge && (
+                <span
+                  className="text-[8.5px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0"
+                  style={BADGE_STYLE_MAP[linkedAccount.badgeColor] || BADGE_STYLE_MAP.cyan}
+                >
+                  {linkedAccount.roleBadge}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {onlineUsernames.length > 0 && (
+                <span className="text-[8.5px] font-mono text-emerald-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  {onlineUsernames.length}
+                </span>
+              )}
+              {isMuted && (
+                <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                  Muted
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ACCOUNT SIGN-IN OR NICKNAME BAR */}
+        {!hasAccountIdentity && onOpenAccountModal ? (
+          <div className="flex items-center justify-between p-2 px-3 border-b chat-bd bg-amber-500/10 border-amber-500/20 shrink-0 transition-all">
+            <span className="text-[9.5px] uppercase font-black text-amber-300 tracking-wider">
+              Sign in with your assigned account to chat
+            </span>
+            <button
+              type="button"
+              onClick={onOpenAccountModal}
+              className="chat-accent-bg text-[10px] font-extrabold px-2.5 py-1 rounded-lg transition-all active:scale-95 cursor-pointer shrink-0"
+            >
+              Sign In
+            </button>
+          </div>
+        ) : !hasAccountIdentity && !validName ? (
+          <div className="flex items-center justify-between p-2 px-3 border-b chat-bd bg-amber-500/10 border-amber-500/20 shrink-0 transition-all">
+            <span className="text-[9px] sm:text-[10px] uppercase font-black text-amber-400 tracking-wider">
+              Enter a Nickname to speak, DO NOT USE YOUR REAL NAME
+            </span>
+            <div className="flex items-center gap-1.5 shrink-0 ml-2">
+              <input
+                type="text"
+                value={nickInput}
+                onChange={(e) => setNickInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveNickname(nickInput);
+                  }
+                }}
+                placeholder="Name"
+                minLength={2}
+                maxLength={16}
+                className="chat-surface-deep text-[11px] px-2.5 py-1 rounded-lg outline-none border chat-bd focus:chat-accent-bd text-right max-w-[120px] font-extrabold chat-txt chat-placeholder-mute"
+              />
+              <button
+                type="button"
+                onClick={() => saveNickname(nickInput)}
+                className="chat-accent-bg text-[10px] font-extrabold px-2.5 py-1 rounded-lg transition-all active:scale-95 cursor-pointer"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {/* DELETE / EPHEMERAL NOTICE BANNER */}
+        {!isMini && !tipDismissed && (
+          <div className="flex items-center justify-between p-2 px-3 border-b chat-bd bg-blue-500/10 border-blue-500/20 shrink-0 text-left transition-all">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                <Info className="w-3.5 h-3.5" />
+              </div>
+              <p className="text-[10px] sm:text-[11px] text-slate-200 leading-tight">
+                <strong className="text-blue-300 font-bold">Want messages deleted?</strong> #general is permanent.
+                Switch to{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    switchChannel('temporary');
+                    showToast('Switched to #1h-ephemeral (Auto-Delete Section)');
+                  }}
+                  className="text-rose-400 font-bold underline hover:text-rose-300 cursor-pointer"
+                >
+                  #1h-ephemeral (Auto-Delete Section)
+                </button>
+                , click 🗑️ on any message, or{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteAllAcrossChannels(false);
+                    setDeleteAllModalOpen(true);
+                  }}
+                  className="text-rose-400 font-bold underline hover:text-rose-300 cursor-pointer"
+                >
+                  delete all your messages
+                </button>
+                .
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setTipDismissed(true);
+                try {
+                  localStorage.setItem('chat_tip_dismissed', 'true');
+                } catch {}
+              }}
+              className="p-1 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg shrink-0 ml-2 cursor-pointer"
+              title="Dismiss notice"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* BANNED / DISABLED GATE OR UNLOCK GATE OR MESSAGES */}
+        {isBanned || isLobbyDisabledForUser ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center select-none">
+            <div className="w-16 h-16 rounded-full bg-rose-500/15 flex items-center justify-center mb-4 border border-rose-500/30">
+              <Ban className="w-7 h-7 text-rose-400" />
+            </div>
+            <h2 className="text-sm font-black uppercase text-rose-300 tracking-wider">
+              {isBanned ? 'Lobby Chat Access Restricted' : 'Lobby Chat Disabled'}
+            </h2>
+            <p className="chat-txt-dim text-[11px] mt-1.5 max-w-xs leading-relaxed">
+              Account <span className="font-mono font-bold text-white">@{linkedAccount?.username || 'user'}</span>{' '}
+              {isBanned
+                ? 'has been banned from Lobby Chat by an administrator.'
+                : 'does not currently have Lobby Chat access enabled.'}
+            </p>
+          </div>
+        ) : isCurrentLocked ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center select-none">
+            <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-4 border border-amber-500/20">
+              <Lock className="w-7 h-7 text-amber-500 animate-pulse" />
+            </div>
+            <h2 className="text-sm font-black uppercase chat-txt tracking-wider">#{currentChannel.name}</h2>
+            <p className="chat-txt-dim text-[11px] mt-1 max-w-xs leading-relaxed">
+              {currentChannel.description || 'This channel is password protected. Enter the passcode to join.'}
+            </p>
+            <form onSubmit={handleUnlockChannel} className="mt-5 w-full max-w-[220px] space-y-2">
+              <div className="relative flex items-center">
+                <Key className="absolute left-3 w-4 h-4 chat-txt-mute" />
+                <input
+                  type="password"
+                  value={unlockCode}
+                  onChange={(e) => setUnlockCode(e.target.value)}
+                  placeholder="Join Code"
+                  required
+                  className="w-full chat-surface-elev border chat-bd focus:chat-accent-bd rounded-xl py-2.5 pl-10 pr-4 text-sm chat-txt outline-none chat-placeholder-mute font-mono tracking-widest text-center"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full chat-accent-bg text-sm font-black uppercase py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer"
+              >
+                Join Channel
+              </button>
+            </form>
+            <div className="mt-4 pt-3 border-t chat-bd w-full max-w-[220px] flex flex-col items-center gap-1.5">
+              <span className="text-[9px] chat-txt-mute font-semibold">Have an invite link?</span>
+              <button
+                type="button"
+                onClick={() => copyInviteLink(currentChannel.id)}
+                className="w-full chat-surface-elev border chat-bd hover:chat-accent-bd rounded-xl py-2 px-3 text-[10px] font-bold chat-accent flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                <LinkIcon className="w-3.5 h-3.5" />
+                <span>Copy / Share Invite Link</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* MESSAGES */}
+            <div
+              ref={messagesPanelRef}
+              className="flex-1 overflow-y-auto px-3 py-3 space-y-3 chat-scrollbar chat-selectable"
+            >
+              {displayedMessages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-6 select-none max-w-sm mx-auto">
+                  <div className="w-12 h-12 rounded-2xl chat-surface-elev border chat-bd flex items-center justify-center mb-3 shadow-sm">
+                    {currentChannel.isDirectMessage ? (
+                      <MessageCircle className="w-6 h-6 chat-accent" />
+                    ) : (
+                      <Hash className="w-6 h-6 chat-accent" />
+                    )}
+                  </div>
+                  <h3 className="text-sm font-black uppercase tracking-wider chat-txt">
+                    {searchFilter
+                      ? 'No Messages Found'
+                      : currentChannel.isDirectMessage
+                        ? currentChannel.name
+                        : `#${currentChannel.name}`}
+                  </h3>
+                  <p className="text-[11px] chat-txt-dim mt-1.5 leading-relaxed">
+                    {searchFilter
+                      ? 'Try searching for a different keyword or clear the search filter.'
+                      : isPerm
+                        ? 'Messages in this default section are permanently saved.'
+                        : 'Messages in this room are temporary and automatically delete 1 hour after being sent.'}
+                  </p>
+                </div>
+              ) : (
+                (() => {
+                  let prevDate = null;
+                  return displayedMessages.map((m) => {
+                    const msgTs = m.timestamp || tickNow;
+                    const dateLabel = formatDateLabel(msgTs);
+                    const showDate = dateLabel !== prevDate;
+                    prevDate = dateLabel;
+
+                    const hue = getUsernameHue(m.name);
+                    const color = `hsl(${hue}, 70%, 65%)`;
+                    const replyInfo = getReplyInfo(m);
+                    const bodyText = replyInfo ? replyInfo.cleanBody : m.text || '';
+                    const isOwner = isMyMessage(m);
+                    const imgSrc = safeChatImageUrl(m.imageUrl);
+                    const copyContent = bodyText ? (m.imageUrl ? `${bodyText}\n${m.imageUrl}` : bodyText) : m.imageUrl || '';
+                    const msgKey = m.id || m.key || `${m.name}_${msgTs}`;
+                    const isCopied = copiedMsgId === (m.id || m.key);
+
+                    let timeRemainingStr = null;
+                    if (!isPerm) {
+                      const remainingMs = Math.max(0, MESSAGE_TTL_MS - (tickNow - msgTs));
+                      const remainingMins = Math.max(0, Math.ceil(remainingMs / 60000));
+                      timeRemainingStr = remainingMins <= 1 ? '<1m' : `${remainingMins}m`;
+                    }
+
+                    const senderOnline = Boolean(m.accountId && onlineUserSet.has(String(m.accountId).toLowerCase()));
+                    return (
+                      <div key={msgKey}>
+                        {showDate && (
+                          <div className="flex items-center gap-2 py-1.5 select-none">
+                            <div className="flex-1 h-px bg-white/5" />
+                            <span className="text-[8px] font-bold font-mono chat-txt-mute uppercase tracking-wider">
+                              {dateLabel}
+                            </span>
+                            <div className="flex-1 h-px bg-white/5" />
+                          </div>
+                        )}
+                        <div className="relative flex flex-col gap-0.5 hover:bg-white/[0.03] px-2.5 py-1.5 rounded-xl transition-all group">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {senderOnline && (
+                              <span
+                                className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"
+                                title="User is online"
+                              />
+                            )}
+                            <span className="text-[11px] font-extrabold font-mono tracking-tight" style={{ color }}>
+                              {m.name || 'anonymous'}
+                            </span>
+                            {m.isRegistered && (
+                              <BadgeCheck className="w-3 h-3 chat-accent shrink-0" title="Verified Account" />
+                            )}
+                            {m.isAdmin && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider border bg-amber-500/20 border-amber-500/50 text-amber-300 leading-tight">
+                                <Shield className="w-2.5 h-2.5" />
+                                <span>Admin</span>
+                              </span>
+                            )}
+                            {m.roleBadge && !(m.isAdmin && m.roleBadge.trim().toLowerCase() === 'admin') && (
+                              <span
+                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider border leading-tight"
+                                style={BADGE_STYLE_MAP[m.badgeColor] || BADGE_STYLE_MAP.cyan}
+                              >
+                                {m.roleBadge}
+                              </span>
+                            )}
+                            {timeRemainingStr && (
+                              <span
+                                className="inline-flex items-center gap-1 text-[8px] font-mono chat-txt-mute"
+                                title={`Message auto-deletes in ${timeRemainingStr}`}
+                              >
+                                <Clock className="w-2.5 h-2.5 opacity-60" />
+                                <span>{timeRemainingStr}</span>
+                              </span>
+                            )}
+                            <span className="text-[8px] chat-txt-mute font-mono ml-auto">{formatTime(msgTs)}</span>
+                          </div>
+
+                          {replyInfo?.replyToName && (
+                            <div className="border-l-2 chat-accent-bd pl-2.5 py-0.5 my-1 rounded-r bg-white/[0.03]">
+                              <span className="text-[9.5px] font-bold chat-txt-mute block tracking-tight">
+                                {(m.name || '').trim().toLowerCase() === effectiveChatName.toLowerCase()
+                                  ? 'You'
+                                  : m.name || 'User'}{' '}
+                                replied to{' '}
+                                <span className="chat-accent font-extrabold font-mono">@{replyInfo.replyToName}</span>
+                              </span>
+                              <p className="text-[11px] chat-txt-dim truncate font-mono mt-0.5">
+                                {replyInfo.replyToText}
+                              </p>
+                            </div>
+                          )}
+
+                          {bodyText && (
+                            <div className="chat-msg-text text-[12px] leading-normal break-words chat-txt">
+                              {bodyText}
+                            </div>
+                          )}
+
+                          {imgSrc && (
+                            <img
+                              src={imgSrc}
+                              alt={`Image shared by ${m.name || 'anonymous'}`}
+                              loading="lazy"
+                              decoding="async"
+                              className="mt-1 max-w-full rounded-xl border chat-bd object-contain"
+                              style={{ maxWidth: 'min(100%, 420px)', maxHeight: '360px' }}
+                            />
+                          )}
+
+                          {/* Hover / Focus Action Bar */}
+                          <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-1.5 mt-1 text-[9px] transition-opacity select-none">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopyMessage(m, copyContent);
+                              }}
+                              className="flex items-center gap-1 text-[9px] font-bold chat-txt-dim hover:chat-accent hover:bg-white/10 px-2 py-0.5 rounded-md transition-all cursor-pointer chat-surface-elev border chat-bd"
+                              title="Copy message"
+                            >
+                              {isCopied ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                  <span className="text-emerald-400">Copied!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-2.5 h-2.5 text-sky-400" />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleReplyClick(m.name || 'User', bodyText);
+                              }}
+                              className="flex items-center gap-1 text-[9px] font-bold chat-txt-dim hover:chat-accent hover:bg-white/10 px-2 py-0.5 rounded-md transition-all cursor-pointer chat-surface-elev border chat-bd"
+                              title="Reply"
+                            >
+                              <Reply className="w-2.5 h-2.5 chat-accent" />
+                              <span>Reply</span>
+                            </button>
+
+                            {(isOwner || isChatAdmin) && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteSingleMessage(m);
+                                }}
+                                className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-md chat-surface-elev border chat-bd font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 transition-all cursor-pointer"
+                                title={isOwner ? 'Delete your message' : 'Admin: Delete message'}
+                              >
+                                <Trash2 className="w-3 h-3 text-rose-400" />
+                                <span>Delete</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()
+              )}
+            </div>
+
+            {/* COMPOSER */}
+            <footer className="p-2.5 border-t chat-bd chat-surface-deep shrink-0">
+              {isMuted && (
+                <div className="flex items-center gap-2 px-3 py-2 mb-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-semibold">
+                  <VolumeX className="w-3.5 h-3.5 shrink-0" />
+                  <span>You are currently muted in Lobby Chat by an administrator and cannot send messages.</span>
+                </div>
+              )}
+
+              {replyTo && (
+                <div className="flex items-center justify-between p-2 rounded-xl chat-surface-elev border chat-accent-bd mb-2 text-left">
+                  <div className="min-w-0 flex-1 border-l-2 chat-accent-bd pl-2">
+                    <span className="text-[9.5px] font-bold chat-txt-mute uppercase tracking-wider flex items-center gap-1">
+                      <Reply className="w-3 h-3 chat-accent" />
+                      <span>
+                        Replying to <span className="chat-accent font-extrabold font-mono">@{replyTo.name}</span>
+                      </span>
+                    </span>
+                    <p className="text-[11px] chat-txt-dim truncate font-mono mt-0.5">{replyTo.text}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReplyTo(null)}
+                    className="p-1 chat-txt-mute hover:chat-txt hover:bg-white/10 rounded-lg cursor-pointer shrink-0 ml-2"
+                    title="Cancel Reply"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {pastedImage && (
+                <div className="chat-surface-elev border chat-bd rounded-xl p-2 mb-2" role="status" aria-live="polite">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={pastedImage.dataUrl}
+                      alt="Pasted image preview"
+                      className="w-16 h-16 object-contain rounded-lg chat-surface-deep"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-bold chat-txt">Image attached</p>
+                      <p className="text-[10px] chat-txt-mute truncate">
+                        {pastedImage.width} × {pastedImage.height} · {Math.ceil(pastedImage.bytes / 1024)} KB
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={clearPastedImage}
+                      aria-label="Remove attached image"
+                      className="p-2 chat-txt-mute hover:chat-txt rounded-lg cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[10px] chat-txt-mute mb-1" aria-live="polite">
+                {imagePasteStatus}
+              </p>
+
+              <form
+                onSubmit={handleSendMessage}
+                className={`flex items-center gap-1.5 chat-surface-elev border chat-bd rounded-xl p-1 transition-all focus-within:chat-accent-bd ${
+                  isMuted || (!validName && !hasContent) ? 'opacity-60' : ''
+                }`}
+              >
+                <input
+                  ref={composeInputRef}
+                  type="text"
+                  value={composeText}
+                  onChange={(e) => setComposeText(e.target.value)}
+                  onPaste={handleImagePaste}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  disabled={isMuted || (!hasAccountIdentity && Boolean(onOpenAccountModal))}
+                  maxLength={500}
+                  placeholder={
+                    isMuted
+                      ? 'Muted by admin — read-only mode'
+                      : !hasAccountIdentity && onOpenAccountModal
+                        ? 'Sign in with your account to send messages…'
+                        : validName
+                          ? 'Write message… (type @ to mention)'
+                          : 'Set nickname above or start typing…'
+                  }
+                  className="flex-1 bg-transparent border-none text-[12px] chat-txt chat-placeholder-mute pl-2 py-1.5 outline-none font-medium min-w-0"
+                />
+                <button
+                  type="submit"
+                  disabled={sendDisabled}
+                  className={`p-2 rounded-lg transition-all flex items-center justify-center shrink-0 ${
+                    !sendDisabled
+                      ? 'chat-accent-bg hover:scale-105 active:scale-95 cursor-pointer font-bold shadow'
+                      : 'bg-neutral-700 text-neutral-400'
+                  }`}
+                >
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </form>
+            </footer>
+          </>
+        )}
+      </section>
+
+      {/* TOAST */}
+      {toastMsg && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[60] pointer-events-none">
+          <div className="bg-rose-500 text-white font-mono text-[10px] font-black uppercase tracking-wider px-3.5 py-1.5 rounded-lg shadow-lg shadow-black/50 border border-rose-400 whitespace-nowrap">
+            {toastMsg}
+          </div>
+        </div>
+      )}
+
+      {/* ============ CREATE CHANNEL MODAL ============ */}
+      {createModalOpen && (
+        <div
+          onClick={(e) => e.target === e.currentTarget && setCreateModalOpen(false)}
+          className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-[70] backdrop-blur-sm"
+        >
+          <div className="chat-surface border chat-bd2 rounded-2xl w-full max-w-sm p-5 shadow-2xl flex flex-col gap-4 text-left animate-chat-pop">
+            <div className="flex items-center justify-between border-b chat-bd pb-2.5">
+              <h2 className="text-xs font-black uppercase chat-accent tracking-wider flex items-center gap-1.5">
+                <Plus className="w-3.5 h-3.5" /> Create Custom Channel
+              </h2>
+              <button
+                type="button"
+                onClick={() => setCreateModalOpen(false)}
+                className="chat-txt-mute hover:chat-txt p-0.5 rounded hover:bg-white/5 transition-all cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateChannel} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-wider chat-txt-dim block">
+                  Channel Name <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3 chat-txt-mute font-black text-xs">#</span>
+                  <input
+                    type="text"
+                    required
+                    maxLength={20}
+                    value={newChanName}
+                    onChange={(e) => setNewChanName(e.target.value)}
+                    placeholder="e.g. secret-lounge"
+                    className="w-full chat-surface-deep border chat-bd focus:chat-accent-bd rounded-xl py-2 pl-7 pr-3 text-xs chat-txt outline-none chat-placeholder-mute font-bold"
+                  />
+                </div>
+                <span className="text-[8px] chat-txt-mute block">Letters, numbers, dashes. Formatted lowercase.</span>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-wider chat-txt-dim block">Description</label>
+                <input
+                  type="text"
+                  maxLength={60}
+                  value={newChanDesc}
+                  onChange={(e) => setNewChanDesc(e.target.value)}
+                  placeholder="e.g. Discussion room for cool stuff"
+                  className="w-full chat-surface-deep border chat-bd focus:chat-accent-bd rounded-xl py-2 px-3 text-xs chat-txt outline-none chat-placeholder-mute"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-wider chat-txt-dim flex items-center justify-between">
+                  <span>
+                    Passcode <span className="chat-txt-mute font-normal">(Optional)</span>
+                  </span>
+                  <span className="text-[8px] text-amber-500 font-bold flex items-center gap-0.5">
+                    <Lock className="w-2 h-2" /> Protect
+                  </span>
+                </label>
+                <div className="relative flex items-center">
+                  <Key className="absolute left-3 w-3.5 h-3.5 chat-txt-mute" />
+                  <input
+                    type="text"
+                    maxLength={16}
+                    value={newChanPass}
+                    onChange={(e) => setNewChanPass(e.target.value)}
+                    placeholder="Leave empty for public"
+                    className="w-full chat-surface-deep border chat-bd focus:chat-accent-bd rounded-xl py-2 pl-9 pr-3 text-xs chat-txt outline-none chat-placeholder-mute font-mono"
+                  />
+                </div>
+              </div>
+              <div className="p-2 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-2 text-rose-400 text-[9px] font-mono">
+                <Clock className="w-3.5 h-3.5 shrink-0 animate-pulse" />
+                <span>Ephemeral Room: Custom rooms automatically disappear 1 hour after creation.</span>
+              </div>
+              <div className="flex gap-2 pt-2 border-t chat-bd">
+                <button
+                  type="button"
+                  onClick={() => setCreateModalOpen(false)}
+                  className="flex-1 bg-white/5 hover:bg-white/10 chat-txt text-[10px] font-black uppercase py-2 rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 chat-accent-bg text-[10px] font-black uppercase py-2 rounded-xl transition-all cursor-pointer"
+                >
+                  Create Channel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============ THEME MODAL ============ */}
+      {themeModalOpen && !isMini && (
+        <div
+          onClick={(e) => e.target === e.currentTarget && setThemeModalOpen(false)}
+          className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-[70] backdrop-blur-sm"
+        >
+          <div className="chat-surface border chat-bd2 rounded-2xl w-full max-w-md p-5 shadow-2xl flex flex-col gap-4 text-left animate-chat-pop">
+            <div className="flex items-center justify-between border-b chat-bd pb-2.5">
+              <h2 className="text-xs font-black uppercase chat-accent tracking-wider flex items-center gap-1.5">
+                <Palette className="w-3.5 h-3.5" /> Theme
+              </h2>
+              <button
+                type="button"
+                onClick={() => setThemeModalOpen(false)}
+                className="chat-txt-mute hover:chat-txt p-0.5 rounded hover:bg-white/5 transition-all cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 chat-surface-deep border chat-bd rounded-full px-3 py-2 self-start flex-wrap">
+              {THEME_ORDER.map((key) => {
+                const t = THEMES[key];
+                const active = theme === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => handleApplyTheme(key)}
+                    title={`${t.label} Theme`}
+                    className={`w-6 h-6 rounded-full shrink-0 transition-all cursor-pointer ${
+                      active ? 'ring-2 ring-white scale-110' : 'hover:scale-110 opacity-80 hover:opacity-100'
+                    }`}
+                    style={{
+                      background: `linear-gradient(135deg, ${t.swatch[0]}, ${t.swatch[1]})`,
+                      border: '1px solid rgba(255,255,255,.15)',
+                    }}
+                  />
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {THEME_ORDER.map((key) => {
+                const t = THEMES[key];
+                const active = theme === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => handleApplyTheme(key)}
+                    className={`group relative rounded-xl p-3 h-20 flex flex-col justify-end text-left border transition-all cursor-pointer ${
+                      active ? 'ring-2 ring-offset-1' : ''
+                    }`}
+                    style={{
+                      background: `linear-gradient(135deg, ${t.swatch[0]}, ${t.swatch[1]})`,
+                      borderColor: 'rgba(255,255,255,.10)',
+                      boxShadow: active ? `0 0 0 2px ${t.accent}` : undefined,
+                    }}
+                  >
+                    <span className="text-[11px] font-black tracking-tight" style={{ color: t.accent }}>
+                      {t.label}
+                    </span>
+                    {active && (
+                      <span
+                        className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center"
+                        style={{ background: t.accent }}
+                      >
+                        <Check className="w-2.5 h-2.5 text-black" />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============ DELETE ALL MY MESSAGES MODAL ============ */}
+      {deleteAllModalOpen && (
+        <div
+          onClick={(e) => e.target === e.currentTarget && setDeleteAllModalOpen(false)}
+          className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-[70] backdrop-blur-sm"
+        >
+          <div className="chat-surface border chat-bd2 rounded-2xl w-full max-w-sm p-5 shadow-2xl flex flex-col gap-4 text-left animate-chat-pop">
+            <div className="flex items-center justify-between border-b chat-bd pb-2.5">
+              <h2 className="text-xs font-black uppercase text-rose-400 tracking-wider flex items-center gap-1.5">
+                <Trash2 className="w-3.5 h-3.5 text-rose-400" /> Delete All My Messages
+              </h2>
+              <button
+                type="button"
+                onClick={() => setDeleteAllModalOpen(false)}
+                className="chat-txt-mute hover:chat-txt p-0.5 rounded hover:bg-white/5 transition-all cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs chat-txt-dim leading-relaxed">
+                Are you sure you want to delete all messages you've sent? They will be permanently removed for everyone.
+              </p>
+
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-1.5 text-xs">
+                <div className="flex items-center justify-between text-slate-300 font-mono text-[11px]">
+                  <span>Active Channel:</span>
+                  <span className="font-bold text-white">#{currentChannel.name}</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-300 font-mono text-[11px]">
+                  <span>Your Messages in Channel:</span>
+                  <span className="font-bold text-rose-400">
+                    {myMessageCountInCurrent === 1 ? '1 message' : `${myMessageCountInCurrent} messages`}
+                  </span>
+                </div>
+              </div>
+
+              <label className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-white/5 cursor-pointer text-xs select-none">
+                <input
+                  type="checkbox"
+                  checked={deleteAllAcrossChannels}
+                  onChange={(e) => setDeleteAllAcrossChannels(e.target.checked)}
+                  className="mt-0.5 rounded border chat-bd text-rose-500 focus:ring-rose-500"
+                />
+                <span className="chat-txt-dim text-[11px] leading-tight">
+                  Also delete all my sent messages across{' '}
+                  <strong className="chat-txt font-bold">all channels</strong> (not just this one)
+                </span>
+              </label>
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t chat-bd">
+              <button
+                type="button"
+                onClick={() => setDeleteAllModalOpen(false)}
+                className="flex-1 bg-white/5 hover:bg-white/10 chat-txt text-[10px] font-black uppercase py-2.5 rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingMyMessages}
+                onClick={executeDeleteAllMyMessages}
+                className="flex-1 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-[10px] font-black uppercase py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 disabled:opacity-60"
+              >
+                {deletingMyMessages ? (
+                  <span className="animate-pulse">Deleting...</span>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Messages</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Admin Delete All at the bottom */}
+            <div className="pt-3 border-t chat-bd space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                  <ShieldAlert className="w-3.5 h-3.5" /> Admin: Delete All Chat
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="password"
+                  value={adminPassModalInput}
+                  onChange={(e) => setAdminPassModalInput(e.target.value)}
+                  placeholder="Admin password..."
+                  className="flex-1 chat-surface-deep border chat-bd focus:border-rose-500 rounded-xl py-2 px-3 text-xs chat-txt outline-none chat-placeholder-mute font-mono min-w-0"
+                />
+                <button
+                  type="button"
+                  disabled={deletingAllAdmin}
+                  onClick={() => executeAdminDeleteAll(adminPassModalInput)}
+                  className="bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-[10px] font-black uppercase px-3 py-2 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-1 shrink-0 disabled:opacity-60"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{deletingAllAdmin ? 'Deleting...' : 'Delete All'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============ SETTINGS & ADMIN MODAL ============ */}
+      {settingsModalOpen && (
+        <div
+          onClick={(e) => e.target === e.currentTarget && setSettingsModalOpen(false)}
+          className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-[70] backdrop-blur-sm"
+        >
+          <div className="chat-surface border chat-bd2 rounded-2xl w-full max-w-sm p-5 shadow-2xl flex flex-col gap-4 text-left animate-chat-pop">
+            <div className="flex items-center justify-between border-b chat-bd pb-2.5">
+              <h2 className="text-xs font-black uppercase chat-accent tracking-wider flex items-center gap-1.5">
+                <Settings className="w-3.5 h-3.5" /> Chat Settings
+              </h2>
+              <button
+                type="button"
+                onClick={() => setSettingsModalOpen(false)}
+                className="chat-txt-mute hover:chat-txt p-0.5 rounded hover:bg-white/5 transition-all cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-2.5 rounded-xl chat-surface-elev border chat-bd">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold chat-txt">Delete My Messages</p>
+                  <p className="text-[10px] chat-txt-mute">Remove only the messages you sent</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettingsModalOpen(false);
+                    setDeleteAllAcrossChannels(false);
+                    setDeleteAllModalOpen(true);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 text-[10px] font-black uppercase cursor-pointer transition-all shrink-0"
+                >
+                  Open
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t chat-bd space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5 text-rose-400" /> Admin Controls
+                </span>
+                <span className="text-[9px] font-mono chat-txt-mute">
+                  {isOwnerAdmin || linkedAccount?.isAdmin ? 'Admin signed in' : 'Password required'}
+                </span>
+              </div>
+              <p className="text-[11px] chat-txt-dim leading-snug">
+                Permanently delete <strong className="chat-txt font-bold">all messages from all users</strong> across
+                every channel.
+              </p>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  executeAdminDeleteAll(adminPassSettingsInput);
+                }}
+                className="space-y-2"
+              >
+                <div className="relative flex items-center">
+                  <Lock className="absolute left-3 w-3.5 h-3.5 chat-txt-mute" />
+                  <input
+                    type="password"
+                    value={adminPassSettingsInput}
+                    onChange={(e) => setAdminPassSettingsInput(e.target.value)}
+                    placeholder={
+                      isOwnerAdmin || linkedAccount?.isAdmin
+                        ? 'Enter admin password (or leave blank)...'
+                        : 'Enter admin password...'
+                    }
+                    className="w-full chat-surface-deep border chat-bd focus:border-rose-500 rounded-xl py-2 pl-9 pr-3 text-xs chat-txt outline-none chat-placeholder-mute font-mono"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={deletingAllAdmin}
+                  className="w-full bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-[11px] font-black uppercase py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 disabled:opacity-60"
+                >
+                  {deletingAllAdmin ? (
+                    <span className="animate-pulse">Deleting All...</span>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete All (Admin)</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

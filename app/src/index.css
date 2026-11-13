@@ -1419,4 +1419,184 @@ body.animations-disabled .shimmer-bg,
   scrollbar-width: none;
 }
 
+/* ==========================================================================
+   PORTAL CHAT COMPONENT THEME TOKENS (Scoped to #portal-chat-root)
+   ========================================================================== */
+#portal-chat-root {
+  --chat-bg: #000000;
+  --chat-bg-deep: #000000;
+  --chat-bg-elev: #0f0f0f;
+  --chat-bg-elev2: #171717;
+  --chat-border: rgba(255, 255, 255, 0.18);
+  --chat-border-2: rgba(255, 255, 255, 0.28);
+  --chat-text: #ffffff;
+  --chat-text-dim: #d4d4d4;
+  --chat-text-mute: #a3a3a3;
+  --chat-accent: #ffffff;
+  --chat-accent-ink: #000000;
+  --chat-accent-soft: rgba(255, 255, 255, 0.16);
+  --chat-accent-glow: rgba(255, 255, 255, 0.25);
+  color: var(--chat-text);
+  background: radial-gradient(1200px 600px at 15% -10%, color-mix(in srgb, var(--chat-accent) 8%, transparent), transparent 60%), var(--chat-bg-deep);
+}
+
+#portal-chat-root[data-chat-theme='midnight'] {
+  --chat-bg: #0a0d16;
+  --chat-bg-deep: #070a11;
+  --chat-bg-elev: #0d1222;
+  --chat-bg-elev2: #0e1627;
+  --chat-accent: #00e5b0;
+  --chat-accent-ink: #05131b;
+  --chat-text: #e2e8f0;
+  --chat-text-dim: #94a3b8;
+  --chat-text-mute: #64748b;
+  --chat-border: rgba(255, 255, 255, 0.06);
+  --chat-border-2: rgba(255, 255, 255, 0.1);
+  --chat-accent-soft: rgba(0, 229, 176, 0.16);
+  --chat-accent-glow: rgba(0, 229, 176, 0.22);
+}
+
+#portal-chat-root[data-chat-theme='slate'] {
+  --chat-bg: #141922;
+  --chat-bg-deep: #0f131b;
+  --chat-bg-elev: #1c212e;
+  --chat-bg-elev2: #222838;
+  --chat-accent: #93a4bd;
+  --chat-accent-ink: #0f131b;
+  --chat-text: #e6eaf2;
+  --chat-text-dim: #9aa5b8;
+  --chat-text-mute: #6b7280;
+  --chat-border: rgba(255, 255, 255, 0.06);
+  --chat-border-2: rgba(255, 255, 255, 0.1);
+  --chat-accent-soft: rgba(147, 164, 189, 0.16);
+  --chat-accent-glow: rgba(147, 164, 189, 0.22);
+}
+
+#portal-chat-root[data-chat-theme='ocean'] {
+  --chat-bg: #081722;
+  --chat-bg-deep: #050f18;
+  --chat-bg-elev: #0e273b;
+  --chat-bg-elev2: #123049;
+  --chat-accent: #4fb0e6;
+  --chat-accent-ink: #04121c;
+  --chat-text: #e2edf5;
+  --chat-text-dim: #8fb6d0;
+  --chat-text-mute: #546e7a;
+  --chat-border: rgba(255, 255, 255, 0.06);
+  --chat-border-2: rgba(255, 255, 255, 0.1);
+  --chat-accent-soft: rgba(79, 176, 230, 0.16);
+  --chat-accent-glow: rgba(79, 176, 230, 0.22);
+}
+
+#portal-chat-root[data-chat-theme='emerald'] {
+  --chat-bg: #08160e;
+  --chat-bg-deep: #050f0a;
+  --chat-bg-elev: #0c2b1b;
+  --chat-bg-elev2: #123c26;
+  --chat-accent: #3ddc84;
+  --chat-accent-ink: #04120a;
+  --chat-text: #e0f2e8;
+  --chat-text-dim: #8fc7a5;
+  --chat-text-mute: #558b6f;
+  --chat-border: rgba(255, 255, 255, 0.06);
+  --chat-border-2: rgba(255, 255, 255, 0.1);
+  --chat-accent-soft: rgba(61, 220, 132, 0.16);
+  --chat-accent-glow: rgba(61, 220, 132, 0.22);
+}
+
+#portal-chat-root[data-chat-theme='sunset'] {
+  --chat-bg: #1c1109;
+  --chat-bg-deep: #150c06;
+  --chat-bg-elev: #2b1a11;
+  --chat-bg-elev2: #3a2216;
+  --chat-accent: #ff8a4c;
+  --chat-accent-ink: #1c0d04;
+  --chat-text: #f5e6dc;
+  --chat-text-dim: #d39c80;
+  --chat-text-mute: #9a7066;
+  --chat-border: rgba(255, 255, 255, 0.06);
+  --chat-border-2: rgba(255, 255, 255, 0.1);
+  --chat-accent-soft: rgba(255, 138, 76, 0.16);
+  --chat-accent-glow: rgba(255, 138, 76, 0.22);
+}
+
+#portal-chat-root[data-chat-theme='lavender'] {
+  --chat-bg: #150f26;
+  --chat-bg-deep: #0f0b1c;
+  --chat-bg-elev: #241c3b;
+  --chat-bg-elev2: #2f2650;
+  --chat-accent: #a78bfa;
+  --chat-accent-ink: #120b24;
+  --chat-text: #ece7f7;
+  --chat-text-dim: #b6a9d6;
+  --chat-text-mute: #7c7a95;
+  --chat-border: rgba(255, 255, 255, 0.06);
+  --chat-border-2: rgba(255, 255, 255, 0.1);
+  --chat-accent-soft: rgba(167, 139, 250, 0.16);
+  --chat-accent-glow: rgba(167, 139, 250, 0.22);
+}
+
+#portal-chat-root[data-chat-theme='light'] {
+  --chat-bg: #f4f6fa;
+  --chat-bg-deep: #eaf0f6;
+  --chat-bg-elev: #ffffff;
+  --chat-bg-elev2: #f0f3f8;
+  --chat-accent: #2563eb;
+  --chat-accent-ink: #ffffff;
+  --chat-text: #1f2733;
+  --chat-text-dim: #5a6273;
+  --chat-text-mute: #8492a6;
+  --chat-border: rgba(0, 0, 0, 0.08);
+  --chat-border-2: rgba(0, 0, 0, 0.12);
+  --chat-accent-soft: rgba(37, 99, 235, 0.16);
+  --chat-accent-glow: rgba(37, 99, 235, 0.22);
+}
+
+#portal-chat-root[data-chat-theme='amoled'] {
+  --chat-bg: #000000;
+  --chat-bg-deep: #000000;
+  --chat-bg-elev: #0a0a0a;
+  --chat-bg-elev2: #111111;
+  --chat-accent: #00e5b0;
+  --chat-accent-ink: #00120c;
+  --chat-text: #f0f0f0;
+  --chat-text-dim: #9aa0aa;
+  --chat-text-mute: #6f7a89;
+  --chat-border: rgba(255, 255, 255, 0.04);
+  --chat-border-2: rgba(255, 255, 255, 0.08);
+  --chat-accent-soft: rgba(0, 229, 176, 0.16);
+  --chat-accent-glow: rgba(0, 229, 176, 0.22);
+}
+
+#portal-chat-root .chat-surface { background: var(--chat-bg); }
+#portal-chat-root .chat-surface-deep { background: var(--chat-bg-deep); }
+#portal-chat-root .chat-surface-elev { background: var(--chat-bg-elev); }
+#portal-chat-root .chat-surface-elev2 { background: var(--chat-bg-elev2); }
+#portal-chat-root .chat-bd { border-color: var(--chat-border); }
+#portal-chat-root .chat-bd2 { border-color: var(--chat-border-2); }
+#portal-chat-root .chat-txt { color: var(--chat-text); }
+#portal-chat-root .chat-txt-dim { color: var(--chat-text-dim); }
+#portal-chat-root .chat-txt-mute { color: var(--chat-text-mute); }
+#portal-chat-root .chat-accent { color: var(--chat-accent); }
+#portal-chat-root .chat-accent-bg { background: var(--chat-accent); color: var(--chat-accent-ink); }
+#portal-chat-root .chat-accent-bd { border-color: color-mix(in srgb, var(--chat-accent) 45%, transparent); }
+#portal-chat-root .chat-accent-soft { background: var(--chat-accent-soft); }
+#portal-chat-root .chat-placeholder-mute::placeholder { color: var(--chat-text-mute); }
+
+#portal-chat-root .chat-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+#portal-chat-root .chat-scrollbar::-webkit-scrollbar-thumb { background: var(--chat-border-2); border-radius: 99px; }
+
+#portal-chat-root .chat-selectable,
+#portal-chat-root .chat-msg-text {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+@keyframes chat-pop-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-chat-pop { animation: chat-pop-in 0.16s ease-out; }
+
+
 

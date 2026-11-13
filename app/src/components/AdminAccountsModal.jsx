@@ -34,7 +34,9 @@ import {
   WORKSPACE_ACCESS_KEYS,
   createManagedAccount,
   deleteManagedAccount,
+  formatLastSeen,
   generateStrongPassword,
+  isAccountOnline,
   subscribeToAllManagedAccounts,
   updateManagedAccount,
   updateWorkspaceConfig,
@@ -76,6 +78,8 @@ export default function AdminAccountsModal({
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'online'
+  const [presenceNow, setPresenceNow] = useState(() => Date.now());
   const [feedback, setFeedback] = useState(null);
 
   // Create form state
@@ -127,6 +131,13 @@ export default function AdminAccountsModal({
     return () => unsub();
   }, [isOpen, db, auth]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    setPresenceNow(Date.now());
+    const timer = setInterval(() => setPresenceNow(Date.now()), 15000);
+    return () => clearInterval(timer);
+  }, [isOpen]);
+
   const showNotice = (type, text) => {
     setFeedback({ type, text });
     setTimeout(() => {
@@ -134,15 +145,21 @@ export default function AdminAccountsModal({
     }, 3500);
   };
 
+  const onlineCount = useMemo(() => {
+    return accounts.filter((acc) => isAccountOnline(acc, presenceNow)).length;
+  }, [accounts, presenceNow]);
+
   const filteredAccounts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return accounts;
-    return accounts.filter(
-      (acc) =>
+    return accounts.filter((acc) => {
+      if (statusFilter === 'online' && !isAccountOnline(acc, presenceNow)) return false;
+      if (!q) return true;
+      return (
         acc.usernameLower.includes(q) ||
-        (acc.roleBadge || '').toLowerCase().includes(q),
-    );
-  }, [accounts, searchQuery]);
+        (acc.roleBadge || '').toLowerCase().includes(q)
+      );
+    });
+  }, [accounts, searchQuery, statusFilter, presenceNow]);
 
   if (!isOpen) return null;
 
@@ -381,7 +398,7 @@ export default function AdminAccountsModal({
                         <span>Site Lockdown Mode</span>
                       </div>
                       <p className={`text-[11px] mt-1 leading-relaxed ${isLight ? 'text-neutral-600' : 'text-neutral-400'}`}>
-                        Locks every workspace for all visitors and signed-in accounts. Only the owner admin password can enter.
+                        Locks every workspace for all visitors and non-admin accounts. Owners &amp; admin accounts always bypass lockdown.
                       </p>
                     </div>
                     <button
@@ -466,7 +483,7 @@ export default function AdminAccountsModal({
                   <div>
                     <h3 className="text-xs font-black uppercase tracking-wider">Site-Wide Workspace Controls</h3>
                     <p className={`text-[11px] ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>
-                      Disable a workspace globally for all non-owner users (even if their individual account has it enabled).
+                      Disable a workspace globally for all non-admin users (owners &amp; admin accounts are exempt).
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -737,7 +754,7 @@ export default function AdminAccountsModal({
 
               {/* Existing Accounts Header & Search */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                <div className="text-xs font-black uppercase tracking-wider flex items-center gap-2">
+                <div className="text-xs font-black uppercase tracking-wider flex items-center gap-2 flex-wrap">
                   <span>Managed Accounts</span>
                   <span
                     className={`text-[10px] font-mono px-2 py-0.5 rounded-md border ${
@@ -746,6 +763,19 @@ export default function AdminAccountsModal({
                   >
                     {accounts.length} total
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter((prev) => (prev === 'online' ? 'all' : 'online'))}
+                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border flex items-center gap-1.5 cursor-pointer transition-all ${
+                      statusFilter === 'online'
+                        ? 'bg-emerald-500/25 border-emerald-400 text-emerald-300'
+                        : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                    }`}
+                    title={statusFilter === 'online' ? 'Showing online users only (click to show all)' : 'Click to filter online users only'}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>{onlineCount} online</span>
+                  </button>
                 </div>
                 <div className="relative w-full sm:w-64">
                   <Search className={`w-3.5 h-3.5 absolute left-3 top-2.5 ${isLight ? 'text-neutral-400' : 'text-neutral-500'}`} />
@@ -783,6 +813,7 @@ export default function AdminAccountsModal({
                   {filteredAccounts.map((acc) => {
                     const colorMeta = BADGE_COLORS[acc.badgeColor] || BADGE_COLORS.cyan;
                     const isSelf = activeAccount?.usernameLower === acc.usernameLower;
+                    const online = isSelf || isAccountOnline(acc, presenceNow);
                     return (
                       <div
                         key={acc.usernameLower}
@@ -799,20 +830,40 @@ export default function AdminAccountsModal({
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                           {/* Identity & Stats */}
                           <div className="flex items-start gap-2.5 min-w-0">
-                            <div
-                              className={`w-8 h-8 rounded-lg border flex items-center justify-center font-mono font-black text-xs shrink-0 ${
-                                acc.isActive
-                                  ? isLight
-                                    ? 'bg-neutral-900 text-white border-neutral-900'
-                                    : 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] border-[var(--accent-color)]/30'
-                                  : 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30'
-                              }`}
-                            >
-                              {acc.username.slice(0, 2).toUpperCase()}
+                            <div className="relative shrink-0">
+                              <div
+                                className={`w-8 h-8 rounded-lg border flex items-center justify-center font-mono font-black text-xs ${
+                                  acc.isActive
+                                    ? isLight
+                                      ? 'bg-neutral-900 text-white border-neutral-900'
+                                      : 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] border-[var(--accent-color)]/30'
+                                    : 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30'
+                                }`}
+                              >
+                                {acc.username.slice(0, 2).toUpperCase()}
+                              </div>
+                              <span
+                                className={`absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border-2 ${
+                                  isLight ? 'border-white' : 'border-[#0e0d16]'
+                                } ${online ? 'bg-emerald-400' : 'bg-neutral-500'}`}
+                                title={online ? 'Online' : 'Offline'}
+                              />
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-mono font-bold text-sm truncate">@{acc.username}</span>
+                                <span
+                                  className={`text-[9px] font-mono font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded border flex items-center gap-1 ${
+                                    online
+                                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                                      : isLight
+                                        ? 'bg-neutral-100 border-neutral-300 text-neutral-500'
+                                        : 'bg-white/5 border-white/10 text-neutral-400'
+                                  }`}
+                                >
+                                  <span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-emerald-400 animate-pulse' : 'bg-neutral-500'}`} />
+                                  <span>{online ? 'Online' : 'Offline'}</span>
+                                </span>
                                 {acc.isAdmin && (
                                   <span className="text-[9px] font-mono font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-500/20 border-amber-500/50 text-amber-300 flex items-center gap-1">
                                     <Shield className="w-2.5 h-2.5" />
@@ -829,8 +880,8 @@ export default function AdminAccountsModal({
                                   </span>
                                 )}
                                 {isSelf && (
-                                  <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                                    Signed In
+                                  <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                                    You
                                   </span>
                                 )}
                                 {!acc.isActive && (
@@ -843,9 +894,13 @@ export default function AdminAccountsModal({
                                 <span>{acc.favorites.length} bookmarks</span>
                                 <span>{acc.recentlyPlayed.length} recent</span>
                                 <span>
-                                  {acc.lastLoginAt
-                                    ? `Last login ${new Date(acc.lastLoginAt).toLocaleDateString()}`
-                                    : 'Never signed in'}
+                                  {online
+                                    ? 'Active now'
+                                    : acc.lastSeenAt
+                                      ? `Last seen ${formatLastSeen(acc.lastSeenAt, presenceNow)}`
+                                      : acc.lastLoginAt
+                                        ? `Last login ${new Date(acc.lastLoginAt).toLocaleDateString()}`
+                                        : 'Never signed in'}
                                 </span>
                               </div>
                             </div>
@@ -1015,20 +1070,24 @@ export default function AdminAccountsModal({
                           </span>
                           {WORKSPACE_ACCESS_KEYS.map(({ key, label }) => {
                             const Icon = WORKSPACE_ICONS[key] || Shield;
-                            const enabled = Boolean(acc[key]);
-                            const globalDisabled = workspaceConfig?.[key] === false;
+                            const enabled = acc.isAdmin ? true : Boolean(acc[key]);
+                            const globalDisabled = !acc.isAdmin && workspaceConfig?.[key] === false;
                             return (
                               <button
                                 key={key}
                                 type="button"
-                                disabled={busyKey === `${acc.usernameLower}:${key}` || busyKey === `${acc.usernameLower}:bulk`}
+                                disabled={acc.isAdmin || busyKey === `${acc.usernameLower}:${key}` || busyKey === `${acc.usernameLower}:bulk`}
                                 onClick={() => handleToggleField(acc, key)}
                                 title={
-                                  globalDisabled
-                                    ? `${label} (globally disabled right now in Global Access)`
-                                    : `Toggle ${label} access for @${acc.username}`
+                                  acc.isAdmin
+                                    ? `${label} (Admin accounts bypass all restrictions)`
+                                    : globalDisabled
+                                      ? `${label} (globally disabled right now in Global Access)`
+                                      : `Toggle ${label} access for @${acc.username}`
                                 }
-                                className={`px-2 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                                className={`px-2 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 transition-all ${
+                                  acc.isAdmin ? 'cursor-default' : 'cursor-pointer'
+                                } ${
                                   enabled
                                     ? globalDisabled
                                       ? 'bg-amber-500/10 border-amber-500/30 text-amber-300/80'
