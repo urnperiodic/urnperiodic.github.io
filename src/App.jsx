@@ -6,7 +6,6 @@ import { collection, doc, getDocs, deleteDoc, getFirestore, limit, onSnapshot, o
 import { PUBLIC_GAMES_BASE_URL } from './data/gameSource';
 import { gameRankings } from './data/gameRankings';
 import { WHATS_NEW_SENTENCE, WHATS_NEW_CHANGES, WHATS_NEW_VERSION } from './whatsNewData';
-import defaultThumbnail from './assets/images/defaultthumbnail.png';
 const GAMES_PER_PAGE = 36;
 const MAX_CACHED_GAMES = 2; // Strict LRU cap to keep memory low on low-spec hardware
 const gameHtmlCache = new Map();
@@ -675,7 +674,9 @@ function DecoyDropdown({
   compact = false, 
   showLabel = false, 
   customTitles = {}, 
-  onCustomTitleChange 
+  onCustomTitleChange,
+  isUnlocked = false,
+  onRequestUnlock
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeDecoy, setActiveDecoy] = useState(value);
@@ -767,10 +768,24 @@ function DecoyDropdown({
               <div className={`w-full sm:w-[245px] max-h-[350px] overflow-y-auto p-1.5 flex flex-col gap-1 border-b sm:border-b-0 sm:border-r scrollbar-thin ${
                 mode === 'light' ? 'border-neutral-200' : 'border-white/10'
               }`}>
-                <div className="px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-neutral-400">
-                  Select Disguise
+                <div className="px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-neutral-400 flex items-center justify-between">
+                  <span>Select Disguise</span>
+                  {!isUnlocked && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        if (onRequestUnlock) onRequestUnlock();
+                      }}
+                      className="text-[var(--accent-color)] hover:underline cursor-pointer flex items-center gap-0.5"
+                    >
+                      <Lock className="w-2.5 h-2.5" />
+                      <span>Unlock All</span>
+                    </button>
+                  )}
                 </div>
                 {decoyOptions.map((opt) => {
+                  const isLockedOption = !isUnlocked && opt.value !== 'classroom';
                   const isSelected = opt.value === value;
                   const isEditing = opt.value === activeDecoy;
                   const hasCustom = !!customTitles?.[opt.value];
@@ -780,18 +795,26 @@ function DecoyDropdown({
                       key={opt.value}
                       type="button"
                       onClick={() => {
+                        if (isLockedOption) {
+                          setIsOpen(false);
+                          if (onRequestUnlock) onRequestUnlock();
+                          return;
+                        }
                         onChange(opt.value);
                         setActiveDecoy(opt.value);
                       }}
                       className={`flex items-center gap-2 w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
-                        isEditing
-                          ? mode === 'light'
-                            ? 'bg-neutral-100 text-neutral-900 border border-neutral-300 shadow-xs'
-                            : 'bg-white/10 text-white border border-[var(--accent-color)]/50 shadow-xs'
-                          : mode === 'light'
-                            ? 'text-neutral-700 hover:text-black hover:bg-neutral-100/70 border border-transparent'
-                            : 'text-neutral-300 hover:text-white hover:bg-white/5 border border-transparent'
+                        isLockedOption
+                          ? 'opacity-45 text-neutral-500 hover:bg-white/5 border border-transparent'
+                          : isEditing
+                            ? mode === 'light'
+                              ? 'bg-neutral-100 text-neutral-900 border border-neutral-300 shadow-xs'
+                              : 'bg-white/10 text-white border border-[var(--accent-color)]/50 shadow-xs'
+                            : mode === 'light'
+                              ? 'text-neutral-700 hover:text-black hover:bg-neutral-100/70 border border-transparent'
+                              : 'text-neutral-300 hover:text-white hover:bg-white/5 border border-transparent'
                       }`}
+                      title={isLockedOption ? "Locked: Enter admin pass (ttt) to unlock all decoys" : opt.labelLong}
                     >
                       {opt.icon === 'school' ? (
                         <School className={`w-3.5 h-3.5 shrink-0 ${isSelected ? (mode === 'light' ? 'text-black' : 'text-[var(--accent-color)]') : 'text-neutral-400'}`} />
@@ -803,15 +826,17 @@ function DecoyDropdown({
                         {opt.labelLong}
                       </span>
 
-                      {hasCustom && (
+                      {hasCustom && !isLockedOption && (
                         <span className="text-[8px] font-mono font-bold px-1.5 py-0.2 rounded bg-[var(--accent-color)]/15 text-[var(--accent-color)] border border-[var(--accent-color)]/30 shrink-0">
                           Custom
                         </span>
                       )}
 
-                      {isSelected && (
+                      {isLockedOption ? (
+                        <Lock className="w-3 h-3 text-neutral-500 shrink-0 ml-1" />
+                      ) : isSelected ? (
                         <Check className="w-3.5 h-3.5 text-[var(--accent-color)] shrink-0 ml-1" />
-                      )}
+                      ) : null}
                     </button>
                   );
                 })}
@@ -958,7 +983,9 @@ function AutoRandomizeDecoyButton({
   onRandomizeNow,
   currentDecoy,
   mode,
-  compact = false
+  compact = false,
+  isUnlocked = false,
+  onRequestUnlock
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -1045,15 +1072,22 @@ function AutoRandomizeDecoyButton({
                 </span>
               </div>
               <button
-                onClick={() => setAutoRandomize(!autoRandomize)}
+                onClick={() => {
+                  if (!isUnlocked) {
+                    setIsOpen(false);
+                    if (onRequestUnlock) onRequestUnlock();
+                    return;
+                  }
+                  setAutoRandomize(!autoRandomize);
+                }}
                 className={`relative w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer p-0.5 border ${
-                  autoRandomize ? 'bg-emerald-500 border-emerald-400' : 'bg-neutral-800 border-neutral-700'
+                  autoRandomize && isUnlocked ? 'bg-emerald-500 border-emerald-400' : 'bg-neutral-800 border-neutral-700'
                 }`}
                 aria-label="Toggle Auto Switch Decoy"
               >
                 <div
                   className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-200 ${
-                    autoRandomize ? 'translate-x-5' : 'translate-x-0'
+                    autoRandomize && isUnlocked ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>
@@ -1120,16 +1154,26 @@ function AutoRandomizeDecoyButton({
               {/* Decoy options checkboxes */}
               <div className="grid grid-cols-1 gap-1 max-h-36 overflow-y-auto pr-0.5 scrollbar-thin">
                 {decoyOptions.map((opt) => {
-                  const isChecked = pool.includes(opt.value);
+                  const isLockedOption = !isUnlocked && opt.value !== 'classroom';
+                  const isChecked = isUnlocked ? pool.includes(opt.value) : opt.value === 'classroom';
                   const isCurrent = currentDecoy === opt.value;
                   return (
                     <button
                       key={opt.value}
-                      onClick={() => togglePoolItem(opt.value)}
+                      onClick={() => {
+                        if (isLockedOption) {
+                          setIsOpen(false);
+                          if (onRequestUnlock) onRequestUnlock();
+                          return;
+                        }
+                        togglePoolItem(opt.value);
+                      }}
                       className={`flex items-center justify-between w-full px-2 py-1 rounded-lg text-xs transition-colors cursor-pointer border ${
-                        isChecked
-                          ? 'bg-white/10 border-white/15 text-white'
-                          : 'bg-transparent border-transparent text-neutral-500 hover:bg-white/5'
+                        isLockedOption
+                          ? 'opacity-45 bg-transparent border-transparent text-neutral-500'
+                          : isChecked
+                            ? 'bg-white/10 border-white/15 text-white'
+                            : 'bg-transparent border-transparent text-neutral-500 hover:bg-white/5'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -1145,11 +1189,15 @@ function AutoRandomizeDecoyButton({
                           </span>
                         )}
                       </div>
-                      <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border transition-all ${
-                        isChecked ? 'bg-[var(--accent-color)] border-[var(--accent-color)] text-[var(--bg-color)]' : 'border-neutral-600'
-                      }`}>
-                        {isChecked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                      </div>
+                      {isLockedOption ? (
+                        <Lock className="w-3 h-3 text-neutral-500 shrink-0" />
+                      ) : (
+                        <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border transition-all ${
+                          isChecked ? 'bg-[var(--accent-color)] border-[var(--accent-color)] text-[var(--bg-color)]' : 'border-neutral-600'
+                        }`}>
+                          {isChecked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
+                      )}
                     </button>
                   );
                 })}
@@ -1159,22 +1207,29 @@ function AutoRandomizeDecoyButton({
             {/* Footer Action: Randomize Now & Status */}
             <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10">
               <div className="text-[10px] text-neutral-400 font-mono flex items-center gap-1.5">
-                {autoRandomize ? (
+                {autoRandomize && isUnlocked ? (
                   <>
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                     <span>Next in {countdown}s</span>
                   </>
                 ) : (
-                  <span className="text-neutral-500">Auto switch off</span>
+                  <span className="text-neutral-500">{isUnlocked ? 'Auto switch off' : 'Admin pass required'}</span>
                 )}
               </div>
               <button
-                onClick={onRandomizeNow}
+                onClick={() => {
+                  if (!isUnlocked) {
+                    setIsOpen(false);
+                    if (onRequestUnlock) onRequestUnlock();
+                    return;
+                  }
+                  onRandomizeNow();
+                }}
                 className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-[var(--accent-color)] text-[var(--bg-color)] hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-sm"
-                title="Immediately pick another random decoy"
+                title={isUnlocked ? "Immediately pick another random decoy" : "Enter admin pass to unlock all decoys"}
               >
                 <Shuffle className="w-3 h-3" />
-                <span>Roll Now</span>
+                <span>{isUnlocked ? 'Roll Now' : 'Unlock'}</span>
               </button>
             </div>
           </motion.div>
@@ -1253,27 +1308,8 @@ export default function App() {
 
   const isPasscodeUnlocked = viewMode === 'games';
 
-  // Classroom/Games Cloak/Decoy State
-  const [decoyType, setDecoyType] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const urlDecoyType = params.get('decoyType');
-      if (urlDecoyType && decoyOptions.some(d => d.value === urlDecoyType)) {
-        return urlDecoyType;
-      }
-      const urlDecoy = params.get('decoy');
-      if (urlDecoy === 'true') return 'classroom';
-      if (urlDecoy === 'false') return 'classroom';
-      if (urlDecoy && decoyOptions.some(d => d.value === urlDecoy)) {
-        return urlDecoy;
-      }
-      const cached = localStorage.getItem('study-tools-decoy-type');
-      if (cached && decoyOptions.some(d => d.value === cached)) {
-        return cached;
-      }
-    }
-    return 'classroom';
-  });
+  // Classroom/Games Cloak/Decoy State (defaults to classroom until admin pass unlocks all decoys)
+  const [decoyType, setDecoyType] = useState('classroom');
 
   const isWhiteDecoy = ['classroom', 'docs', 'drive', 'slides', 'clever', 'deltamath', 'studysync', 'commonlit'].includes(decoyType);
   const [showGoGuardianNotice, setShowGoGuardianNotice] = useState(() => {
@@ -2486,44 +2522,21 @@ export default function App() {
   const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
+  const [isDecoysUnlocked, setIsDecoysUnlocked] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [adminError, setAdminError] = useState('');
-  const [showAiPassNotice, setShowAiPassNotice] = useState(false);
-  const whatsNewShownRef = useRef(false);
 
-  // Trigger AI pass notice ONLY AFTER "What's New" is finished/closed
+  // Enforce Classroom-only decoy until ttt is entered
   useEffect(() => {
-    if (showWhatsNewDrop) {
-      whatsNewShownRef.current = true;
-    } else if (whatsNewShownRef.current) {
-      // What's New was shown and has just been closed/dismissed
-      if (!isAdminUnlocked) {
-        const timer = setTimeout(() => {
-          setShowAiPassNotice(true);
-        }, 350);
-        return () => clearTimeout(timer);
+    if (!isDecoysUnlocked) {
+      if (decoyType !== 'classroom') {
+        setDecoyType('classroom');
+      }
+      if (autoRandomizeDecoy) {
+        setAutoRandomizeDecoy(false);
       }
     }
-  }, [showWhatsNewDrop, isAdminUnlocked]);
-
-  // Fallback if What's New was not shown on mount
-  useEffect(() => {
-    if (!showWhatsNewDrop && !isAdminUnlocked) {
-      const timer = setTimeout(() => {
-        setShowAiPassNotice(true);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
-  // Auto-dismiss AI pass notice after 5 seconds
-  useEffect(() => {
-    if (!showAiPassNotice) return;
-    const timer = setTimeout(() => {
-      setShowAiPassNotice(false);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [showAiPassNotice]);
+  }, [isDecoysUnlocked, decoyType, autoRandomizeDecoy]);
 
   useEffect(() => {
     try {
@@ -2534,9 +2547,14 @@ export default function App() {
   const handleAdminPasswordSubmit = (e) => {
     if (e) e.preventDefault();
     const val = adminPasswordInput.trim();
-    if (val === 'sharp') {
+    if (val === 'ttt') {
       setIsAdminUnlocked(true);
-      setShowAiPassNotice(false);
+      setIsDecoysUnlocked(true);
+      setAdminError('');
+      setAdminPasswordInput('');
+      setIsAdminPanelOpen(false);
+    } else if (val === 'sharp') {
+      setIsAdminUnlocked(true);
       setAdminError('');
       setAdminPasswordInput('');
       setFilter('chat');
@@ -2557,6 +2575,9 @@ export default function App() {
 
   const handleAdminLock = () => {
     setIsAdminUnlocked(false);
+    setIsDecoysUnlocked(false);
+    setDecoyType('classroom');
+    setAutoRandomizeDecoy(false);
     setAdminPasswordInput('');
     setAdminError('');
     if (filter === 'chat') {
@@ -2648,75 +2669,33 @@ export default function App() {
             setAdminError('');
           }} 
         />
-        <div className="absolute top-full right-[-50px] sm:right-[-30px] mt-2.5 z-[99999] w-72 sm:w-80 bg-[#13111c] border-2 border-pink-500/80 rounded-xl p-3.5 shadow-2xl text-left select-none animate-fade-in">
-          {/* Pointer arrow pointing UP to padlock */}
-          <div className="absolute -top-2.5 right-[55px] sm:right-[35px] w-3.5 h-3.5 bg-[#13111c] border-t-2 border-l-2 border-pink-500/80 transform rotate-45" />
-
-          <div className="flex items-center justify-between gap-1 pb-1.5 mb-2 border-b border-pink-500/20">
-            <span className="text-[10px] font-black uppercase tracking-wider text-pink-400 flex items-center gap-1 font-mono">
-              <Sparkles className="w-3 h-3 text-pink-400" />
-              <span>AI Pass Unlock</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => {
+        <form
+          onSubmit={handleAdminPasswordSubmit}
+          className="absolute top-full right-0 mt-2 z-[99999] select-none animate-fade-in"
+        >
+          <input
+            type="password"
+            value={adminPasswordInput}
+            onChange={(e) => {
+              setAdminPasswordInput(e.target.value);
+              if (adminError) setAdminError('');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
                 setIsAdminPanelOpen(false);
                 setAdminPasswordInput('');
                 setAdminError('');
-              }}
-              className="text-neutral-400 hover:text-white cursor-pointer p-0.5 rounded hover:bg-white/10"
-              title="Close"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <p className="text-[11px] text-neutral-200 leading-relaxed font-medium mb-2.5">
-            DM @Urnperiodic (or his personal account) on Instgram to get the AI pass.
-          </p>
-
-          <form onSubmit={handleAdminPasswordSubmit} className="space-y-2">
-            <input
-              type="password"
-              value={adminPasswordInput}
-              onChange={(e) => {
-                setAdminPasswordInput(e.target.value);
-                if (adminError) setAdminError('');
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  setIsAdminPanelOpen(false);
-                  setAdminPasswordInput('');
-                  setAdminError('');
-                }
-              }}
-              placeholder={adminError || "Enter AI pass / password..."}
-              autoFocus
-              className={`w-full bg-[#0f0e17] border rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-400 shadow-inner outline-none transition-all font-mono ${
-                adminError 
-                  ? 'border-red-500 placeholder-red-400 shadow-[0_0_12px_rgba(239,68,68,0.5)]' 
-                  : 'border-white/20 focus:border-pink-500 shadow-[0_4px_24px_rgba(0,0,0,0.7)]'
-              }`}
-            />
-            <div className="flex items-center justify-between gap-2 pt-1">
-              <a
-                href="https://www.instagram.com/urnperiodic/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[10px] text-pink-400 hover:text-pink-300 font-bold flex items-center gap-1 transition-colors"
-              >
-                <span>Instagram @Urnperiodic</span>
-                <ExternalLink className="w-2.5 h-2.5" />
-              </a>
-              <button
-                type="submit"
-                className="px-3 py-1 rounded bg-pink-600 hover:bg-pink-500 text-white font-bold text-[10px] tracking-wider uppercase transition-all shadow-md cursor-pointer active:scale-95"
-              >
-                Unlock
-              </button>
-            </div>
-          </form>
-        </div>
+              }
+            }}
+            placeholder={adminError || "Enter password..."}
+            autoFocus
+            className={`w-44 rounded-lg px-3 py-1.5 text-xs outline-none ring-0 border-0 focus:outline-none focus:ring-0 font-mono shadow-lg ${
+              mode === 'light'
+                ? 'bg-white text-neutral-900 placeholder-neutral-400'
+                : 'bg-[#0f0e17] text-white placeholder-neutral-400'
+            } ${adminError ? 'text-red-400 placeholder-red-400' : ''}`}
+          />
+        </form>
       </>
     );
   };
@@ -2737,94 +2716,11 @@ export default function App() {
                 ? 'text-black hover:text-black hover:bg-black/5'
                 : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
           }`}
-          title={isAdminUnlocked ? "AI Chat Pass Unlocked" : "Admin Panel - AI Pass (DM @Urnperiodic)"}
+          title={isAdminUnlocked ? "Admin Pass Unlocked (All Decoys & AI)" : "Admin Panel - Unlock All Decoys & AI"}
           aria-label="Admin Panel"
         >
           <Lock className={isAltBar ? "w-3.5 h-3.5" : "w-3 h-3"} style={{ color: !isAdminPanelOpen && mode === 'light' ? '#000000' : undefined }} />
-
-          {/* Notification point towards padlock icon */}
-          {!isAdminUnlocked && (
-            <span 
-              className="absolute -top-1 -right-1 flex h-2.5 w-2.5 pointer-events-none z-30" 
-              title="Notification: DM @Urnperiodic on Instagram for AI pass"
-            >
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-gradient-to-tr from-pink-500 to-purple-500 border border-[var(--bg-secondary)] shadow-[0_0_8px_rgba(236,72,153,0.9)]"></span>
-            </span>
-          )}
         </button>
-
-        {/* Notification point callout towards the padlock icon */}
-        <AnimatePresence>
-          {showAiPassNotice && !isAdminUnlocked && !isAdminPanelOpen && (
-            <motion.div
-              initial={animationsEnabled ? { opacity: 0, y: -4, scale: 0.95 } : false}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={animationsEnabled ? { opacity: 0, y: -4, scale: 0.95 } : undefined}
-              transition={{ duration: 0.18 }}
-              className="absolute top-full right-[-8px] sm:right-0 mt-2 w-56 sm:w-60 bg-[#13111c] border border-pink-500/80 text-white rounded-xl p-2.5 shadow-[0_0_24px_rgba(236,72,153,0.3)] z-[99999] select-none text-left font-medium overflow-hidden"
-            >
-              {/* Pointer arrow pointing UP directly to the padlock icon */}
-              <div className="absolute -top-1.5 right-3 w-2.5 h-2.5 bg-[#13111c] border-t border-l border-pink-500/80 transform rotate-45 z-10" />
-
-              {/* Dismiss button in top corner - NO title bar */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowAiPassNotice(false);
-                  safeStorage.setItem('ai_pass_notice_dismissed', 'true');
-                }}
-                className="absolute top-1.5 right-1.5 p-0.5 text-neutral-400 hover:text-white rounded hover:bg-white/10 transition-colors cursor-pointer z-10"
-                title="Dismiss"
-              >
-                <X className="w-3 h-3" />
-              </button>
-
-              {/* Notice text (compact, no title) */}
-              <p className="text-[10px] leading-snug text-neutral-200 font-medium pr-4 mt-0.5">
-                DM @Urnperiodic (or his personal account) on Instgram to get the AI pass.
-              </p>
-
-              {/* Compact Action Buttons */}
-              <div className="mt-2 pt-1.5 border-t border-white/10 flex items-center justify-between gap-1.5">
-                <a
-                  href="https://www.instagram.com/urnperiodic/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="px-2 py-0.5 rounded bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold text-[9px] transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
-                >
-                  <span>Instagram</span>
-                  <ExternalLink className="w-2.5 h-2.5" />
-                </a>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsAdminPanelOpen(true);
-                    setIsGlobalSettingsOpen(false);
-                    setShowAiPassNotice(false);
-                  }}
-                  className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-neutral-200 hover:text-white font-bold text-[9px] transition-all cursor-pointer border border-white/10 flex items-center gap-1 active:scale-95"
-                >
-                  <Lock className="w-2.5 h-2.5" />
-                  <span>Enter Pass</span>
-                </button>
-              </div>
-
-              {/* 5-second animated progress line at bottom */}
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10 overflow-hidden">
-                <motion.div
-                  initial={{ width: "100%" }}
-                  animate={{ width: "0%" }}
-                  transition={{ duration: 5, ease: "linear" }}
-                  className="h-full bg-gradient-to-r from-pink-500 to-purple-500"
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {renderAdminPanelPopover()}
       </div>
@@ -3090,6 +2986,13 @@ export default function App() {
         alert("Popup blocked! Please allow popups to open the portals in a cloaked tab.");
       }
       setPasscode('');
+    } else if (inputPass === 'ttt') {
+      setTimeout(() => {
+        setIsAdminUnlocked(true);
+        setIsDecoysUnlocked(true);
+        setViewModeAndSave('games');
+        setPasscode('');
+      }, 150);
     } else if (inputPass === 'tungtung' || inputPass === '1378') {
       setTimeout(() => {
         setViewModeAndSave('games');
@@ -3177,6 +3080,11 @@ export default function App() {
     if (q === 'ttt1234') {
       setArticleSearch('');
       handlePasswordSubmit(q);
+    } else if (q === 'ttt') {
+      setIsAdminUnlocked(true);
+      setIsDecoysUnlocked(true);
+      setViewModeAndSave('games');
+      setArticleSearch('');
     } else if (q === 'tungtung' || q === '2026') {
       setViewModeAndSave('games');
       setArticleSearch('');
@@ -3416,7 +3324,7 @@ export default function App() {
   };
 
   // Helper method to draw beautiful game art based on game title / id
-  const renderGameArt = (game, defaultThumbnailSrc = defaultThumbnail) => {
+  const renderGameArt = (game, defaultThumbnailSrc = null) => {
     const iconSize = 48;
     const id = String(game?.id || '').toLowerCase();
     const title = String(game?.title || '').toLowerCase();
@@ -4200,7 +4108,17 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [safeGamePage]);
 
-
+  const triggerPanicToClassroom = useCallback(() => {
+    try {
+      safeStorage.setItem('classroom-view-mode', 'articles');
+      safeStorage.setItem('classroom-passcode-unlocked', 'false');
+      window.history.replaceState({ disguise: 'educational_workspace' }, 'Home - Classroom', window.location.pathname || '/');
+      window.close();
+    } catch (err) {
+      console.error(err);
+    }
+    window.location.href = "https://classroom.google.com";
+  }, []);
 
   if (!isPasscodeUnlocked) {
     const filteredArticles = articles.filter(art => {
@@ -5101,25 +5019,13 @@ export default function App() {
 
         {/* Bottom Copyright */}
         <div className="w-full text-center py-2 text-[11px] text-[var(--text-muted)] font-mono select-none">
-          © {new Date().getFullYear()} TT / Urnperiodic • TT stands for Torin Thorgood
+          © {new Date().getFullYear()} Urnperiodic
         </div>
 
       </div>
       </MotionConfig>
     );
   }
-
-  const triggerPanicToClassroom = useCallback(() => {
-    try {
-      safeStorage.setItem('classroom-view-mode', 'articles');
-      safeStorage.setItem('classroom-passcode-unlocked', 'false');
-      window.history.replaceState({ disguise: 'educational_workspace' }, 'Home - Classroom', window.location.pathname || '/');
-      window.close();
-    } catch (err) {
-      console.error(err);
-    }
-    window.location.href = "https://classroom.google.com";
-  }, []);
 
   const renderSystemSettingsPopover = (isAltBar = false) => {
     if (!isGlobalSettingsOpen) return null;
@@ -5571,21 +5477,35 @@ export default function App() {
 
             {/* Decoy Selector */}
             <div className="flex items-center gap-1.5">
-              <DecoyDropdown value={decoyType} onChange={setDecoyType} mode={mode} customTitles={customDecoyTitles} onCustomTitleChange={handleCustomTitleChange} />
+              {isDecoysUnlocked && (
+                <>
+                  <DecoyDropdown 
+                    value={decoyType} 
+                    onChange={(val) => { if (isDecoysUnlocked || val === 'classroom') setDecoyType(val); }} 
+                    mode={mode} 
+                    customTitles={customDecoyTitles} 
+                    onCustomTitleChange={handleCustomTitleChange}
+                    isUnlocked={isDecoysUnlocked}
+                    onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                  />
 
-              <AutoRandomizeDecoyButton
-                autoRandomize={autoRandomizeDecoy}
-                setAutoRandomize={setAutoRandomizeDecoy}
-                interval={randomizeInterval}
-                setInterval={updateRandomizeInterval}
-                pool={randomizePool}
-                togglePoolItem={toggleDecoyInPool}
-                selectAllPool={selectAllDecoys}
-                countdown={randomizeCountdown}
-                onRandomizeNow={triggerManualRandomize}
-                currentDecoy={decoyType}
-                mode={mode}
-              />
+                  <AutoRandomizeDecoyButton
+                    autoRandomize={autoRandomizeDecoy}
+                    setAutoRandomize={setAutoRandomizeDecoy}
+                    interval={randomizeInterval}
+                    setInterval={updateRandomizeInterval}
+                    pool={randomizePool}
+                    togglePoolItem={toggleDecoyInPool}
+                    selectAllPool={selectAllDecoys}
+                    countdown={randomizeCountdown}
+                    onRandomizeNow={triggerManualRandomize}
+                    currentDecoy={decoyType}
+                    mode={mode}
+                    isUnlocked={isDecoysUnlocked}
+                    onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                  />
+                </>
+              )}
 
               {/* Cloak / About:blank Button (to the right of shuffle button) */}
               <motion.button
@@ -5697,7 +5617,7 @@ export default function App() {
                     style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
                   >
                     <span className="text-neutral-400 font-bold" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 'bold' }}>Leadcreator:</span>
-                    <span className="font-bold text-[var(--text-primary)]" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>TT / Urnperiodic</span>
+                    <span className="font-bold text-[var(--text-primary)]" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>Urnperiodic</span>
                   </span>
                   <span 
                     className="text-[8px] leading-[11px] tracking-tight flex items-center gap-1 transition-colors"
@@ -5814,22 +5734,37 @@ export default function App() {
               </button>
 
               {/* Decoy Selector & Auto Randomize */}
-                <DecoyDropdown value={decoyType} onChange={setDecoyType} mode={mode} compact={true} customTitles={customDecoyTitles} onCustomTitleChange={handleCustomTitleChange} />
+              {isDecoysUnlocked && (
+                <>
+                  <DecoyDropdown 
+                    value={decoyType} 
+                    onChange={(val) => { if (isDecoysUnlocked || val === 'classroom') setDecoyType(val); }} 
+                    mode={mode} 
+                    compact={true} 
+                    customTitles={customDecoyTitles} 
+                    onCustomTitleChange={handleCustomTitleChange}
+                    isUnlocked={isDecoysUnlocked}
+                    onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                  />
 
-                <AutoRandomizeDecoyButton
-                  autoRandomize={autoRandomizeDecoy}
-                  setAutoRandomize={setAutoRandomizeDecoy}
-                  interval={randomizeInterval}
-                  setInterval={updateRandomizeInterval}
-                  pool={randomizePool}
-                  togglePoolItem={toggleDecoyInPool}
-                  selectAllPool={selectAllDecoys}
-                  countdown={randomizeCountdown}
-                  onRandomizeNow={triggerManualRandomize}
-                  currentDecoy={decoyType}
-                  mode={mode}
-                  compact={true}
-                />
+                  <AutoRandomizeDecoyButton
+                    autoRandomize={autoRandomizeDecoy}
+                    setAutoRandomize={setAutoRandomizeDecoy}
+                    interval={randomizeInterval}
+                    setInterval={updateRandomizeInterval}
+                    pool={randomizePool}
+                    togglePoolItem={toggleDecoyInPool}
+                    selectAllPool={selectAllDecoys}
+                    countdown={randomizeCountdown}
+                    onRandomizeNow={triggerManualRandomize}
+                    currentDecoy={decoyType}
+                    mode={mode}
+                    compact={true}
+                    isUnlocked={isDecoysUnlocked}
+                    onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                  />
+                </>
+              )}
 
                 {/* Cloak & Open Link & Refresh Buttons */}
                 <div className="flex items-center gap-0.5">
@@ -6036,31 +5971,39 @@ export default function App() {
 
               {/* Decoy Selector & Auto Randomize */}
               <div className="relative flex items-center gap-1">
-                <div className={showNotices && noticeStep === 3 ? 'ring-2 ring-[var(--accent-color)] ring-offset-2 ring-offset-[#0d0d12] rounded-lg animate-pulse' : ''}>
-                  <DecoyDropdown 
-                    value={decoyType} 
-                    onChange={setDecoyType} 
-                    mode={mode} 
-                    compact={true} 
-                    customTitles={customDecoyTitles}
-                    onCustomTitleChange={handleCustomTitleChange}
-                  />
-                </div>
+                {isDecoysUnlocked && (
+                  <>
+                    <div className={showNotices && noticeStep === 3 ? 'ring-2 ring-[var(--accent-color)] ring-offset-2 ring-offset-[#0d0d12] rounded-lg animate-pulse' : ''}>
+                      <DecoyDropdown 
+                        value={decoyType} 
+                        onChange={(val) => { if (isDecoysUnlocked || val === 'classroom') setDecoyType(val); }} 
+                        mode={mode} 
+                        compact={true} 
+                        customTitles={customDecoyTitles}
+                        onCustomTitleChange={handleCustomTitleChange}
+                        isUnlocked={isDecoysUnlocked}
+                        onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                      />
+                    </div>
 
-                <AutoRandomizeDecoyButton
-                  autoRandomize={autoRandomizeDecoy}
-                  setAutoRandomize={setAutoRandomizeDecoy}
-                  interval={randomizeInterval}
-                  setInterval={updateRandomizeInterval}
-                  pool={randomizePool}
-                  togglePoolItem={toggleDecoyInPool}
-                  selectAllPool={selectAllDecoys}
-                  countdown={randomizeCountdown}
-                  onRandomizeNow={triggerManualRandomize}
-                  currentDecoy={decoyType}
-                  mode={mode}
-                  compact={true}
-                />
+                    <AutoRandomizeDecoyButton
+                      autoRandomize={autoRandomizeDecoy}
+                      setAutoRandomize={setAutoRandomizeDecoy}
+                      interval={randomizeInterval}
+                      setInterval={updateRandomizeInterval}
+                      pool={randomizePool}
+                      togglePoolItem={toggleDecoyInPool}
+                      selectAllPool={selectAllDecoys}
+                      countdown={randomizeCountdown}
+                      onRandomizeNow={triggerManualRandomize}
+                      currentDecoy={decoyType}
+                      mode={mode}
+                      compact={true}
+                      isUnlocked={isDecoysUnlocked}
+                      onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                    />
+                  </>
+                )}
 
                 {/* Cloak / About:blank Button (to the right of shuffle button) */}
                 <div className="relative">
@@ -6583,29 +6526,35 @@ export default function App() {
             </button>
 
             {/* Decoy Mode Selector */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono font-bold text-neutral-400 uppercase select-none">Decoy:</span>
-              <DecoyDropdown 
-                value={decoyType} 
-                onChange={setDecoyType} 
-                mode={mode} 
-                customTitles={customDecoyTitles}
-                onCustomTitleChange={handleCustomTitleChange}
-              />
-              <AutoRandomizeDecoyButton
-                autoRandomize={autoRandomizeDecoy}
-                setAutoRandomize={setAutoRandomizeDecoy}
-                interval={randomizeInterval}
-                setInterval={updateRandomizeInterval}
-                pool={randomizePool}
-                togglePoolItem={toggleDecoyInPool}
-                selectAllPool={selectAllDecoys}
-                countdown={randomizeCountdown}
-                onRandomizeNow={triggerManualRandomize}
-                currentDecoy={decoyType}
-                mode={mode}
-              />
-            </div>
+            {isDecoysUnlocked && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-mono font-bold text-neutral-400 uppercase select-none">Decoy:</span>
+                <DecoyDropdown 
+                  value={decoyType} 
+                  onChange={(val) => { if (isDecoysUnlocked || val === 'classroom') setDecoyType(val); }} 
+                  mode={mode} 
+                  customTitles={customDecoyTitles}
+                  onCustomTitleChange={handleCustomTitleChange}
+                  isUnlocked={isDecoysUnlocked}
+                  onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                />
+                <AutoRandomizeDecoyButton
+                  autoRandomize={autoRandomizeDecoy}
+                  setAutoRandomize={setAutoRandomizeDecoy}
+                  interval={randomizeInterval}
+                  setInterval={updateRandomizeInterval}
+                  pool={randomizePool}
+                  togglePoolItem={toggleDecoyInPool}
+                  selectAllPool={selectAllDecoys}
+                  countdown={randomizeCountdown}
+                  onRandomizeNow={triggerManualRandomize}
+                  currentDecoy={decoyType}
+                  mode={mode}
+                  isUnlocked={isDecoysUnlocked}
+                  onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                />
+              </div>
+            )}
 
             {/* Alt Bar Search Bar (squishable, left of Clear History) */}
             <div className="w-28 sm:w-36 md:w-44 shrink transition-all duration-300 min-w-[70px]">
@@ -7778,16 +7727,16 @@ export default function App() {
                               className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none pointer-events-none" 
                             />
                           ) : (
-                            <img
-                              src={defaultThumbnail}
-                              alt={game.title}
-                              width={isCompactLayout ? "300" : "640"}
-                              height={isCompactLayout ? "300" : "360"}
-                              loading="lazy"
-                              decoding="async"
-                              draggable="false"
-                              className="w-full h-full object-cover select-none pointer-events-none"
-                            />
+                            <div
+                              className="w-full h-full bg-[#050505] flex items-center justify-center select-none pointer-events-none"
+                              aria-label={game.title}
+                            >
+                              <Gamepad2
+                                className={`${isCompactLayout ? 'w-9 h-9' : 'w-12 h-12'} text-neutral-400/80`}
+                                strokeWidth={1.75}
+                                aria-hidden="true"
+                              />
+                            </div>
                           )}
 
                           {/* Rank badge on game card */}
@@ -8532,6 +8481,38 @@ export default function App() {
 
         </main>
       </div>
+
+      {/* Main Games Menu Edge-to-Edge Square Footer */}
+      {filter !== 'chat' && filter !== 'movies' && filter !== 'moremovies' && filter !== 'youtube' && filter !== 'lobbychat' && filter !== 'download' && filter !== 'info' && !selectedGame && (
+        <footer
+          role="contentinfo"
+          aria-label="Website Usage Disclaimer"
+          className="w-full rounded-none border-t border-[var(--card-border)] bg-[var(--bg-secondary)] px-4 sm:px-6 lg:px-8 py-3 transition-colors relative z-10"
+        >
+          <div className="w-full max-w-8xl mx-auto flex items-start gap-3">
+            <div className="w-7 h-7 rounded-none bg-[var(--card-bg)] border border-[var(--card-border)] flex items-center justify-center text-[var(--accent-color)] shrink-0 mt-0.5">
+              <ShieldAlert className="w-3.5 h-3.5" aria-hidden="true" />
+            </div>
+            <div className="flex-1 min-w-0 space-y-1.5">
+              <div>
+                <h3 className="text-[11px] font-black uppercase tracking-wider text-[var(--text-primary)]">
+                  Disclaimer &amp; Acceptable Use Notice
+                </h3>
+                <p className="mt-0.5 text-[10.5px] font-semibold leading-relaxed text-[var(--text-primary)]">
+                  We do not support the usage of this website in school. This site is strictly a personal passion project built to pass time at home during your own free time. If you choose to access or get caught using this website in class, you assume all personal and academic liabilities.
+                </p>
+              </div>
+
+              <div className="pt-1.5 border-t border-[var(--card-border)]/70 text-[10px] leading-relaxed text-[var(--text-muted)]">
+                <div>
+                  <span className="font-bold text-[var(--text-primary)]">School Rules &amp; IT Policies: </span>
+                  Always respect your school&apos;s code of conduct, acceptable-use agreements, and local IT or network policies. Do not use this site to bypass classroom supervision or during instructional hours.
+                </div>
+              </div>
+            </div>
+          </div>
+        </footer>
+      )}
 
     </div>
 
