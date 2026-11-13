@@ -40,7 +40,7 @@ service cloud.firestore {
         ])
         && data.keys().hasOnly([
           'username', 'usernameLower', 'passwordSalt', 'passwordHash',
-          'isActive', 'gamesAccess', 'moviesAccess', 'moreMoviesAccess',
+          'isActive', 'isAdmin', 'gamesAccess', 'moviesAccess', 'moreMoviesAccess',
           'youtubeAccess', 'lobbyChatAccess', 'aiAccess', 'decoysAccess',
           'downloadAccess', 'chatMuted', 'chatBanned', 'roleBadge',
           'badgeColor', 'favorites', 'recentlyPlayed', 'preferredTheme',
@@ -53,6 +53,7 @@ service cloud.firestore {
         && data.passwordSalt is string && data.passwordSalt.size() >= 1 && data.passwordSalt.size() <= 128
         && data.passwordHash is string && data.passwordHash.size() >= 1 && data.passwordHash.size() <= 256
         && data.isActive is bool
+        && isOptionalBool(data, 'isAdmin')
         && data.gamesAccess is bool
         && data.moviesAccess is bool
         && data.moreMoviesAccess is bool
@@ -146,7 +147,7 @@ service cloud.firestore {
       allow update: if isValidId(accountId)
         && isValidAccountUpdate(incoming(), accountId)
         && incoming().diff(existing()).affectedKeys().hasOnly([
-          'username', 'passwordSalt', 'passwordHash', 'isActive',
+          'username', 'passwordSalt', 'passwordHash', 'isActive', 'isAdmin',
           'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'youtubeAccess',
           'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess',
           'chatMuted', 'chatBanned', 'roleBadge', 'badgeColor',

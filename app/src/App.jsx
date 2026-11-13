@@ -1274,16 +1274,6 @@ export default function App() {
   });
 
   const [viewMode, setViewMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('unlocked') === 'true' || params.get('view') === 'games') {
-        safeStorage.setItem('classroom-view-mode', 'games');
-        safeStorage.setItem('classroom-passcode-unlocked', 'true');
-        safeSessionStorage.setItem('classroom-view-mode', 'games');
-        safeSessionStorage.setItem('classroom-passcode-unlocked', 'true');
-        return 'games';
-      }
-    }
     // Check if session storage retains unlocked status in current tab
     const sessionMode = safeSessionStorage.getItem('classroom-view-mode');
     if (sessionMode === 'games') {
@@ -2539,10 +2529,11 @@ export default function App() {
   const [isDecoyPassUnlocked, setIsDecoyPassUnlocked] = useState(false);
   const [isOwnerAdmin, setIsOwnerAdmin] = useState(false);
   const [activeAccount, setActiveAccount] = useState(null);
+  const [accountSessionChecked, setAccountSessionChecked] = useState(() => !getSavedAccountSession());
   const [workspaceConfig, setWorkspaceConfig] = useState(DEFAULT_WORKSPACE_CONFIG);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [adminAccountsModalOpen, setAdminAccountsModalOpen] = useState(false);
-  const [lockAuthTab, setLockAuthTab] = useState('passcode');
+  const [lockAuthTab, setLockAuthTab] = useState('account');
   const [lockUsername, setLockUsername] = useState('');
   const [lockPassword, setLockPassword] = useState('');
   const [lockAccountError, setLockAccountError] = useState('');
@@ -2550,9 +2541,11 @@ export default function App() {
   const suppressAccountSyncRef = useRef(false);
   const activeAccountSyncTimerRef = useRef(null);
 
+  const hasAdminAccess = Boolean(isOwnerAdmin || (activeAccount?.isActive && activeAccount?.isAdmin));
+
   const canAccessWorkspace = useCallback(
     (key) => {
-      if (isOwnerAdmin) return true;
+      if (hasAdminAccess) return true;
       if (workspaceConfig?.siteLockdown) return false;
       if (workspaceConfig && workspaceConfig[key] === false) return false;
       if (key === 'aiAccess') {
@@ -2566,7 +2559,7 @@ export default function App() {
       }
       return true;
     },
-    [isOwnerAdmin, isAdminPassUnlocked, isDecoyPassUnlocked, activeAccount, workspaceConfig],
+    [hasAdminAccess, isAdminPassUnlocked, isDecoyPassUnlocked, activeAccount, workspaceConfig],
   );
 
   const canGamesAccess = canAccessWorkspace('gamesAccess');
@@ -2605,25 +2598,46 @@ export default function App() {
   }, []);
 
   const handleAccountSignIn = useCallback(async (username, password) => {
-    if (workspaceConfig?.siteLockdown && !isOwnerAdmin) {
+    const trimmedUser = String(username || '').trim();
+    const rawPass = String(password || '');
+    if (
+      rawPass.trim() === '06091006Tt' &&
+      (!trimmedUser || ['admin', 'owner'].includes(trimmedUser.toLowerCase()))
+    ) {
+      setIsOwnerAdmin(true);
+      setIsAdminPassUnlocked(true);
+      setIsDecoyPassUnlocked(true);
+      setAccountSessionChecked(true);
+      setViewModeAndSave('games');
+      return { isOwnerAdmin: true };
+    }
+    const account = await authenticateAccount(lobbyDb, lobbyAuth, trimmedUser, rawPass);
+    if (workspaceConfig?.siteLockdown && !isOwnerAdmin && !account.isAdmin) {
       throw new Error(workspaceConfig?.lockdownMessage || 'Workspace access is currently locked by admin.');
     }
-    const account = await authenticateAccount(lobbyDb, lobbyAuth, username, password);
     saveAccountSession(account);
     setActiveAccount(account);
+    setAccountSessionChecked(true);
     applyAccountProfileToApp(account);
     syncChatLinkedAccountStorage(account);
+    setViewModeAndSave('games');
     return account;
-  }, [applyAccountProfileToApp, workspaceConfig, isOwnerAdmin]);
+  }, [applyAccountProfileToApp, workspaceConfig, isOwnerAdmin, setViewModeAndSave]);
 
   const handleAccountSignOut = useCallback(() => {
     clearAccountSession();
     setActiveAccount(null);
+    setIsOwnerAdmin(false);
+    setIsAdminPassUnlocked(false);
+    setIsDecoyPassUnlocked(false);
+    setAdminAccountsModalOpen(false);
+    setDecoyType('classroom');
+    setAutoRandomizeDecoy(false);
     syncChatLinkedAccountStorage(null);
-    if (filter === 'chat' && !isAdminPassUnlocked) {
-      setFilter('all');
-    }
-  }, [filter, isAdminPassUnlocked]);
+    setSelectedGame(null);
+    setFilter('all');
+    setViewModeAndSave('articles');
+  }, [setViewModeAndSave]);
 
   // Restore saved account session on boot
   useEffect(() => {
@@ -2631,6 +2645,7 @@ export default function App() {
     const saved = getSavedAccountSession();
     if (!saved) {
       syncChatLinkedAccountStorage(null);
+      setAccountSessionChecked(true);
       return;
     }
     verifySessionAccount(lobbyDb, lobbyAuth, saved)
@@ -2645,7 +2660,10 @@ export default function App() {
         applyAccountProfileToApp(acc);
         syncChatLinkedAccountStorage(acc);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setAccountSessionChecked(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -2709,9 +2727,9 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Enforce global lockdown, shared-passcode restriction, and per-workspace access live
+  // Enforce global lockdown, account requirement, and per-workspace access live
   useEffect(() => {
-    if (isOwnerAdmin) return;
+    if (hasAdminAccess) return;
     if (viewMode === 'games') {
       if (workspaceConfig?.siteLockdown) {
         setViewMode('articles');
@@ -2722,7 +2740,7 @@ export default function App() {
         setSelectedGame(null);
         return;
       }
-      if (!activeAccount && workspaceConfig?.allowSharedPasscodes === false) {
+      if (accountSessionChecked && !activeAccount) {
         setViewMode('articles');
         safeStorage.setItem('classroom-view-mode', 'articles');
         safeStorage.setItem('classroom-passcode-unlocked', 'false');
@@ -2747,7 +2765,8 @@ export default function App() {
       setFilter('all');
     }
   }, [
-    isOwnerAdmin,
+    hasAdminAccess,
+    accountSessionChecked,
     viewMode,
     workspaceConfig,
     activeAccount,
@@ -3095,8 +3114,6 @@ export default function App() {
     const inputPass = rawInput.toLowerCase();
     if (!rawInput) return;
 
-    const sharedCodesAllowed = !workspaceConfig?.siteLockdown && workspaceConfig?.allowSharedPasscodes !== false;
-
     if (rawInput === '06091006Tt') {
       setTimeout(() => {
         setIsOwnerAdmin(true);
@@ -3108,156 +3125,7 @@ export default function App() {
       return;
     }
 
-    if (inputPass === 'ttt1234' && sharedCodesAllowed) {
-      const win = window.open("about:blank", "_blank");
-      if (win) {
-        // Automatically save that we are unlocked so the iframe can read it
-        safeStorage.setItem('classroom-view-mode', 'games');
-        safeStorage.setItem('classroom-passcode-unlocked', 'true');
-        safeSessionStorage.setItem('classroom-view-mode', 'games');
-        safeSessionStorage.setItem('classroom-passcode-unlocked', 'true');
-
-        const searchParams = new URLSearchParams(window.location.search);
-        searchParams.set('unlocked', 'true');
-        searchParams.set('decoyType', decoyType);
-        const iframeSrc = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${window.location.hash}`;
-        
-        let parentTitle = getDecoyTitle(decoyType, customDecoyTitles);
-        let parentFavicon = getDecoyFavicon(decoyType);
-
-        win.document.open();
-        win.document.write(`
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${parentTitle}</title>
-            <link rel="icon" href="${parentFavicon}">
-            <link rel="shortcut icon" href="${parentFavicon}">
-            <style>
-              * { box-sizing: border-box; margin: 0; padding: 0; }
-              html, body { width: 100vw; height: 100vh; overflow: hidden; background: #080b12; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-              #cloak-frame { width: 100vw; height: 100vh; border: none; display: block; background: #080b12; }
-              #loading-overlay {
-                position: fixed;
-                inset: 0;
-                background: #080b12;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                z-index: 9999;
-                transition: opacity 0.35s ease, visibility 0.35s ease;
-              }
-              #loading-overlay.hidden {
-                opacity: 0;
-                visibility: hidden;
-                pointer-events: none;
-              }
-              .spinner-ring {
-                width: 48px;
-                height: 48px;
-                border: 3px solid rgba(0, 229, 176, 0.15);
-                border-top-color: #00e5b0;
-                border-radius: 50%;
-                animation: spin 0.8s linear infinite;
-                margin-bottom: 20px;
-              }
-              .loading-text {
-                color: #f3f4f6;
-                font-size: 15px;
-                font-weight: 600;
-                letter-spacing: -0.01em;
-                margin-bottom: 6px;
-              }
-              .loading-subtext {
-                color: #6b7280;
-                font-size: 12px;
-                font-family: monospace;
-              }
-              @keyframes spin {
-                to { transform: rotate(360deg); }
-              }
-            </style>
-          </head>
-          <body>
-            <div id="loading-overlay">
-              <div class="spinner-ring"></div>
-              <div class="loading-text">${parentTitle}</div>
-              <div class="loading-subtext">Initializing cloaked workspace...</div>
-            </div>
-            <iframe 
-              id="cloak-frame" 
-              src="${iframeSrc}"
-              allow="pointer-lock; fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write; microphone; camera; geolocation; gamepad; gamepads; accelerometer; gyroscope"
-              allowfullscreen="true"
-            ></iframe>
-            <script>
-              (function() {
-                var frame = document.getElementById('cloak-frame');
-                var loader = document.getElementById('loading-overlay');
-                function hideLoader() {
-                  if (loader) loader.classList.add('hidden');
-                }
-                if (frame) {
-                  frame.addEventListener('load', hideLoader);
-                  setTimeout(hideLoader, 3000);
-                }
-                window.addEventListener('keydown', function(e) {
-                  if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'))) {
-                    e.preventDefault();
-                    try {
-                      localStorage.setItem('classroom-view-mode', 'games');
-                      localStorage.setItem('classroom-passcode-unlocked', 'true');
-                      localStorage.setItem('unblocked-refreshing-session', 'true');
-                      localStorage.setItem('unblocked-refresh-timestamp', String(Date.now()));
-                    } catch (err) {}
-                    try {
-                      if (frame && frame.contentWindow) {
-                        frame.contentWindow.location.reload();
-                        return;
-                      }
-                    } catch (err) {}
-                    if (frame) frame.src = "${iframeSrc}";
-                  }
-                });
-              })();
-            </script>
-          </body>
-          </html>
-        `);
-        win.document.close();
-
-        // Automatically close the original window using self-open script trick
-        try {
-          window.opener = null;
-          window.open("", "_self");
-          window.close();
-        } catch (e) {}
-        // Fallback: If browser security prevents script-closing a manually opened tab,
-        // stay in decoy disguise mode or safely redirect to classroom
-        setTimeout(() => {
-          if (!window.closed) {
-            try {
-              window.opener = null;
-              window.open("", "_self");
-              window.close();
-            } catch (e) {}
-            // If still not closed, keep page in decoy mode without force navigating
-            setViewModeAndSave('articles');
-          }
-        }, 150);
-      } else {
-        alert("Popup blocked! Please allow popups to open the portals in a cloaked tab.");
-      }
-      setPasscode('');
-    } else if ((inputPass === 'tungtung' || inputPass === '1378') && sharedCodesAllowed) {
-      setTimeout(() => {
-        setViewModeAndSave('games');
-        setPasscode('');
-      }, 150);
-    } else if (
+    if (
       inputPass === '1212' || 
       inputPass === '1111' || 
       ['school', 'classroom', 'study', 'science', 'math', 'education', 'admin', 'password', 'open', 'class'].includes(inputPass)
@@ -3283,15 +3151,7 @@ export default function App() {
     const nextPasscode = passcode + digit;
     setPasscode(nextPasscode);
 
-    const sharedCodesAllowed = !workspaceConfig?.siteLockdown && workspaceConfig?.allowSharedPasscodes !== false;
-
-    // Instant matching for rapid-pins (2026, 1212, 1111)
-    if (nextPasscode === '2026' && sharedCodesAllowed) {
-      setTimeout(() => {
-        setViewModeAndSave('games');
-        setPasscode('');
-      }, 150);
-    } else if (nextPasscode === '1212' || nextPasscode === '1111') {
+    if (nextPasscode === '1212' || nextPasscode === '1111') {
       setTimeout(() => {
         setViewModeAndSave('articles');
         setPasscode('');
@@ -3335,53 +3195,17 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [passcode, viewMode]);
 
-  // Automated trigger checks for passwords within the article search tab
+  // Owner password check inside article search tab (shared passcodes disabled)
   useEffect(() => {
     const rawQ = articleSearch.trim();
-    const q = rawQ.toLowerCase();
-    const sharedCodesAllowed = !workspaceConfig?.siteLockdown && workspaceConfig?.allowSharedPasscodes !== false;
-
     if (rawQ === '06091006Tt') {
       setIsOwnerAdmin(true);
       setIsAdminPassUnlocked(true);
       setIsDecoyPassUnlocked(true);
       setViewModeAndSave('games');
       setArticleSearch('');
-    } else if (q === 'ttt1234' && sharedCodesAllowed) {
-      setArticleSearch('');
-      handlePasswordSubmit(q);
-    } else if ((q === 'tungtung' || q === '2026') && sharedCodesAllowed) {
-      setViewModeAndSave('games');
-      setArticleSearch('');
     }
-  }, [articleSearch, workspaceConfig]);
-
-  // Global keydown listeners for quick keystroke combinations
-  useEffect(() => {
-    let sequenceBuffer = '';
-    const handleGlobalSequence = (e) => {
-      // Avoid intercepting if targeted on search input to let them type fully
-      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
-        return;
-      }
-      if (e.key >= '0' && e.key <= '9') {
-        sequenceBuffer += e.key;
-        if (sequenceBuffer.length > 4) {
-          sequenceBuffer = sequenceBuffer.slice(-4);
-        }
-        
-        if (sequenceBuffer === '2026' && !workspaceConfig?.siteLockdown && workspaceConfig?.allowSharedPasscodes !== false) {
-          setViewModeAndSave('games');
-          setPasscode('');
-          sequenceBuffer = '';
-        }
-      } else if (e.key === 'Escape') {
-        sequenceBuffer = '';
-      }
-    };
-    window.addEventListener('keydown', handleGlobalSequence);
-    return () => window.removeEventListener('keydown', handleGlobalSequence);
-  }, [viewMode, workspaceConfig]);
+  }, [articleSearch]);
 
   // Global Panic Key Handler
   useEffect(() => {
@@ -4691,7 +4515,7 @@ export default function App() {
         <div className="min-h-screen bg-[var(--bg-color)] text-[var(--text-primary)] flex flex-col h-screen overflow-hidden transition-colors duration-300 relative select-text p-0">
           
           {/* Decoy Legitimate Educational Header */}
-          <header className="w-full mx-auto flex flex-col lg:flex-row justify-center items-center border-b border-[var(--card-border)] gap-4 select-none max-w-none px-4 md:px-6 py-3 shrink-0">
+          <header className="w-full mx-auto flex flex-col lg:flex-row justify-between items-center border-b border-[var(--card-border)] gap-3 select-none max-w-none px-4 md:px-6 py-3 shrink-0">
             {/* HIGHLY ACCESSIBLE PRIMARY TAB SWITCHER */}
             <div className="bg-[var(--bg-secondary)] border border-[var(--card-border)] p-1 shadow-sm select-none w-full max-w-sm sm:max-w-xl lg:max-w-none lg:w-auto rounded-2xl lg:rounded-full grid grid-cols-2 sm:grid-cols-3 lg:flex lg:items-center gap-1 shrink-0">
               {[
@@ -4721,25 +4545,54 @@ export default function App() {
               })}
             </div>
 
-            <div className="flex items-center gap-3 self-stretch lg:self-auto justify-center lg:justify-start">
-              {/* Study Timer Dropdown */}
-              <StudyTimer />
+            <div className="flex items-center gap-2.5 self-stretch lg:self-auto justify-between sm:justify-end lg:ml-auto shrink-0">
+              <div className="flex items-center gap-2.5">
+                {/* Study Timer Dropdown */}
+                <StudyTimer />
 
-              {/* Light/Dark Toggle */}
-              <div className="flex items-center gap-2 border border-[var(--card-border)] bg-[var(--bg-secondary)] py-1.5 px-2.5 rounded-full shadow-sm">
-                <div 
-                  onClick={() => setMode(prev => prev === 'light' ? 'dark' : 'light')}
-                  className="relative w-[50px] h-6 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 transition-all duration-300"
-                >
+                {/* Light/Dark Toggle */}
+                <div className="flex items-center gap-2 border border-[var(--card-border)] bg-[var(--bg-secondary)] py-1.5 px-2.5 rounded-full shadow-sm">
                   <div 
-                    className={`w-5 h-5 rounded-full bg-[var(--accent-color)] transition-all flex items-center justify-center text-[10px] transform ${
-                      mode === 'dark' ? 'translate-x-6' : 'translate-x-0'
-                    }`}
+                    onClick={() => setMode(prev => prev === 'light' ? 'dark' : 'light')}
+                    className="relative w-[50px] h-6 bg-[var(--input-fill)] border border-[var(--card-border)] rounded-full cursor-pointer flex items-center p-0.5 transition-all duration-300"
                   >
-                    {mode === 'dark' ? '🌙' : '☀️'}
+                    <div 
+                      className={`w-5 h-5 rounded-full bg-[var(--accent-color)] transition-all flex items-center justify-center text-[10px] transform ${
+                        mode === 'dark' ? 'translate-x-6' : 'translate-x-0'
+                      }`}
+                    >
+                      {mode === 'dark' ? '🌙' : '☀️'}
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* Top-Right Sign In Button */}
+              <button
+                type="button"
+                onClick={() => setAccountModalOpen(true)}
+                className={`px-3.5 py-2 rounded-full border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm whitespace-nowrap ${
+                  activeAccount || isOwnerAdmin
+                    ? 'bg-[var(--accent-color)]/15 border-[var(--accent-color)]/50 text-[var(--accent-color)] hover:bg-[var(--accent-color)]/25'
+                    : 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] hover:opacity-90'
+                }`}
+                title={
+                  isOwnerAdmin
+                    ? 'Signed in as Owner Admin'
+                    : activeAccount
+                      ? `Signed in as @${activeAccount.username}`
+                      : 'Sign in with your account info'
+                }
+              >
+                {activeAccount || isOwnerAdmin ? <User className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
+                <span>
+                  {isOwnerAdmin
+                    ? 'Admin'
+                    : activeAccount
+                      ? `@${activeAccount.username}`
+                      : 'Sign In'}
+                </span>
+              </button>
             </div>
           </header>
 
@@ -4986,6 +4839,31 @@ export default function App() {
             )}
 
           </div>
+
+          <AccountModal
+            isOpen={accountModalOpen}
+            onClose={() => setAccountModalOpen(false)}
+            activeAccount={activeAccount}
+            isOwnerAdmin={isOwnerAdmin}
+            workspaceConfig={workspaceConfig}
+            onLogin={handleAccountSignIn}
+            onLogout={handleAccountSignOut}
+            onEnterWorkspace={() => setViewModeAndSave('games')}
+            onOpenAdmin={hasAdminAccess ? () => setAdminAccountsModalOpen(true) : null}
+            mode={mode}
+          />
+
+          {hasAdminAccess && (
+            <AdminAccountsModal
+              isOpen={adminAccountsModalOpen}
+              onClose={() => setAdminAccountsModalOpen(false)}
+              db={lobbyDb}
+              auth={lobbyAuth}
+              mode={mode}
+              activeAccount={activeAccount}
+              workspaceConfig={workspaceConfig}
+            />
+          )}
         </div>
       );
     }
@@ -5153,11 +5031,9 @@ export default function App() {
             </form>
           ) : (
             <>
-              {!workspaceConfig?.siteLockdown && workspaceConfig?.allowSharedPasscodes === false && (
-                <div className="w-full px-3 py-2 rounded-xl border border-amber-500/35 bg-amber-500/10 text-amber-300 text-[11px] font-semibold text-center leading-relaxed">
-                  Shared passcodes are disabled by the admin. Use Account Sign In or Owner Password.
-                </div>
-              )}
+              <div className="w-full px-3 py-2 rounded-xl border border-amber-500/35 bg-amber-500/10 text-amber-300 text-[11px] font-semibold text-center leading-relaxed">
+                Shared passcodes are disabled. Use Account Sign In or Owner Password.
+              </div>
 
               {/* Alphanumeric Text/Passcode Input Field */}
               <div className="w-full flex flex-col gap-2.5">
@@ -5676,7 +5552,7 @@ export default function App() {
                 }`} />
               </button>
 
-              {isOwnerAdmin && (
+              {hasAdminAccess && (
                 <button
                   type="button"
                   onClick={() => {
@@ -6743,8 +6619,8 @@ export default function App() {
                 )}
               </button>
 
-              {/* Admin Accounts Manager Button (visible when owner pass entered) */}
-              {isOwnerAdmin && (
+              {/* Admin Accounts Manager Button (visible for owner or promoted admin accounts) */}
+              {hasAdminAccess && (
                 <button
                   type="button"
                   onClick={() => {
@@ -7149,8 +7025,8 @@ export default function App() {
                 )}
               </button>
 
-              {/* Admin Accounts Manager Button (visible when owner pass entered) */}
-              {isOwnerAdmin && (
+              {/* Admin Accounts Manager Button (visible for owner or promoted admin accounts) */}
+              {hasAdminAccess && (
                 <button
                   type="button"
                   onClick={() => {
@@ -9180,13 +9056,15 @@ export default function App() {
           isOpen={accountModalOpen}
           onClose={() => setAccountModalOpen(false)}
           activeAccount={activeAccount}
+          isOwnerAdmin={isOwnerAdmin}
           workspaceConfig={workspaceConfig}
           onLogin={handleAccountSignIn}
           onLogout={handleAccountSignOut}
+          onOpenAdmin={hasAdminAccess ? () => setAdminAccountsModalOpen(true) : null}
           mode={mode}
         />
 
-        {isOwnerAdmin && (
+        {hasAdminAccess && (
           <AdminAccountsModal
             isOpen={adminAccountsModalOpen}
             onClose={() => setAdminAccountsModalOpen(false)}

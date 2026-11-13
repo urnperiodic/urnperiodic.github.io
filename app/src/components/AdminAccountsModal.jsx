@@ -85,6 +85,7 @@ export default function AdminAccountsModal({
   const [newRoleBadge, setNewRoleBadge] = useState('');
   const [newBadgeColor, setNewBadgeColor] = useState('cyan');
   const [newIsActive, setNewIsActive] = useState(true);
+  const [newIsAdmin, setNewIsAdmin] = useState(false);
   const [newPerms, setNewPerms] = useState(DEFAULT_CREATE_PERMS);
   const [creating, setCreating] = useState(false);
 
@@ -156,6 +157,7 @@ export default function AdminAccountsModal({
         roleBadge: newRoleBadge,
         badgeColor: newBadgeColor,
         isActive: newIsActive,
+        isAdmin: newIsAdmin,
         ...newPerms,
       });
       setNewUsername('');
@@ -163,7 +165,8 @@ export default function AdminAccountsModal({
       setNewRoleBadge('');
       setNewPerms(DEFAULT_CREATE_PERMS);
       setNewIsActive(true);
-      showNotice('success', `Created account @${created.username}`);
+      setNewIsAdmin(false);
+      showNotice('success', `Created account @${created.username}${created.isAdmin ? ' (Admin)' : ''}`);
     } catch (err) {
       showNotice('error', err?.message || 'Failed to create account.');
     } finally {
@@ -429,13 +432,7 @@ export default function AdminAccountsModal({
                 </div>
 
                 <div
-                  className={`rounded-xl border p-4 flex flex-col justify-between gap-3 ${
-                    !workspaceConfig?.allowSharedPasscodes
-                      ? 'border-amber-500/40 bg-amber-500/10'
-                      : isLight
-                        ? 'bg-neutral-50 border-neutral-200'
-                        : 'bg-white/[0.03] border-white/10'
-                  }`}
+                  className="rounded-xl border p-4 flex flex-col justify-between gap-3 border-amber-500/40 bg-amber-500/10"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -444,40 +441,17 @@ export default function AdminAccountsModal({
                         <span>Shared Public Passcodes</span>
                       </div>
                       <p className={`text-[11px] mt-1 leading-relaxed ${isLight ? 'text-neutral-600' : 'text-neutral-400'}`}>
-                        Allow shared passcodes (2026, tungtung, 1378, ttt1234). Turn OFF to require admin-created Accounts or the owner password only.
+                        Legacy shared passcodes (tungtung, ttt1234, 1378, 2026) are permanently disabled. Users must sign in with an assigned account or the owner password.
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      disabled={globalBusyKey === 'allowSharedPasscodes'}
-                      onClick={() =>
-                        handleGlobalUpdate(
-                          { allowSharedPasscodes: workspaceConfig?.allowSharedPasscodes === false },
-                          'allowSharedPasscodes',
-                        )
-                      }
-                      className={`px-3 py-1.5 rounded-lg border text-[11px] font-mono font-black uppercase cursor-pointer shrink-0 transition-all ${
-                        workspaceConfig?.allowSharedPasscodes !== false
-                          ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
-                          : 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                      }`}
-                    >
-                      {workspaceConfig?.allowSharedPasscodes !== false ? 'Allowed' : 'Disabled'}
-                    </button>
+                    <span className="px-3 py-1.5 rounded-lg border text-[11px] font-mono font-black uppercase shrink-0 bg-amber-500/20 border-amber-500/50 text-amber-300">
+                      Disabled
+                    </span>
                   </div>
 
                   <div className={`text-[11px] flex items-center gap-1.5 ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>
-                    {workspaceConfig?.allowSharedPasscodes !== false ? (
-                      <>
-                        <Unlock className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Anyone with a shared code or account can enter.</span>
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Shared codes blocked — only assigned accounts & owner can enter.</span>
-                      </>
-                    )}
+                    <Lock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Shared codes blocked — only assigned accounts &amp; owner can enter.</span>
                   </div>
                 </div>
               </div>
@@ -711,6 +685,22 @@ export default function AdminAccountsModal({
                       <span>{newIsActive ? 'Active' : 'Disabled'}</span>
                     </button>
 
+                    <button
+                      type="button"
+                      onClick={() => setNewIsAdmin((v) => !v)}
+                      className={`px-2.5 py-1 rounded-lg border text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                        newIsAdmin
+                          ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                          : isLight
+                            ? 'bg-white border-neutral-300 text-neutral-500'
+                            : 'bg-white/5 border-white/10 text-neutral-400'
+                      }`}
+                      title="Grant full admin privileges (manage accounts & site controls)"
+                    >
+                      <Shield className="w-3 h-3" />
+                      <span>{newIsAdmin ? 'Admin: ON' : 'Admin: OFF'}</span>
+                    </button>
+
                     {WORKSPACE_ACCESS_KEYS.map(({ key, label }) => {
                       const Icon = WORKSPACE_ICONS[key] || Shield;
                       const enabled = Boolean(newPerms[key]);
@@ -823,6 +813,12 @@ export default function AdminAccountsModal({
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-mono font-bold text-sm truncate">@{acc.username}</span>
+                                {acc.isAdmin && (
+                                  <span className="text-[9px] font-mono font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-500/20 border-amber-500/50 text-amber-300 flex items-center gap-1">
+                                    <Shield className="w-2.5 h-2.5" />
+                                    <span>Admin</span>
+                                  </span>
+                                )}
                                 {acc.roleBadge && (
                                   <span
                                     className={`text-[9px] font-mono font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
@@ -857,6 +853,23 @@ export default function AdminAccountsModal({
 
                           {/* Status, Moderation & Account Management Actions */}
                           <div className="flex flex-wrap items-center gap-1.5">
+                            <button
+                              type="button"
+                              disabled={busyKey === `${acc.usernameLower}:isAdmin`}
+                              onClick={() => handleToggleField(acc, 'isAdmin')}
+                              className={`px-2 py-1 rounded-lg border text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                                acc.isAdmin
+                                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                                  : isLight
+                                    ? 'bg-neutral-100 border-neutral-300 text-neutral-500'
+                                    : 'bg-white/5 border-white/10 text-neutral-400'
+                              }`}
+                              title={acc.isAdmin ? 'Admin privileges enabled (click to revoke)' : 'Grant Admin privileges to this account'}
+                            >
+                              <Shield className="w-3 h-3" />
+                              <span>{acc.isAdmin ? 'Admin' : 'Make Admin'}</span>
+                            </button>
+
                             <button
                               type="button"
                               disabled={busyKey === `${acc.usernameLower}:isActive`}

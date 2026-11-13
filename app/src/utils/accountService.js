@@ -35,7 +35,7 @@ export const WORKSPACE_ACCESS_KEYS = [
 export const DEFAULT_WORKSPACE_CONFIG = {
   siteLockdown: false,
   lockdownMessage: 'Workspace access is currently restricted by the administrator.',
-  allowSharedPasscodes: true,
+  allowSharedPasscodes: false,
   gamesAccess: true,
   moviesAccess: true,
   moreMoviesAccess: true,
@@ -55,7 +55,7 @@ export function sanitizeWorkspaceConfig(data) {
       typeof data.lockdownMessage === 'string' && data.lockdownMessage.trim()
         ? data.lockdownMessage.trim().slice(0, 200)
         : DEFAULT_WORKSPACE_CONFIG.lockdownMessage,
-    allowSharedPasscodes: data.allowSharedPasscodes !== false,
+    allowSharedPasscodes: false,
     gamesAccess: data.gamesAccess !== false,
     moviesAccess: data.moviesAccess !== false,
     moreMoviesAccess: data.moreMoviesAccess !== false,
@@ -237,6 +237,7 @@ export function sanitizeAccountDoc(docId, data) {
     usernameLower: String(data.usernameLower || docId).toLowerCase(),
     passwordHash: String(data.passwordHash || ''),
     isActive: data.isActive !== false,
+    isAdmin: Boolean(data.isAdmin),
     gamesAccess: data.gamesAccess !== false,
     moviesAccess: data.moviesAccess !== false,
     moreMoviesAccess: data.moreMoviesAccess !== false,
@@ -265,6 +266,7 @@ export function toPublicChatAccount(account) {
     username: account.username,
     usernameLower: account.usernameLower,
     isActive: account.isActive !== false,
+    isAdmin: Boolean(account.isAdmin),
     roleBadge: account.roleBadge || '',
     badgeColor: account.badgeColor || 'cyan',
     chatMuted: Boolean(account.chatMuted),
@@ -499,6 +501,7 @@ export async function createManagedAccount(db, auth, payload) {
     passwordSalt: salt,
     passwordHash,
     isActive: payload.isActive !== false,
+    isAdmin: Boolean(payload.isAdmin),
     gamesAccess: payload.gamesAccess !== false,
     moviesAccess: payload.moviesAccess !== false,
     moreMoviesAccess: payload.moreMoviesAccess !== false,
@@ -538,6 +541,7 @@ export async function updateManagedAccount(db, auth, currentUsernameLower, updat
   };
 
   if (typeof updates.isActive === 'boolean') patch.isActive = updates.isActive;
+  if (typeof updates.isAdmin === 'boolean') patch.isAdmin = updates.isAdmin;
   if (typeof updates.gamesAccess === 'boolean') patch.gamesAccess = updates.gamesAccess;
   if (typeof updates.moviesAccess === 'boolean') patch.moviesAccess = updates.moviesAccess;
   if (typeof updates.moreMoviesAccess === 'boolean') patch.moreMoviesAccess = updates.moreMoviesAccess;

@@ -35,6 +35,10 @@
           "type": "boolean",
           "description": "Whether the account can currently sign in."
         },
+        "isAdmin": {
+          "type": "boolean",
+          "description": "Whether the account has administrator privileges to manage accounts and workspace settings."
+        },
         "gamesAccess": {
           "type": "boolean",
           "description": "Access to Games & Portals catalog."
