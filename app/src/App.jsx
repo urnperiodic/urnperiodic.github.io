@@ -127,6 +127,7 @@ import AccountModal from './components/AccountModal';
 import AdminAccountsModal from './components/AdminAccountsModal';
 import {
   ACCOUNT_SESSION_KEY,
+  AUTO_SIGNOUT_IDLE_KEY,
   DEFAULT_WORKSPACE_CONFIG,
   INACTIVITY_TIMEOUT_MS,
   LAST_ACTIVITY_KEY,
@@ -136,6 +137,7 @@ import {
   getLastSessionActivity,
   getRememberedLocalUsers,
   getSavedAccountSession,
+  isAutoSignOutOnIdleEnabled,
   isSessionInactiveExpired,
   removeRememberedLocalUser,
   saveAccountSession,
@@ -2590,6 +2592,8 @@ export default function App() {
     return saved !== 'false'; // Defaults to true
   });
 
+  const [autoSignOutOnIdle, setAutoSignOutOnIdle] = useState(() => isAutoSignOutOnIdleEnabled());
+
   const [panicKeysEnabled, setPanicKeysEnabled] = useState(() => {
     const saved = safeStorage.getItem('unblocked-panic-keys-enabled');
     return saved !== 'false'; // Defaults to true
@@ -2640,9 +2644,10 @@ export default function App() {
     }
   }, [historyMaskingEnabled, selectedGame, filter, viewMode, decoyType]);
 
-  // Sign Out & Lock Workspace when tab or window is closed (saved local user remains for re-sign-in)
+  // Sign Out & Lock Workspace when tab or window is closed (if enabled in Settings)
   useEffect(() => {
     const handleUnload = () => {
+      if (!autoLockOnClose) return;
       // If the user triggered an in-website refresh or an active reload, do not sign out
       if (isRefreshingRef.current) return;
       try {
@@ -2887,8 +2892,9 @@ export default function App() {
     setViewModeAndSave('articles');
   }, [setViewModeAndSave, activeAccount?.usernameLower]);
 
-  // Auto sign-out after 1 hour of inactivity (keeps remembered local user)
+  // Auto sign-out after 1 hour of inactivity (if enabled in Settings; keeps remembered local user)
   useEffect(() => {
+    if (!autoSignOutOnIdle) return;
     const isAuthenticated = Boolean(activeAccount || isOwnerAdmin || viewMode === 'games');
     if (!isAuthenticated) return;
 
@@ -2928,11 +2934,19 @@ export default function App() {
       window.removeEventListener('focus', handleVisibilityOrFocus);
       document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
     };
-  }, [activeAccount, isOwnerAdmin, viewMode, handleAccountSignOut]);
+  }, [autoSignOutOnIdle, activeAccount, isOwnerAdmin, viewMode, handleAccountSignOut]);
 
-  // Keep sign-out synchronized across tabs
+  // Keep sign-out & sign-out settings synchronized across tabs
   useEffect(() => {
     const onStorage = (e) => {
+      if (e.key === 'unblocked-auto-lock-on-close') {
+        setAutoLockOnClose(e.newValue !== 'false');
+        return;
+      }
+      if (e.key === AUTO_SIGNOUT_IDLE_KEY) {
+        setAutoSignOutOnIdle(e.newValue !== 'false');
+        return;
+      }
       if (e.key === LAST_ACTIVITY_KEY && e.newValue) {
         return;
       }
@@ -5711,7 +5725,46 @@ export default function App() {
                 </button>
               </div>
               <p className={`text-[11px] leading-snug ${isLight ? 'text-neutral-600' : 'text-neutral-300'}`}>
-                Automatically lock workspace when tab or window is closed.
+                Automatically sign out &amp; lock workspace when tab or window is closed.
+              </p>
+            </div>
+
+            {/* Toggle 1b: Auto Sign Out After 1h Idle */}
+            <div className={`flex flex-col gap-1.5 pt-2.5 border-t ${isLight ? 'border-neutral-200' : 'border-white/10'}`}>
+              <div className="flex items-center justify-between gap-3">
+                <span className={`text-xs font-bold leading-tight ${isLight ? 'text-neutral-900' : 'text-white'}`}>
+                  Auto Sign Out (1h Idle)
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={autoSignOutOnIdle}
+                  onClick={() => {
+                    const newVal = !autoSignOutOnIdle;
+                    if (newVal) {
+                      touchSessionActivity(true);
+                    }
+                    setAutoSignOutOnIdle(newVal);
+                    safeStorage.setItem(AUTO_SIGNOUT_IDLE_KEY, String(newVal));
+                  }}
+                  className={`relative w-12 h-6.5 rounded-full cursor-pointer flex items-center p-0.5 transition-colors duration-200 shrink-0 border-2 ${
+                    autoSignOutOnIdle
+                      ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                      : isLight
+                        ? 'bg-neutral-200 border-neutral-300'
+                        : 'bg-neutral-800 border-neutral-700'
+                  }`}
+                  title="Toggle 1-Hour Inactivity Auto Sign Out"
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-out transform ${
+                      autoSignOutOnIdle ? 'translate-x-5.5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+              <p className={`text-[11px] leading-snug ${isLight ? 'text-neutral-600' : 'text-neutral-300'}`}>
+                Automatically sign out after 1 hour with no activity. Turn off to stay signed in.
               </p>
             </div>
 
