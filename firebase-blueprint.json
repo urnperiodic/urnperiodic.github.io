@@ -1,0 +1,357 @@
+{
+  "entities": {
+    "Account": {
+      "title": "Managed Account",
+      "description": "Admin-managed user account linking workspace permissions, favorites, theme preferences, and Lobby Chat identity/moderation.",
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 20,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Display username assigned by the administrator."
+        },
+        "usernameLower": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 20,
+          "pattern": "^[a-z0-9_\\-]+$",
+          "description": "Lowercase canonical username matching the document ID."
+        },
+        "passwordSalt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Hex salt used for PBKDF2-SHA256 client-side verification."
+        },
+        "passwordHash": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Salted PBKDF2 password hash verifier."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the account can currently sign in."
+        },
+        "isAdmin": {
+          "type": "boolean",
+          "description": "Whether the account has administrator privileges to manage accounts and workspace settings."
+        },
+        "allowGlobalOverride": {
+          "type": "boolean",
+          "description": "Whether this account can access its enabled workspaces even when those workspaces are turned off globally."
+        },
+        "gamesAccess": {
+          "type": "boolean",
+          "description": "Access to Games & Portals catalog."
+        },
+        "moviesAccess": {
+          "type": "boolean",
+          "description": "Access to Movies workspace."
+        },
+        "moreMoviesAccess": {
+          "type": "boolean",
+          "description": "Access to More Movies (Atlantic.st) workspace."
+        },
+        "youtubeAccess": {
+          "type": "boolean",
+          "description": "Access to YouTube workspace."
+        },
+        "lobbyChatAccess": {
+          "type": "boolean",
+          "description": "Access to Lobby Chat."
+        },
+        "aiAccess": {
+          "type": "boolean",
+          "description": "Access to Gemini AI Chat Tutor."
+        },
+        "decoysAccess": {
+          "type": "boolean",
+          "description": "Access to extra tab decoys and auto-randomizer."
+        },
+        "downloadAccess": {
+          "type": "boolean",
+          "description": "Access to offline website download."
+        },
+        "chatMuted": {
+          "type": "boolean",
+          "description": "Whether the account is muted in Lobby Chat."
+        },
+        "chatBanned": {
+          "type": "boolean",
+          "description": "Whether the account is banned from Lobby Chat."
+        },
+        "roleBadge": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Optional Lobby Chat custom role badge label."
+        },
+        "badgeColor": {
+          "type": "string",
+          "enum": ["cyan", "amber", "emerald", "rose", "violet", "neutral"],
+          "description": "Role badge color theme."
+        },
+        "favorites": {
+          "type": "array",
+          "description": "List of bookmarked game IDs (up to 500)."
+        },
+        "recentlyPlayed": {
+          "type": "array",
+          "description": "List of recently played game IDs (up to 30)."
+        },
+        "preferredTheme": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Preferred accent color theme or null."
+        },
+        "preferredMode": {
+          "type": "string",
+          "enum": ["light", "dark"],
+          "description": "Preferred light or dark UI mode or null."
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Epoch millisecond creation timestamp."
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Epoch millisecond last update timestamp."
+        },
+        "lastLoginAt": {
+          "type": "number",
+          "description": "Epoch millisecond timestamp of last sign-in or null."
+        },
+        "isOnline": {
+          "type": "boolean",
+          "description": "Whether the user currently has an active online session."
+        },
+        "lastSeenAt": {
+          "type": "number",
+          "description": "Epoch millisecond heartbeat timestamp of last observed activity or null."
+        }
+      },
+      "required": [
+        "username",
+        "usernameLower",
+        "passwordSalt",
+        "passwordHash",
+        "isActive",
+        "gamesAccess",
+        "moviesAccess",
+        "moreMoviesAccess",
+        "youtubeAccess",
+        "lobbyChatAccess",
+        "aiAccess",
+        "decoysAccess",
+        "downloadAccess",
+        "chatMuted",
+        "chatBanned",
+        "roleBadge",
+        "badgeColor",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkspaceConfig": {
+      "title": "Global Workspace Configuration",
+      "description": "Site-wide lockdown state, shared passcode policy, and global workspace feature flags.",
+      "type": "object",
+      "properties": {
+        "siteLockdown": {
+          "type": "boolean",
+          "description": "Locks out non-owner access globally."
+        },
+        "lockdownMessage": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Banner message displayed on the lock screen during lockdown."
+        },
+        "allowSharedPasscodes": {
+          "type": "boolean",
+          "description": "Whether public/shared passcodes are permitted."
+        },
+        "allowAccountOverrides": {
+          "type": "boolean",
+          "description": "Whether specific accounts with allowGlobalOverride can access workspaces that are turned off globally."
+        },
+        "gamesAccess": {
+          "type": "boolean",
+          "description": "Global toggle for Games & Portals."
+        },
+        "moviesAccess": {
+          "type": "boolean",
+          "description": "Global toggle for Movies workspace."
+        },
+        "moreMoviesAccess": {
+          "type": "boolean",
+          "description": "Global toggle for More Movies workspace."
+        },
+        "youtubeAccess": {
+          "type": "boolean",
+          "description": "Global toggle for YouTube workspace."
+        },
+        "lobbyChatAccess": {
+          "type": "boolean",
+          "description": "Global toggle for Lobby Chat."
+        },
+        "aiAccess": {
+          "type": "boolean",
+          "description": "Global toggle for AI Chat."
+        },
+        "decoysAccess": {
+          "type": "boolean",
+          "description": "Global toggle for Extra Decoys."
+        },
+        "downloadAccess": {
+          "type": "boolean",
+          "description": "Global toggle for Website Downloads."
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Epoch millisecond timestamp of last update."
+        }
+      },
+      "required": [
+        "siteLockdown",
+        "lockdownMessage",
+        "allowSharedPasscodes",
+        "gamesAccess",
+        "moviesAccess",
+        "moreMoviesAccess",
+        "youtubeAccess",
+        "lobbyChatAccess",
+        "aiAccess",
+        "decoysAccess",
+        "downloadAccess",
+        "updatedAt"
+      ]
+    },
+    "ChatChannel": {
+      "title": "Lobby Chat Channel",
+      "description": "Custom or temporary Lobby Chat channel metadata.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z0-9_\\-]+$",
+          "description": "Sanitized channel slug."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 240,
+          "description": "Channel topic description."
+        },
+        "password": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Optional channel passcode or null."
+        },
+        "isPasswordProtected": {
+          "type": "boolean",
+          "description": "Whether entering the channel requires a password."
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Epoch millisecond creation timestamp for 1-hour room TTL."
+        }
+      },
+      "required": ["name", "description", "isPasswordProtected", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "Lobby Chat Message",
+      "description": "Encrypted or plaintext Lobby Chat message inside a channel.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Sender nickname or @account username."
+        },
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Sender client or auth identifier."
+        },
+        "senderId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Persistent client sender identifier."
+        },
+        "accountId": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Linked account lowercase username or null."
+        },
+        "roleBadge": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Sender custom role badge label."
+        },
+        "badgeColor": {
+          "type": "string",
+          "maxLength": 24,
+          "description": "Sender badge color token."
+        },
+        "isRegistered": {
+          "type": "boolean",
+          "description": "Whether the sender posted from a linked account."
+        },
+        "isAdmin": {
+          "type": "boolean",
+          "description": "Whether the sender has administrator privileges."
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 20000,
+          "description": "Encrypted or plaintext message payload."
+        },
+        "imageUrl": {
+          "type": "string",
+          "maxLength": 900000,
+          "description": "Encrypted image payload or image URL."
+        },
+        "replyTo": {
+          "type": "object",
+          "description": "Quoted message summary or null."
+        },
+        "isEncrypted": {
+          "type": "boolean",
+          "description": "Whether text/imageUrl uses AES-GCM v1 payload encryption."
+        },
+        "timestamp": {
+          "type": "number",
+          "description": "Epoch millisecond send timestamp."
+        },
+        "channelId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Parent channel document ID."
+        }
+      },
+      "required": ["name", "text", "timestamp", "channelId"]
+    }
+  },
+  "firestore": {
+    "/siteAccounts/{accountId}": {
+      "schema": { "$ref": "#/entities/Account" },
+      "description": "Stores admin-managed user accounts keyed by lowercase username."
+    },
+    "/siteConfig/{configId}": {
+      "schema": { "$ref": "#/entities/WorkspaceConfig" },
+      "description": "Global site configuration including workspaceAccess."
+    },
+    "/channels/{channelId}": {
+      "schema": { "$ref": "#/entities/ChatChannel" },
+      "description": "Lobby Chat rooms and temporary channels."
+    },
+    "/channels/{channelId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Messages posted inside each Lobby Chat channel."
+    }
+  }
+}
