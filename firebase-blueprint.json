@@ -39,6 +39,10 @@
           "type": "boolean",
           "description": "Whether the account has administrator privileges to manage accounts and workspace settings."
         },
+        "allowGlobalOverride": {
+          "type": "boolean",
+          "description": "Whether this account can access its enabled workspaces even when those workspaces are turned off globally."
+        },
         "gamesAccess": {
           "type": "boolean",
           "description": "Access to Games & Portals catalog."
@@ -118,6 +122,14 @@
         "lastLoginAt": {
           "type": "number",
           "description": "Epoch millisecond timestamp of last sign-in or null."
+        },
+        "isOnline": {
+          "type": "boolean",
+          "description": "Whether the user currently has an active online session."
+        },
+        "lastSeenAt": {
+          "type": "number",
+          "description": "Epoch millisecond heartbeat timestamp of last observed activity or null."
         }
       },
       "required": [
@@ -159,6 +171,10 @@
         "allowSharedPasscodes": {
           "type": "boolean",
           "description": "Whether public/shared passcodes are permitted."
+        },
+        "allowAccountOverrides": {
+          "type": "boolean",
+          "description": "Whether specific accounts with allowGlobalOverride can access workspaces that are turned off globally."
         },
         "gamesAccess": {
           "type": "boolean",
@@ -284,6 +300,10 @@
         "isRegistered": {
           "type": "boolean",
           "description": "Whether the sender posted from a linked account."
+        },
+        "isAdmin": {
+          "type": "boolean",
+          "description": "Whether the sender has administrator privileges."
         },
         "text": {
           "type": "string",

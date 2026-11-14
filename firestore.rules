@@ -40,11 +40,12 @@ service cloud.firestore {
         ])
         && data.keys().hasOnly([
           'username', 'usernameLower', 'passwordSalt', 'passwordHash',
-          'isActive', 'isAdmin', 'gamesAccess', 'moviesAccess', 'moreMoviesAccess',
+          'isActive', 'isAdmin', 'allowGlobalOverride', 'gamesAccess', 'moviesAccess', 'moreMoviesAccess',
           'youtubeAccess', 'lobbyChatAccess', 'aiAccess', 'decoysAccess',
           'downloadAccess', 'chatMuted', 'chatBanned', 'roleBadge',
           'badgeColor', 'favorites', 'recentlyPlayed', 'preferredTheme',
-          'preferredMode', 'createdAt', 'updatedAt', 'lastLoginAt'
+          'preferredMode', 'createdAt', 'updatedAt', 'lastLoginAt',
+          'isOnline', 'lastSeenAt'
         ])
         && data.username is string && data.username.size() >= 2 && data.username.size() <= 20
         && data.username.matches('^[a-zA-Z0-9_\\-]+$')
@@ -54,6 +55,7 @@ service cloud.firestore {
         && data.passwordHash is string && data.passwordHash.size() >= 1 && data.passwordHash.size() <= 256
         && data.isActive is bool
         && isOptionalBool(data, 'isAdmin')
+        && isOptionalBool(data, 'allowGlobalOverride')
         && data.gamesAccess is bool
         && data.moviesAccess is bool
         && data.moreMoviesAccess is bool
@@ -72,7 +74,9 @@ service cloud.firestore {
         && (!('preferredMode' in data) || data.preferredMode == null || data.preferredMode in ['light', 'dark'])
         && data.createdAt is number
         && data.updatedAt is number
-        && isOptionalNumber(data, 'lastLoginAt');
+        && isOptionalNumber(data, 'lastLoginAt')
+        && isOptionalBool(data, 'isOnline')
+        && isOptionalNumber(data, 'lastSeenAt');
     }
 
     function isValidAccountUpdate(data, accountId) {
@@ -89,13 +93,14 @@ service cloud.firestore {
           'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess', 'updatedAt'
         ])
         && data.keys().hasOnly([
-          'siteLockdown', 'lockdownMessage', 'allowSharedPasscodes',
+          'siteLockdown', 'lockdownMessage', 'allowSharedPasscodes', 'allowAccountOverrides',
           'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'youtubeAccess',
           'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess', 'updatedAt'
         ])
         && data.siteLockdown is bool
         && data.lockdownMessage is string && data.lockdownMessage.size() <= 200
         && data.allowSharedPasscodes is bool
+        && isOptionalBool(data, 'allowAccountOverrides')
         && data.gamesAccess is bool
         && data.moviesAccess is bool
         && data.moreMoviesAccess is bool
@@ -122,7 +127,7 @@ service cloud.firestore {
       return data.keys().hasAll(['name', 'text', 'timestamp', 'channelId'])
         && data.keys().hasOnly([
           'name', 'userId', 'senderId', 'accountId', 'roleBadge', 'badgeColor',
-          'isRegistered', 'text', 'imageUrl', 'replyTo', 'isEncrypted', 'timestamp', 'channelId'
+          'isRegistered', 'isAdmin', 'text', 'imageUrl', 'replyTo', 'isEncrypted', 'timestamp', 'channelId'
         ])
         && data.name is string && data.name.size() >= 1 && data.name.size() <= 40
         && isOptionalString(data, 'userId', 128)
@@ -131,6 +136,7 @@ service cloud.firestore {
         && isOptionalString(data, 'roleBadge', 20)
         && isOptionalString(data, 'badgeColor', 24)
         && isOptionalBool(data, 'isRegistered')
+        && isOptionalBool(data, 'isAdmin')
         && data.text is string && data.text.size() <= 20000
         && isOptionalString(data, 'imageUrl', 900000)
         && (!('replyTo' in data) || data.replyTo == null || data.replyTo is map)
@@ -147,12 +153,12 @@ service cloud.firestore {
       allow update: if isValidId(accountId)
         && isValidAccountUpdate(incoming(), accountId)
         && incoming().diff(existing()).affectedKeys().hasOnly([
-          'username', 'passwordSalt', 'passwordHash', 'isActive', 'isAdmin',
+          'username', 'passwordSalt', 'passwordHash', 'isActive', 'isAdmin', 'allowGlobalOverride',
           'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'youtubeAccess',
           'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess',
           'chatMuted', 'chatBanned', 'roleBadge', 'badgeColor',
           'favorites', 'recentlyPlayed', 'preferredTheme', 'preferredMode',
-          'updatedAt', 'lastLoginAt'
+          'updatedAt', 'lastLoginAt', 'isOnline', 'lastSeenAt'
         ]);
       allow delete: if isValidId(accountId);
     }

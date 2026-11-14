@@ -2622,7 +2622,14 @@ export default function App() {
     (key) => {
       if (hasAdminAccess) return true;
       if (workspaceConfig?.siteLockdown) return false;
-      if (workspaceConfig && workspaceConfig[key] === false) return false;
+      const canOverrideGlobalOff = Boolean(
+        workspaceConfig?.allowAccountOverrides !== false &&
+          activeAccount?.isActive &&
+          activeAccount?.allowGlobalOverride,
+      );
+      if (workspaceConfig && workspaceConfig[key] === false && !canOverrideGlobalOff) {
+        return false;
+      }
       if (key === 'aiAccess') {
         return Boolean(isAdminPassUnlocked || (activeAccount?.isActive && activeAccount?.aiAccess));
       }

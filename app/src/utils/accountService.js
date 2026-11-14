@@ -60,6 +60,7 @@ export const DEFAULT_WORKSPACE_CONFIG = {
   siteLockdown: false,
   lockdownMessage: 'Workspace access is currently restricted by the administrator.',
   allowSharedPasscodes: false,
+  allowAccountOverrides: true,
   gamesAccess: true,
   moviesAccess: true,
   moreMoviesAccess: true,
@@ -80,6 +81,7 @@ export function sanitizeWorkspaceConfig(data) {
         ? data.lockdownMessage.trim().slice(0, 200)
         : DEFAULT_WORKSPACE_CONFIG.lockdownMessage,
     allowSharedPasscodes: false,
+    allowAccountOverrides: data.allowAccountOverrides !== false,
     gamesAccess: data.gamesAccess !== false,
     moviesAccess: data.moviesAccess !== false,
     moreMoviesAccess: data.moreMoviesAccess !== false,
@@ -262,6 +264,7 @@ export function sanitizeAccountDoc(docId, data) {
     passwordHash: String(data.passwordHash || ''),
     isActive: data.isActive !== false,
     isAdmin: Boolean(data.isAdmin),
+    allowGlobalOverride: Boolean(data.allowGlobalOverride),
     gamesAccess: data.gamesAccess !== false,
     moviesAccess: data.moviesAccess !== false,
     moreMoviesAccess: data.moreMoviesAccess !== false,
@@ -630,6 +633,7 @@ export async function createManagedAccount(db, auth, payload) {
     passwordHash,
     isActive: payload.isActive !== false,
     isAdmin: Boolean(payload.isAdmin),
+    allowGlobalOverride: Boolean(payload.allowGlobalOverride),
     gamesAccess: payload.gamesAccess !== false,
     moviesAccess: payload.moviesAccess !== false,
     moreMoviesAccess: payload.moreMoviesAccess !== false,
@@ -672,6 +676,7 @@ export async function updateManagedAccount(db, auth, currentUsernameLower, updat
 
   if (typeof updates.isActive === 'boolean') patch.isActive = updates.isActive;
   if (typeof updates.isAdmin === 'boolean') patch.isAdmin = updates.isAdmin;
+  if (typeof updates.allowGlobalOverride === 'boolean') patch.allowGlobalOverride = updates.allowGlobalOverride;
   if (typeof updates.gamesAccess === 'boolean') patch.gamesAccess = updates.gamesAccess;
   if (typeof updates.moviesAccess === 'boolean') patch.moviesAccess = updates.moviesAccess;
   if (typeof updates.moreMoviesAccess === 'boolean') patch.moreMoviesAccess = updates.moreMoviesAccess;
