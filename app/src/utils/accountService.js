@@ -20,6 +20,9 @@ export const WORKSPACE_CONFIG_COLLECTION = 'siteConfig';
 export const WORKSPACE_CONFIG_DOC_ID = 'workspaceAccess';
 export const ACCOUNT_SESSION_KEY = 'urnperiodic-account-session';
 export const CHAT_LINKED_ACCOUNT_KEY = 'urnperiodic_chat_account';
+export const LAST_ACTIVITY_KEY = 'urnperiodic-last-activity';
+export const REMEMBERED_USERS_KEY = 'urnperiodic-saved-users';
+export const INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
 export const ONLINE_TIMEOUT_MS = 90 * 1000;
 
 export function isAccountOnline(account, now = Date.now()) {
@@ -298,12 +301,93 @@ export function toPublicChatAccount(account) {
   };
 }
 
+export function touchSessionActivity(force = false) {
+  const now = Date.now();
+  try {
+    const prev = Number(localStorage.getItem(LAST_ACTIVITY_KEY) || 0);
+    if (force || !prev || now - prev >= 5000) {
+      localStorage.setItem(LAST_ACTIVITY_KEY, String(now));
+    }
+  } catch {}
+  return now;
+}
+
+export function getLastSessionActivity() {
+  try {
+    const raw = localStorage.getItem(LAST_ACTIVITY_KEY);
+    return raw ? Number(raw) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function clearSessionActivity() {
+  try {
+    localStorage.removeItem(LAST_ACTIVITY_KEY);
+  } catch {}
+}
+
+export function isSessionInactiveExpired(fallbackTimestamp = 0) {
+  const last = getLastSessionActivity() || Number(fallbackTimestamp || 0);
+  if (!last) return false;
+  return Date.now() - last >= INACTIVITY_TIMEOUT_MS;
+}
+
+export function getRememberedLocalUsers() {
+  try {
+    const raw = localStorage.getItem(REMEMBERED_USERS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((u) => u && typeof u.username === 'string' && u.username.trim());
+  } catch {
+    return [];
+  }
+}
+
+export function saveRememberedLocalUser(user) {
+  if (!user || !user.username) return [];
+  const username = String(user.username).trim();
+  const usernameLower = String(user.usernameLower || username).trim().toLowerCase();
+  const entry = {
+    username,
+    usernameLower,
+    roleBadge: String(user.roleBadge || '').trim().slice(0, 20),
+    badgeColor: user.badgeColor || 'cyan',
+    isAdmin: Boolean(user.isAdmin),
+    isOwnerAdmin: Boolean(user.isOwnerAdmin),
+    savedAt: Date.now(),
+  };
+  try {
+    const existing = getRememberedLocalUsers().filter((u) => u.usernameLower !== usernameLower);
+    const next = [entry, ...existing].slice(0, 5);
+    localStorage.setItem(REMEMBERED_USERS_KEY, JSON.stringify(next));
+    return next;
+  } catch {
+    return [entry];
+  }
+}
+
+export function removeRememberedLocalUser(usernameLower) {
+  const target = String(usernameLower || '').trim().toLowerCase();
+  try {
+    const next = target
+      ? getRememberedLocalUsers().filter((u) => u.usernameLower !== target)
+      : [];
+    localStorage.setItem(REMEMBERED_USERS_KEY, JSON.stringify(next));
+    return next;
+  } catch {
+    return [];
+  }
+}
+
 export function saveAccountSession(account) {
   if (!account) return;
+  const now = touchSessionActivity(true);
   const sessionPayload = {
     usernameLower: account.usernameLower,
     verifier: account.passwordHash,
-    savedAt: Date.now(),
+    savedAt: now,
   };
   try {
     localStorage.setItem(ACCOUNT_SESSION_KEY, JSON.stringify(sessionPayload));
@@ -311,6 +395,7 @@ export function saveAccountSession(account) {
   try {
     sessionStorage.setItem(ACCOUNT_SESSION_KEY, JSON.stringify(sessionPayload));
   } catch {}
+  saveRememberedLocalUser(account);
   syncChatLinkedAccountStorage(account);
 }
 
@@ -320,6 +405,10 @@ export function getSavedAccountSession() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (parsed && parsed.usernameLower && parsed.verifier) {
+      if (isSessionInactiveExpired(parsed.savedAt)) {
+        clearAccountSession();
+        return null;
+      }
       return parsed;
     }
   } catch {}

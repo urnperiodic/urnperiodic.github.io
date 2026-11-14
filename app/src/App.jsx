@@ -1,8 +1,9 @@
 import { lazy, Suspense, useDeferredValue, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import { signInAnonymously } from 'firebase/auth';
-import { collection, doc, getDocs, deleteDoc, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { lobbyAuth, lobbyDb, handleFirestoreError, isFirestorePermissionError, OperationType } from './firebase';
+import { deleteAllChatMessages } from './utils/chatModeration';
 import { PUBLIC_GAMES_BASE_URL } from './data/gameSource';
 import { gameRankings } from './data/gameRankings';
 import { WHATS_NEW_SENTENCE, WHATS_NEW_CHANGES, WHATS_NEW_VERSION } from './whatsNewData';
@@ -125,15 +126,25 @@ import UserChat from './components/UserChat';
 import AccountModal from './components/AccountModal';
 import AdminAccountsModal from './components/AdminAccountsModal';
 import {
+  ACCOUNT_SESSION_KEY,
   DEFAULT_WORKSPACE_CONFIG,
+  INACTIVITY_TIMEOUT_MS,
+  LAST_ACTIVITY_KEY,
   authenticateAccount,
   clearAccountSession,
+  clearSessionActivity,
+  getLastSessionActivity,
+  getRememberedLocalUsers,
   getSavedAccountSession,
+  isSessionInactiveExpired,
+  removeRememberedLocalUser,
   saveAccountSession,
+  saveRememberedLocalUser,
   subscribeToAccount,
   subscribeToWorkspaceConfig,
   syncAccountUserData,
   syncChatLinkedAccountStorage,
+  touchSessionActivity,
   updateAccountPresence,
   verifySessionAccount,
 } from './utils/accountService';
@@ -271,12 +282,25 @@ const safeSessionStorage = {
 const OWNER_SESSION_KEY = 'urnperiodic-owner-session';
 const getSavedOwnerSession = () => {
   try {
-    if (safeSessionStorage.getItem(OWNER_SESSION_KEY) === 'true') return true;
     const raw = safeStorage.getItem(OWNER_SESSION_KEY);
-    if (!raw) return false;
-    const parsed = JSON.parse(raw);
-    if (parsed?.active && Date.now() - Number(parsed.ts || 0) < 12 * 60 * 60 * 1000) {
-      safeSessionStorage.setItem(OWNER_SESSION_KEY, 'true');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.active) {
+        if (isSessionInactiveExpired(parsed.ts)) {
+          safeSessionStorage.removeItem(OWNER_SESSION_KEY);
+          safeStorage.removeItem(OWNER_SESSION_KEY);
+          return false;
+        }
+        safeSessionStorage.setItem(OWNER_SESSION_KEY, 'true');
+        return true;
+      }
+    }
+    if (safeSessionStorage.getItem(OWNER_SESSION_KEY) === 'true') {
+      if (isSessionInactiveExpired()) {
+        safeSessionStorage.removeItem(OWNER_SESSION_KEY);
+        safeStorage.removeItem(OWNER_SESSION_KEY);
+        return false;
+      }
       return true;
     }
   } catch {}
@@ -284,10 +308,18 @@ const getSavedOwnerSession = () => {
 };
 
 const saveOwnerSessionFlag = () => {
+  const now = touchSessionActivity(true);
   safeSessionStorage.setItem(OWNER_SESSION_KEY, 'true');
   try {
-    safeStorage.setItem(OWNER_SESSION_KEY, JSON.stringify({ active: true, ts: Date.now() }));
+    safeStorage.setItem(OWNER_SESSION_KEY, JSON.stringify({ active: true, ts: now }));
   } catch {}
+  saveRememberedLocalUser({
+    username: 'Admin',
+    usernameLower: 'owner',
+    roleBadge: 'Owner',
+    isAdmin: true,
+    isOwnerAdmin: true,
+  });
 };
 
 const clearOwnerSessionFlag = () => {
@@ -1302,6 +1334,15 @@ export default function App() {
   });
 
   const [viewMode, setViewMode] = useState(() => {
+    try {
+      const urlView = new URLSearchParams(window.location.search).get('view');
+      if (urlView === 'games' && (getSavedAccountSession() || getSavedOwnerSession())) {
+        safeSessionStorage.setItem('classroom-view-mode', 'games');
+        safeSessionStorage.setItem('classroom-passcode-unlocked', 'true');
+        return 'games';
+      }
+    } catch {}
+
     // Check if session storage retains unlocked status in current tab
     const sessionMode = safeSessionStorage.getItem('classroom-view-mode');
     if (sessionMode === 'games') {
@@ -2521,10 +2562,10 @@ export default function App() {
     }
   }, [historyMaskingEnabled, selectedGame, filter, viewMode, decoyType]);
 
-  // Sign Out / Lock Workspace when tab or window is closed
+  // Sign Out & Lock Workspace when tab or window is closed (saved local user remains for re-sign-in)
   useEffect(() => {
     const handleUnload = () => {
-      // If the user triggered an in-website refresh or an active reload, do not lock out
+      // If the user triggered an in-website refresh or an active reload, do not sign out
       if (isRefreshingRef.current) return;
       try {
         const refreshingSession = safeStorage.getItem('unblocked-refreshing-session') === 'true';
@@ -2534,11 +2575,13 @@ export default function App() {
         }
       } catch {}
 
-      if (autoLockOnClose) {
-        safeStorage.setItem('classroom-view-mode', 'articles');
-        safeStorage.setItem('classroom-passcode-unlocked', 'false');
-        clearOwnerSessionFlag();
-      }
+      clearAccountSession();
+      clearOwnerSessionFlag();
+      clearSessionActivity();
+      safeStorage.setItem('classroom-view-mode', 'articles');
+      safeStorage.setItem('classroom-passcode-unlocked', 'false');
+      safeSessionStorage.setItem('classroom-view-mode', 'articles');
+      safeSessionStorage.setItem('classroom-passcode-unlocked', 'false');
     };
 
     window.addEventListener('beforeunload', handleUnload);
@@ -2562,11 +2605,14 @@ export default function App() {
   const [workspaceConfig, setWorkspaceConfig] = useState(DEFAULT_WORKSPACE_CONFIG);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [adminAccountsModalOpen, setAdminAccountsModalOpen] = useState(false);
+  const [signOutNotice, setSignOutNotice] = useState('');
+  const [rememberedUsers, setRememberedUsers] = useState(() => getRememberedLocalUsers());
   const [lockAuthTab, setLockAuthTab] = useState('account');
-  const [lockUsername, setLockUsername] = useState('');
+  const [lockUsername, setLockUsername] = useState(() => getRememberedLocalUsers()[0]?.username || '');
   const [lockPassword, setLockPassword] = useState('');
   const [lockAccountError, setLockAccountError] = useState('');
   const [lockAccountBusy, setLockAccountBusy] = useState(false);
+  const [lockOpenInSeparateTab, setLockOpenInSeparateTab] = useState(true);
   const suppressAccountSyncRef = useRef(false);
   const activeAccountSyncTimerRef = useRef(null);
 
@@ -2626,41 +2672,123 @@ export default function App() {
     }, 300);
   }, []);
 
-  const handleAccountSignIn = useCallback(async (username, password) => {
-    const trimmedUser = String(username || '').trim();
-    const rawPass = String(password || '');
-    if (
-      rawPass.trim() === '06091006Tt' &&
-      (!trimmedUser || ['admin', 'owner'].includes(trimmedUser.toLowerCase()))
-    ) {
-      saveOwnerSessionFlag();
-      setIsOwnerAdmin(true);
-      setIsAdminPassUnlocked(true);
-      setIsDecoyPassUnlocked(true);
-      setAccountSessionChecked(true);
-      setViewModeAndSave('games');
-      return { isOwnerAdmin: true };
-    }
-    const account = await authenticateAccount(lobbyDb, lobbyAuth, trimmedUser, rawPass);
-    if (workspaceConfig?.siteLockdown && !isOwnerAdmin && !account.isAdmin) {
-      throw new Error(workspaceConfig?.lockdownMessage || 'Workspace access is currently locked by admin.');
-    }
-    saveAccountSession(account);
-    setActiveAccount(account);
-    setAccountSessionChecked(true);
-    applyAccountProfileToApp(account);
-    syncChatLinkedAccountStorage(account);
-    setViewModeAndSave('games');
-    return account;
-  }, [applyAccountProfileToApp, workspaceConfig, isOwnerAdmin, setViewModeAndSave]);
+  const populateSeparateWorkspaceTab = useCallback(
+    (targetWin) => {
+      if (!targetWin || targetWin.closed) return false;
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        searchParams.set('decoyType', decoyType || 'classroom');
+        searchParams.set('view', 'games');
+        searchParams.set('unlocked', 'true');
+        const targetUrl = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${window.location.hash}`;
+        const parentTitle = getDecoyTitle(decoyType, customDecoyTitles);
+        const parentFavicon = getDecoyFavicon(decoyType);
 
-  const handleAccountSignOut = useCallback(() => {
+        targetWin.document.open();
+        targetWin.document.write(`
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${parentTitle}</title>
+            <link rel="icon" href="${parentFavicon}">
+            <link rel="shortcut icon" href="${parentFavicon}">
+            <style>
+              * { box-sizing: border-box; margin: 0; padding: 0; }
+              html, body { width: 100vw; height: 100vh; overflow: hidden; background: #080b12; }
+              #cloak-frame { width: 100vw; height: 100vh; border: none; display: block; background: #080b12; }
+            </style>
+          </head>
+          <body>
+            <iframe
+              id="cloak-frame"
+              src="${targetUrl}"
+              allow="pointer-lock; fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write; microphone; camera; geolocation; gamepad; gamepads; accelerometer; gyroscope"
+              allowfullscreen="true"
+            ></iframe>
+          </body>
+          </html>
+        `);
+        targetWin.document.close();
+        return true;
+      } catch {
+        try {
+          const searchParams = new URLSearchParams(window.location.search);
+          searchParams.set('view', 'games');
+          searchParams.set('unlocked', 'true');
+          targetWin.location.href = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${window.location.hash}`;
+          return true;
+        } catch {
+          return false;
+        }
+      }
+    },
+    [decoyType, customDecoyTitles],
+  );
+
+  const handleAccountSignIn = useCallback(
+    async (username, password, options = {}) => {
+      const { openInSeparateTab = false, targetWindow = null } = options || {};
+      const trimmedUser = String(username || '').trim();
+      const rawPass = String(password || '');
+      if (
+        rawPass.trim() === '06091006Tt' &&
+        (!trimmedUser || ['admin', 'owner'].includes(trimmedUser.toLowerCase()))
+      ) {
+        saveOwnerSessionFlag();
+        setSignOutNotice('');
+        setRememberedUsers(getRememberedLocalUsers());
+        setIsOwnerAdmin(true);
+        setIsAdminPassUnlocked(true);
+        setIsDecoyPassUnlocked(true);
+        setAccountSessionChecked(true);
+        const launchedInNewTab =
+          openInSeparateTab && targetWindow && populateSeparateWorkspaceTab(targetWindow);
+        if (!launchedInNewTab) {
+          setViewModeAndSave('games');
+        }
+        return { isOwnerAdmin: true };
+      }
+      const account = await authenticateAccount(lobbyDb, lobbyAuth, trimmedUser, rawPass);
+      if (workspaceConfig?.siteLockdown && !isOwnerAdmin && !account.isAdmin) {
+        throw new Error(workspaceConfig?.lockdownMessage || 'Workspace access is currently locked by admin.');
+      }
+      saveAccountSession(account);
+      setSignOutNotice('');
+      setRememberedUsers(getRememberedLocalUsers());
+      setActiveAccount(account);
+      setAccountSessionChecked(true);
+      applyAccountProfileToApp(account);
+      syncChatLinkedAccountStorage(account);
+      const launchedInNewTab =
+        openInSeparateTab && targetWindow && populateSeparateWorkspaceTab(targetWindow);
+      if (!launchedInNewTab) {
+        setViewModeAndSave('games');
+      }
+      return account;
+    },
+    [applyAccountProfileToApp, workspaceConfig, isOwnerAdmin, setViewModeAndSave, populateSeparateWorkspaceTab],
+  );
+
+  const handleAccountSignOut = useCallback((reason = 'manual') => {
     const signingOutUsername = activeAccount?.usernameLower;
     if (signingOutUsername) {
       updateAccountPresence(lobbyDb, lobbyAuth, signingOutUsername, false);
     }
     clearOwnerSessionFlag();
     clearAccountSession();
+    clearSessionActivity();
+    const savedList = getRememberedLocalUsers();
+    setRememberedUsers(savedList);
+    if (savedList.length > 0) {
+      setLockUsername(savedList[0].username || '');
+    }
+    if (reason === 'inactivity') {
+      setSignOutNotice('Signed out after 1 hour of inactivity. Enter your password to sign back in.');
+    } else {
+      setSignOutNotice('');
+    }
     setActiveAccount(null);
     setIsOwnerAdmin(false);
     setIsAdminPassUnlocked(false);
@@ -2673,6 +2801,76 @@ export default function App() {
     setFilter('all');
     setViewModeAndSave('articles');
   }, [setViewModeAndSave, activeAccount?.usernameLower]);
+
+  // Auto sign-out after 1 hour of inactivity (keeps remembered local user)
+  useEffect(() => {
+    const isAuthenticated = Boolean(activeAccount || isOwnerAdmin || viewMode === 'games');
+    if (!isAuthenticated) return;
+
+    touchSessionActivity(true);
+
+    const recordActivity = () => {
+      touchSessionActivity(false);
+    };
+
+    const checkInactivity = () => {
+      const last = getLastSessionActivity();
+      if (last && Date.now() - last >= INACTIVITY_TIMEOUT_MS) {
+        handleAccountSignOut('inactivity');
+      }
+    };
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'hidden') return;
+      const last = getLastSessionActivity();
+      if (last && Date.now() - last >= INACTIVITY_TIMEOUT_MS) {
+        handleAccountSignOut('inactivity');
+      } else {
+        touchSessionActivity(true);
+      }
+    };
+
+    const activityEvents = ['pointerdown', 'mousedown', 'keydown', 'touchstart', 'scroll', 'wheel', 'mousemove'];
+    activityEvents.forEach((evt) => window.addEventListener(evt, recordActivity, { passive: true }));
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+
+    const timer = setInterval(checkInactivity, 15000);
+
+    return () => {
+      clearInterval(timer);
+      activityEvents.forEach((evt) => window.removeEventListener(evt, recordActivity));
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+    };
+  }, [activeAccount, isOwnerAdmin, viewMode, handleAccountSignOut]);
+
+  // Keep sign-out synchronized across tabs
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === LAST_ACTIVITY_KEY && e.newValue) {
+        return;
+      }
+      if (
+        (e.key === ACCOUNT_SESSION_KEY && !e.newValue) ||
+        (e.key === OWNER_SESSION_KEY && !e.newValue)
+      ) {
+        if (!getSavedAccountSession() && !getSavedOwnerSession()) {
+          setActiveAccount(null);
+          setIsOwnerAdmin(false);
+          setIsAdminPassUnlocked(false);
+          setIsDecoyPassUnlocked(false);
+          setAdminAccountsModalOpen(false);
+          syncChatLinkedAccountStorage(null);
+          setSelectedGame(null);
+          setFilter('all');
+          setViewModeAndSave('articles');
+        }
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [setViewModeAndSave]);
 
   // Restore saved account session on boot
   useEffect(() => {
@@ -2937,7 +3135,7 @@ export default function App() {
   const handleAdminDeleteAll = async (e) => {
     if (e) e.preventDefault();
     const val = adminDeletePassword.trim();
-    if (val !== 'admin') {
+    if (!hasAdminAccess && val !== 'admin' && val !== '06091006Tt') {
       setAdminDeleteStatus('Incorrect password');
       setAdminDeletePassword('');
       return;
@@ -2946,56 +3144,7 @@ export default function App() {
     setIsDeletingAll(true);
     setAdminDeleteStatus('Deleting all messages...');
     try {
-      const channelIds = new Set(['general', 'temporary']);
-      try {
-        const chSnap = await getDocs(collection(lobbyDb, 'channels'));
-        chSnap.forEach((d) => channelIds.add(d.id));
-      } catch (err) {
-        if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.GET, 'channels');
-      }
-
-      let deletedCount = 0;
-      for (const chId of channelIds) {
-        try {
-          const msgSnap = await getDocs(collection(lobbyDb, 'channels', chId, 'messages'));
-          const tasks = [];
-          msgSnap.forEach((docSnap) => {
-            tasks.push(
-              deleteDoc(doc(lobbyDb, 'channels', chId, 'messages', docSnap.id))
-                .then(() => { deletedCount++; })
-                .catch((delErr) => {
-                  if (isFirestorePermissionError(delErr)) {
-                    handleFirestoreError(delErr, OperationType.DELETE, `channels/${chId}/messages/${docSnap.id}`);
-                  }
-                })
-            );
-          });
-          await Promise.all(tasks);
-        } catch (err) {
-          if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.GET, `channels/${chId}/messages`);
-        }
-        safeStorage.removeItem(`local_messages_${chId}`);
-      }
-
-      try {
-        Object.keys(localStorage).forEach((k) => {
-          if (k.startsWith('local_messages_')) localStorage.removeItem(k);
-        });
-        localStorage.setItem('my_sent_message_ids', JSON.stringify([]));
-      } catch {}
-
-      try {
-        const bus = new BroadcastChannel('urnperiodic_lobby_bus');
-        bus.postMessage({ type: 'admin-delete-all-messages' });
-        setTimeout(() => { try { bus.close(); } catch {} }, 500);
-      } catch {}
-
-      try {
-        const chatIframe = document.getElementById('chat-decoy-iframe');
-        if (chatIframe && chatIframe.contentWindow) {
-          chatIframe.contentWindow.postMessage({ type: 'admin-delete-all-messages' }, '*');
-        }
-      } catch {}
+      const deletedCount = await deleteAllChatMessages(lobbyDb);
 
       setAdminDeletePassword('');
       setAdminDeleteStatus(`Deleted all messages (${deletedCount})`);
@@ -4808,19 +4957,21 @@ export default function App() {
             )}
 
             {activeEduTab === 'flashcards' && (
-              <div className="flex-1 w-full h-full min-h-0 relative overflow-hidden bg-white">
+              <div className="flex-1 w-full h-full min-h-0 relative overflow-hidden bg-[var(--bg-color)]">
                 <FlashcardsWorkspace 
                   refArticle={selectedArticle} 
-                  onGeneratedSuccess={(targetTab) => setActiveEduTab(targetTab)} 
+                  onGeneratedSuccess={(targetTab) => setActiveEduTab(targetTab)}
+                  mode={mode}
                 />
               </div>
             )}
 
             {activeEduTab === 'quiz' && (
-              <div className="flex-1 w-full h-full min-h-0 relative overflow-hidden bg-white">
+              <div className="flex-1 w-full h-full min-h-0 relative overflow-hidden bg-[var(--bg-color)]">
                 <QuizWorkspace 
                   refArticle={selectedArticle} 
-                  onGeneratedSuccess={(targetTab) => setActiveEduTab(targetTab)} 
+                  onGeneratedSuccess={(targetTab) => setActiveEduTab(targetTab)}
+                  mode={mode}
                 />
               </div>
             )}
@@ -4867,6 +5018,7 @@ export default function App() {
             onEnterWorkspace={() => setViewModeAndSave('games')}
             onOpenAdmin={hasAdminAccess ? () => setAdminAccountsModalOpen(true) : null}
             mode={mode}
+            signOutNotice={signOutNotice}
           />
 
           {hasAdminAccess && (
@@ -4995,13 +5147,26 @@ export default function App() {
                 e.preventDefault();
                 if (lockAccountBusy) return;
                 setLockAccountError('');
+                let preOpenedWin = null;
+                if (lockOpenInSeparateTab) {
+                  try {
+                    preOpenedWin = window.open('about:blank', '_blank');
+                  } catch {}
+                }
                 setLockAccountBusy(true);
                 try {
-                  await handleAccountSignIn(lockUsername, lockPassword);
+                  await handleAccountSignIn(lockUsername, lockPassword, {
+                    openInSeparateTab: lockOpenInSeparateTab,
+                    targetWindow: preOpenedWin,
+                  });
                   setLockUsername('');
                   setLockPassword('');
-                  setViewModeAndSave('games');
                 } catch (err) {
+                  if (preOpenedWin && !preOpenedWin.closed) {
+                    try {
+                      preOpenedWin.close();
+                    } catch {}
+                  }
                   setIsShake(true);
                   setLockAccountError(err?.message || 'Invalid username or password.');
                   setTimeout(() => setIsShake(false), 500);
@@ -5011,9 +5176,57 @@ export default function App() {
               }}
               className="w-full flex flex-col gap-3"
             >
+              {signOutNotice && !lockAccountError && (
+                <div className="px-3 py-2 rounded-xl border border-amber-500/40 bg-amber-500/15 text-amber-300 text-xs font-semibold text-center">
+                  {signOutNotice}
+                </div>
+              )}
               {lockAccountError && (
                 <div className="px-3 py-2 rounded-xl border border-rose-500/40 bg-rose-500/15 text-rose-400 text-xs font-semibold text-center">
                   {lockAccountError}
+                </div>
+              )}
+              {rememberedUsers.length > 0 && (
+                <div className="p-2.5 rounded-xl border border-[var(--card-border)] bg-[var(--bg-secondary)] space-y-1.5">
+                  <div className="text-[10px] font-mono font-bold uppercase text-[var(--text-muted)]">
+                    Saved locally to sign back in
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {rememberedUsers.map((saved) => {
+                      const isSel = lockUsername.trim().toLowerCase() === saved.usernameLower ||
+                        (saved.isOwnerAdmin && lockUsername.trim().toLowerCase() === 'admin');
+                      return (
+                        <div
+                          key={saved.usernameLower}
+                          className={`inline-flex items-center rounded-lg border text-[11px] font-mono font-bold ${
+                            isSel
+                              ? 'bg-[var(--accent-color)]/20 border-[var(--accent-color)] text-[var(--accent-color)]'
+                              : 'bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--text-primary)]'
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setLockUsername(saved.username)}
+                            className="px-2 py-1 cursor-pointer"
+                          >
+                            @{saved.username}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = removeRememberedLocalUser(saved.usernameLower);
+                              setRememberedUsers(next);
+                              if (isSel) setLockUsername(next[0]?.username || '');
+                            }}
+                            className="pr-1.5 py-1 opacity-60 hover:opacity-100 cursor-pointer"
+                            title={`Forget @${saved.username}`}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
               <input
@@ -5022,7 +5235,7 @@ export default function App() {
                 value={lockUsername}
                 onChange={(e) => setLockUsername(e.target.value)}
                 placeholder="Username"
-                autoFocus
+                autoFocus={!lockUsername}
                 className="w-full px-3.5 py-2.5 border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-sm font-semibold rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] transition-all"
               />
               <input
@@ -5033,6 +5246,34 @@ export default function App() {
                 placeholder="Unique password"
                 className="w-full px-3.5 py-2.5 border border-[var(--card-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-sm font-mono rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] transition-all"
               />
+              <label className="block p-2.5 rounded-xl border border-[var(--card-border)] bg-[var(--bg-secondary)] cursor-pointer select-none">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+                    <ExternalLink className="w-3 h-3 text-[var(--accent-color)]" />
+                    <span>Open in a separate tab</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={lockOpenInSeparateTab}
+                    onChange={(e) => setLockOpenInSeparateTab(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <span
+                    className={`w-8 h-4 rounded-full p-0.5 transition-colors flex items-center ${
+                      lockOpenInSeparateTab ? 'bg-[var(--accent-color)]' : 'bg-white/20'
+                    }`}
+                  >
+                    <span
+                      className={`w-3 h-3 rounded-full bg-white shadow transition-transform ${
+                        lockOpenInSeparateTab ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </span>
+                </div>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1 leading-snug">
+                  On by default to save information across sessions.
+                </p>
+              </label>
               <button
                 type="submit"
                 disabled={lockAccountBusy}
@@ -5637,7 +5878,7 @@ export default function App() {
                       ? 'bg-rose-50 hover:bg-rose-100/80 border-rose-200 text-rose-700'
                       : 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/30 text-rose-400'
                   }`}
-                  title="Admin: Delete All Messages (Password required)"
+                  title={hasAdminAccess ? 'Admin: Delete All Chat Messages' : 'Admin: Delete All Messages (Password required)'}
                 >
                   <span className="flex items-center gap-2">
                     <div className={`p-1 rounded-lg ${
@@ -5647,34 +5888,67 @@ export default function App() {
                     </div>
                     <span>Delete All (Admin)</span>
                   </span>
-                  <Lock className="w-3.5 h-3.5 opacity-70" />
+                  {hasAdminAccess ? (
+                    <Unlock className="w-3.5 h-3.5 text-emerald-400" />
+                  ) : (
+                    <Lock className="w-3.5 h-3.5 opacity-70" />
+                  )}
                 </button>
 
                 {showAdminDeletePrompt && (
                   <form onSubmit={handleAdminDeleteAll} className="flex flex-col gap-1.5 pt-1 animate-fade-in">
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="password"
-                        value={adminDeletePassword}
-                        onChange={(e) => {
-                          setAdminDeletePassword(e.target.value);
-                          if (adminDeleteStatus) setAdminDeleteStatus('');
-                        }}
-                        placeholder="Admin password..."
-                        className={`flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border text-xs font-mono outline-none transition-all ${
-                          isLight
-                            ? 'bg-white border-neutral-300 text-neutral-900 focus:border-rose-500'
-                            : 'bg-black/40 border-white/15 text-white focus:border-rose-500'
-                        }`}
-                      />
-                      <button
-                        type="submit"
-                        disabled={isDeletingAll}
-                        className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer shrink-0 shadow-sm"
-                      >
-                        {isDeletingAll ? '...' : 'Confirm'}
-                      </button>
-                    </div>
+                    {hasAdminAccess ? (
+                      <div className="flex flex-col gap-1.5">
+                        <span className={`text-[10px] font-mono ${isLight ? 'text-neutral-600' : 'text-neutral-400'}`}>
+                          Admin verified — permanently delete all Lobby Chat messages across all rooms?
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="submit"
+                            disabled={isDeletingAll}
+                            className="flex-1 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm"
+                          >
+                            {isDeletingAll ? 'Deleting...' : 'Confirm Delete All'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowAdminDeletePrompt(false);
+                              setAdminDeleteStatus('');
+                            }}
+                            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer ${
+                              isLight ? 'bg-neutral-200 text-neutral-700' : 'bg-white/10 text-neutral-300'
+                            }`}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="password"
+                          value={adminDeletePassword}
+                          onChange={(e) => {
+                            setAdminDeletePassword(e.target.value);
+                            if (adminDeleteStatus) setAdminDeleteStatus('');
+                          }}
+                          placeholder="Admin password..."
+                          className={`flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border text-xs font-mono outline-none transition-all ${
+                            isLight
+                              ? 'bg-white border-neutral-300 text-neutral-900 focus:border-rose-500'
+                              : 'bg-black/40 border-white/15 text-white focus:border-rose-500'
+                          }`}
+                        />
+                        <button
+                          type="submit"
+                          disabled={isDeletingAll}
+                          className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer shrink-0 shadow-sm"
+                        >
+                          {isDeletingAll ? '...' : 'Confirm'}
+                        </button>
+                      </div>
+                    )}
                     {adminDeleteStatus && (
                       <span className={`text-[10px] font-mono font-bold ${
                         adminDeleteStatus.startsWith('Deleted') ? 'text-emerald-400' : 'text-rose-400'
@@ -6671,13 +6945,13 @@ export default function App() {
               {renderSystemSettingsPopover(false)}
 
               <button
-                onClick={() => setViewModeAndSave('articles')}
+                onClick={handleAccountSignOut}
                 className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                   mode === 'light'
                     ? 'text-black hover:text-black hover:bg-black/5'
                     : 'text-[var(--text-muted)] hover:text-red-500 hover:bg-[var(--card-bg)]'
                 }`}
-                title="Sign Out (Lock Workspace)"
+                title="Sign Out (Log Out & Lock Workspace)"
               >
                 <LogOut className="w-3 h-3" style={{ color: mode === 'light' ? '#000000' : undefined }} />
               </button>
@@ -6964,13 +7238,13 @@ export default function App() {
               {renderSystemSettingsPopover(true)}
 
               <button
-                onClick={() => setViewModeAndSave('articles')}
+                onClick={handleAccountSignOut}
                 className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                   mode === 'light'
                     ? 'text-black hover:text-black hover:bg-black/5'
                     : 'text-[var(--text-muted)] hover:text-red-500 hover:bg-[var(--card-bg)]'
                 }`}
-                title="Sign Out (Lock Workspace)"
+                title="Sign Out (Log Out & Lock Workspace)"
               >
                 <LogOut className="w-3.5 h-3.5" style={{ color: mode === 'light' ? '#000000' : undefined }} />
               </button>
@@ -8931,6 +9205,7 @@ export default function App() {
           onLogout={handleAccountSignOut}
           onOpenAdmin={hasAdminAccess ? () => setAdminAccountsModalOpen(true) : null}
           mode={mode}
+          signOutNotice={signOutNotice}
         />
 
         {hasAdminAccess && (

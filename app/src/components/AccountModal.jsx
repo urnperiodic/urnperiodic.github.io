@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Ban,
   Bookmark,
   Check,
+  Clock,
+  ExternalLink,
   Eye,
   EyeOff,
   History,
@@ -15,7 +17,13 @@ import {
   VolumeX,
   X,
 } from 'lucide-react';
-import { BADGE_COLORS, DEFAULT_WORKSPACE_CONFIG, WORKSPACE_ACCESS_KEYS } from '../utils/accountService';
+import {
+  BADGE_COLORS,
+  DEFAULT_WORKSPACE_CONFIG,
+  WORKSPACE_ACCESS_KEYS,
+  getRememberedLocalUsers,
+  removeRememberedLocalUser,
+} from '../utils/accountService';
 
 export default function AccountModal({
   isOpen,
@@ -28,13 +36,26 @@ export default function AccountModal({
   onOpenAdmin = null,
   mode = 'dark',
   workspaceConfig = DEFAULT_WORKSPACE_CONFIG,
+  signOutNotice = '',
 }) {
   const isLight = mode === 'light';
-  const [username, setUsername] = useState('');
+  const [rememberedUsers, setRememberedUsers] = useState(() => getRememberedLocalUsers());
+  const [username, setUsername] = useState(() => getRememberedLocalUsers()[0]?.username || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [openInSeparateTab, setOpenInSeparateTab] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const passwordInputRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const savedList = getRememberedLocalUsers();
+    setRememberedUsers(savedList);
+    if (!username && savedList.length > 0) {
+      setUsername(savedList[0].username || '');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -50,13 +71,36 @@ export default function AccountModal({
       setErrorMsg('Please enter your username and password.');
       return;
     }
+
+    let preOpenedWin = null;
+    if (openInSeparateTab) {
+      try {
+        preOpenedWin = window.open('about:blank', '_blank');
+        if (preOpenedWin) {
+          preOpenedWin.document.open();
+          preOpenedWin.document.write(
+            '<!DOCTYPE html><html><body style="margin:0;background:#080b12;color:#f3f4f6;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;"><div>Signing in &amp; saving information...</div></body></html>',
+          );
+          preOpenedWin.document.close();
+        }
+      } catch {}
+    }
+
     setSubmitting(true);
     try {
-      await onLogin(trimmedUser, rawPass);
+      await onLogin(trimmedUser, rawPass, {
+        openInSeparateTab,
+        targetWindow: preOpenedWin,
+      });
       setUsername('');
       setPassword('');
       onClose();
     } catch (err) {
+      if (preOpenedWin && !preOpenedWin.closed) {
+        try {
+          preOpenedWin.close();
+        } catch {}
+      }
       setErrorMsg(err?.message || 'Sign in failed.');
     } finally {
       setSubmitting(false);
@@ -286,9 +330,71 @@ export default function AccountModal({
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {signOutNotice && !errorMsg && (
+                <div className="px-3 py-2 rounded-xl border border-amber-500/40 bg-amber-500/15 text-amber-300 text-xs font-semibold flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                  <span>{signOutNotice}</span>
+                </div>
+              )}
+
               {errorMsg && (
                 <div className="px-3 py-2 rounded-xl border border-rose-500/40 bg-rose-500/15 text-rose-400 text-xs font-semibold">
                   {errorMsg}
+                </div>
+              )}
+
+              {rememberedUsers.length > 0 && (
+                <div
+                  className={`p-2.5 rounded-xl border space-y-1.5 ${
+                    isLight ? 'bg-neutral-50 border-neutral-200' : 'bg-white/[0.03] border-white/10'
+                  }`}
+                >
+                  <div className={`text-[10px] font-mono font-bold uppercase ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>
+                    Saved locally on this device
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {rememberedUsers.map((saved) => {
+                      const isSelected = username.trim().toLowerCase() === saved.usernameLower ||
+                        (saved.isOwnerAdmin && username.trim().toLowerCase() === 'admin');
+                      return (
+                        <div
+                          key={saved.usernameLower}
+                          className={`inline-flex items-center rounded-lg border text-xs font-mono font-bold transition-all ${
+                            isSelected
+                              ? 'bg-[var(--accent-color)]/20 border-[var(--accent-color)] text-[var(--accent-color)]'
+                              : isLight
+                                ? 'bg-white border-neutral-300 text-neutral-700 hover:border-neutral-500'
+                                : 'bg-black/40 border-white/15 text-neutral-200 hover:border-white/35'
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUsername(saved.username);
+                              setTimeout(() => passwordInputRef.current?.focus(), 20);
+                            }}
+                            className="px-2.5 py-1 cursor-pointer flex items-center gap-1"
+                            title={`Sign back in as ${saved.username}`}
+                          >
+                            <User className="w-3 h-3" />
+                            <span>@{saved.username}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = removeRememberedLocalUser(saved.usernameLower);
+                              setRememberedUsers(next);
+                              if (isSelected) setUsername(next[0]?.username || '');
+                            }}
+                            className="pr-1.5 py-1 opacity-60 hover:opacity-100 cursor-pointer"
+                            title={`Forget saved user @${saved.username}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -301,7 +407,7 @@ export default function AccountModal({
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter your username"
-                  autoFocus
+                  autoFocus={!username}
                   className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none transition-colors ${
                     isLight
                       ? 'bg-neutral-50 border-neutral-300 text-neutral-900 focus:border-neutral-900'
@@ -316,8 +422,10 @@ export default function AccountModal({
                 </label>
                 <div className="relative flex items-center">
                   <input
+                    ref={passwordInputRef}
                     type={showPassword ? 'text' : 'password'}
                     required
+                    autoFocus={Boolean(username)}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
@@ -337,6 +445,49 @@ export default function AccountModal({
                   </button>
                 </div>
               </div>
+
+              <label
+                className={`block p-3 rounded-xl border cursor-pointer transition-all select-none ${
+                  openInSeparateTab
+                    ? isLight
+                      ? 'bg-neutral-100 border-neutral-900 text-neutral-900'
+                      : 'bg-[var(--accent-color)]/10 border-[var(--accent-color)]/50 text-white'
+                    : isLight
+                      ? 'bg-neutral-50 border-neutral-200 text-neutral-700'
+                      : 'bg-white/[0.02] border-white/10 text-neutral-300'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <ExternalLink className="w-3.5 h-3.5 text-[var(--accent-color)] shrink-0" />
+                    <span className="text-xs font-bold">Open in a separate tab</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={openInSeparateTab}
+                    onChange={(e) => setOpenInSeparateTab(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <span
+                    className={`w-9 h-5 rounded-full p-0.5 transition-colors flex items-center shrink-0 ${
+                      openInSeparateTab
+                        ? 'bg-[var(--accent-color)]'
+                        : isLight
+                          ? 'bg-neutral-300'
+                          : 'bg-white/20'
+                    }`}
+                  >
+                    <span
+                      className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                        openInSeparateTab ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </span>
+                </div>
+                <p className={`text-[10.5px] mt-1.5 leading-relaxed ${isLight ? 'text-neutral-600' : 'text-neutral-400'}`}>
+                  On by default to save information — opens your workspace in a separate tab so your session and progress stay saved.
+                </p>
+              </label>
 
               <button
                 type="submit"
