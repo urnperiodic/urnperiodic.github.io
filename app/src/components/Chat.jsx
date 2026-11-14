@@ -50,6 +50,12 @@ import {
   lobbyDb,
 } from '../firebase';
 import { isAccountOnline } from '../utils/accountService';
+import {
+  clearChannelMessages,
+  deleteAllChatMessages,
+  deleteCustomChannel,
+  deleteSingleChatMessage,
+} from '../utils/chatModeration';
 
 const DEFAULT_CHANNELS = [
   {
@@ -450,6 +456,9 @@ export default function Chat({
   const [adminPassModalInput, setAdminPassModalInput] = useState('');
   const [adminPassSettingsInput, setAdminPassSettingsInput] = useState('');
   const [deletingAllAdmin, setDeletingAllAdmin] = useState(false);
+  const [clearingChannelAdmin, setClearingChannelAdmin] = useState(false);
+  const [confirmDeleteChanId, setConfirmDeleteChanId] = useState(null);
+  const [deletingChannelAdmin, setDeletingChannelAdmin] = useState(false);
 
   const [toastMsg, setToastMsg] = useState('');
   const [tickNow, setTickNow] = useState(() => Date.now());
@@ -460,7 +469,12 @@ export default function Chat({
   const toastTimerRef = useRef(null);
   const imagePasteRevRef = useRef(0);
   const latestLobbyTsRef = useRef(0);
+  const activeChannelIdRef = useRef(activeChannelId);
   const clientId = useMemo(() => getClientId(), []);
+
+  useEffect(() => {
+    activeChannelIdRef.current = activeChannelId;
+  }, [activeChannelId]);
 
   const showToast = useCallback((msg) => {
     setToastMsg(msg);
@@ -515,6 +529,27 @@ export default function Chat({
         } catch {}
         setMessages([]);
         showToast('🗑️ Admin deleted all messages');
+      } else if (data.type === 'admin-clear-channel' && data.channelId === activeChannelIdRef.current) {
+        setMessages([]);
+      } else if (data.type === 'admin-delete-message' && data.channelId === activeChannelIdRef.current && data.messageId) {
+        setMessages((prev) => prev.filter((m) => String(m.id || m.key) !== String(data.messageId)));
+      } else if (data.type === 'admin-delete-channel' && data.channelId) {
+        setLocalChannels((prev) => prev.filter((c) => c.id !== data.channelId));
+        setCustomChannels((prev) => prev.filter((c) => c.id !== data.channelId));
+        if (activeChannelIdRef.current === data.channelId) {
+          setActiveChannelId('general');
+          setMessages([]);
+          showToast('🗑️ Channel deleted by admin');
+        }
+      } else if (data.type === 'admin-purge-user' && data.usernameLower) {
+        const target = String(data.usernameLower).toLowerCase();
+        setMessages((prev) =>
+          prev.filter(
+            (m) =>
+              String(m.accountId || '').toLowerCase() !== target &&
+              String(m.name || '').trim().toLowerCase() !== target
+          )
+        );
       }
     };
 
@@ -1321,17 +1356,20 @@ export default function Chat({
       return;
     }
     const cId = currentChannel.id;
-    if (msg.id) {
-      try {
-        await deleteDoc(doc(lobbyDb, 'channels', cId, 'messages', String(msg.id)));
-      } catch {}
-    }
-    setMessages((prev) => prev.filter((m) => String(m.id || m.key) !== String(msgId)));
-    const locals = getLocalMessages(cId).filter((m) => String(m.id || m.key) !== String(msgId));
     try {
-      localStorage.setItem(`local_messages_${cId}`, JSON.stringify(locals));
-    } catch {}
-    showToast('🗑️ Message deleted');
+      if (msg.id) {
+        await deleteSingleChatMessage(lobbyDb, cId, String(msg.id));
+      } else {
+        const locals = getLocalMessages(cId).filter((m) => String(m.id || m.key) !== String(msgId));
+        try {
+          localStorage.setItem(`local_messages_${cId}`, JSON.stringify(locals));
+        } catch {}
+      }
+      setMessages((prev) => prev.filter((m) => String(m.id || m.key) !== String(msgId)));
+      showToast('🗑️ Message deleted');
+    } catch {
+      showToast('⚠️ Could not delete message from database');
+    }
   };
 
   const handleCopyMessage = async (msg, copyContent) => {
@@ -1467,12 +1505,59 @@ export default function Chat({
     }
   };
 
+  const handleAdminClearCurrentChannel = async () => {
+    if (!isChatAdmin) return;
+    setClearingChannelAdmin(true);
+    try {
+      const chId = currentChannel.id;
+      const count = await clearChannelMessages(lobbyDb, chId);
+      setMessages([]);
+      setDeleteAllModalOpen(false);
+      setSettingsModalOpen(false);
+      showToast(`🗑️ Cleared #${currentChannel.name} (${count} removed)`);
+    } catch {
+      showToast('⚠️ Failed to clear channel messages');
+    } finally {
+      setClearingChannelAdmin(false);
+    }
+  };
+
+  const handleAdminDeleteCustomChannel = async (channelToDelete) => {
+    if (!isChatAdmin || !channelToDelete?.id) return;
+    if (channelToDelete.id === 'general' || channelToDelete.id === 'temporary') {
+      showToast('Default channels cannot be deleted — use Clear Messages instead.');
+      return;
+    }
+    setDeletingChannelAdmin(true);
+    try {
+      await deleteCustomChannel(lobbyDb, channelToDelete.id);
+      setLocalChannels((prev) => prev.filter((c) => c.id !== channelToDelete.id));
+      setCustomChannels((prev) => prev.filter((c) => c.id !== channelToDelete.id));
+      if (fallbackInviteChannel?.id === channelToDelete.id) {
+        setFallbackInviteChannel(null);
+      }
+      if (activeChannelId === channelToDelete.id) {
+        setActiveChannelId('general');
+        setMessages([]);
+      }
+      setConfirmDeleteChanId(null);
+      setDropdownOpen(false);
+      setDeleteAllModalOpen(false);
+      setSettingsModalOpen(false);
+      showToast(`🗑️ Deleted channel #${channelToDelete.name}`);
+    } catch {
+      showToast('⚠️ Could not delete custom channel');
+    } finally {
+      setDeletingChannelAdmin(false);
+    }
+  };
+
   const executeAdminDeleteAll = async (passwordValue) => {
     const val = (passwordValue || '').trim();
     const isAuthorizedAdmin =
+      isChatAdmin ||
       val === 'admin' ||
-      val === '06091006Tt' ||
-      (!val && (isOwnerAdmin || linkedAccount?.isAdmin));
+      val === '06091006Tt';
 
     if (!isAuthorizedAdmin) {
       showToast('⚠️ Incorrect admin password!');
@@ -1480,50 +1565,9 @@ export default function Chat({
     }
 
     setDeletingAllAdmin(true);
-    let totalDeleted = 0;
     try {
-      const channelIds = new Set(['general', 'temporary']);
-      allChannels.forEach((ch) => {
-        if (ch?.id) channelIds.add(ch.id);
-      });
-      try {
-        const chSnap = await getDocs(collection(lobbyDb, 'channels'));
-        chSnap.forEach((d) => channelIds.add(d.id));
-      } catch {}
-
-      for (const chId of channelIds) {
-        try {
-          const msgSnap = await getDocs(collection(lobbyDb, 'channels', chId, 'messages'));
-          const tasks = [];
-          msgSnap.forEach((docSnap) => {
-            tasks.push(
-              deleteDoc(doc(lobbyDb, 'channels', chId, 'messages', docSnap.id))
-                .then(() => {
-                  totalDeleted += 1;
-                })
-                .catch(() => {})
-            );
-          });
-          await Promise.all(tasks);
-        } catch {}
-        try {
-          localStorage.removeItem(`local_messages_${chId}`);
-        } catch {}
-      }
-
-      try {
-        Object.keys(localStorage).forEach((k) => {
-          if (k.startsWith('local_messages_')) localStorage.removeItem(k);
-        });
-        localStorage.setItem('my_sent_message_ids', JSON.stringify([]));
-        const bus = new BroadcastChannel('urnperiodic_lobby_bus');
-        bus.postMessage({ type: 'admin-delete-all-messages' });
-        setTimeout(() => {
-          try {
-            bus.close();
-          } catch {}
-        }, 400);
-      } catch {}
+      const extraIds = allChannels.map((ch) => ch?.id).filter(Boolean);
+      const totalDeleted = await deleteAllChatMessages(lobbyDb, extraIds);
 
       setMessages([]);
       setAdminPassModalInput('');
@@ -1531,6 +1575,8 @@ export default function Chat({
       setDeleteAllModalOpen(false);
       setSettingsModalOpen(false);
       showToast(`🗑️ Admin: Deleted all messages (${totalDeleted} removed)!`);
+    } catch {
+      showToast('⚠️ Error deleting messages');
     } finally {
       setDeletingAllAdmin(false);
     }
@@ -1690,6 +1736,37 @@ export default function Chat({
                     <span className="hidden sm:inline">1h auto-delete</span>
                   </span>
                 )}
+                {isChatAdmin && currentChannel.id !== 'general' && currentChannel.id !== 'temporary' && !currentChannel.isDirectMessage && (
+                  confirmDeleteChanId === currentChannel.id ? (
+                    <div className="inline-flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        disabled={deletingChannelAdmin}
+                        onClick={() => handleAdminDeleteCustomChannel(currentChannel)}
+                        className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[9px] font-black uppercase cursor-pointer"
+                      >
+                        {deletingChannelAdmin ? '...' : 'Delete Room'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteChanId(null)}
+                        className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-[9px] font-bold cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteChanId(currentChannel.id)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[9px] font-bold uppercase cursor-pointer shrink-0 transition-all"
+                      title={`Admin: Delete #${currentChannel.name}`}
+                    >
+                      <Trash2 className="w-2.5 h-2.5" />
+                      <span className="hidden lg:inline">Delete Room</span>
+                    </button>
+                  )
+                )}
               </>
             )}
           </div>
@@ -1806,7 +1883,7 @@ export default function Chat({
                 setDeleteAllModalOpen(true);
               }}
               className="chat-surface-elev border border-rose-500/30 hover:border-rose-500/60 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm shrink-0"
-              title="Delete all messages you have sent"
+              title={isChatAdmin ? 'Admin Delete / Clear Messages & Channels' : 'Delete all messages you have sent'}
             >
               <Trash2 className="w-3.5 h-3.5 text-rose-400 shrink-0" />
             </button>
@@ -1847,24 +1924,39 @@ export default function Chat({
                         ? Math.max(1, Math.ceil((ROOM_TTL_MS - (tickNow - c.createdAt)) / 60000))
                         : null;
                     return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => switchChannel(c.id)}
-                        className={`w-full text-left px-2.5 py-2 rounded-lg flex items-center justify-between text-[11px] font-bold transition-all cursor-pointer ${
-                          active ? 'chat-accent-bg shadow-sm' : 'chat-txt-dim hover:chat-txt hover:bg-white/5'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0 truncate">
-                          {renderChannelGlyph(c, locked, 'w-3.5 h-3.5 shrink-0 opacity-85')}
-                          <span className="truncate font-mono uppercase tracking-wide">#{c.name}</span>
-                        </div>
-                        {remMins !== null && (
-                          <span className="text-[8.5px] font-mono text-rose-400 font-bold ml-auto shrink-0 px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">
-                            {remMins}m left
-                          </span>
+                      <div key={c.id} className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => switchChannel(c.id)}
+                          className={`flex-1 min-w-0 text-left px-2.5 py-2 rounded-lg flex items-center justify-between text-[11px] font-bold transition-all cursor-pointer ${
+                            active ? 'chat-accent-bg shadow-sm' : 'chat-txt-dim hover:chat-txt hover:bg-white/5'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0 truncate">
+                            {renderChannelGlyph(c, locked, 'w-3.5 h-3.5 shrink-0 opacity-85')}
+                            <span className="truncate font-mono uppercase tracking-wide">#{c.name}</span>
+                          </div>
+                          {remMins !== null && (
+                            <span className="text-[8.5px] font-mono text-rose-400 font-bold ml-auto shrink-0 px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">
+                              {remMins}m left
+                            </span>
+                          )}
+                        </button>
+                        {isChatAdmin && isCustom && c.id !== 'temporary' && (
+                          <button
+                            type="button"
+                            disabled={deletingChannelAdmin}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAdminDeleteCustomChannel(c);
+                            }}
+                            className="p-2 rounded-lg text-rose-400 hover:bg-rose-500/20 border border-transparent hover:border-rose-500/30 cursor-pointer shrink-0 transition-all"
+                            title={`Admin: Delete #${c.name}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         )}
-                      </button>
+                      </div>
                     );
                   })}
                   <div className="my-1 border-t chat-bd opacity-30" />
@@ -2205,7 +2297,23 @@ export default function Chat({
                                 <span>{timeRemainingStr}</span>
                               </span>
                             )}
-                            <span className="text-[8px] chat-txt-mute font-mono ml-auto">{formatTime(msgTs)}</span>
+                            <span className="text-[8px] chat-txt-mute font-mono ml-auto flex items-center gap-1.5 shrink-0">
+                              <span>{formatTime(msgTs)}</span>
+                              {(isOwner || isChatAdmin) && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteSingleMessage(m);
+                                  }}
+                                  className="p-0.5 rounded text-rose-400/75 hover:text-rose-300 hover:bg-rose-500/20 transition-all cursor-pointer"
+                                  title={isOwner ? 'Delete your message' : 'Admin: Delete message'}
+                                  aria-label="Delete message"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </span>
                           </div>
 
                           {replyInfo?.replyToName && (
@@ -2668,31 +2776,71 @@ export default function Chat({
               </button>
             </div>
 
-            {/* Admin Delete All at the bottom */}
+            {/* Admin Delete Actions at the bottom */}
             <div className="pt-3 border-t chat-bd space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
-                  <ShieldAlert className="w-3.5 h-3.5" /> Admin: Delete All Chat
+                  <ShieldAlert className="w-3.5 h-3.5" /> Admin Delete Controls
                 </span>
+                {isChatAdmin && (
+                  <span className="text-[9px] font-mono font-bold text-emerald-400">Admin Unlocked</span>
+                )}
               </div>
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="password"
-                  value={adminPassModalInput}
-                  onChange={(e) => setAdminPassModalInput(e.target.value)}
-                  placeholder="Admin password..."
-                  className="flex-1 chat-surface-deep border chat-bd focus:border-rose-500 rounded-xl py-2 px-3 text-xs chat-txt outline-none chat-placeholder-mute font-mono min-w-0"
-                />
-                <button
-                  type="button"
-                  disabled={deletingAllAdmin}
-                  onClick={() => executeAdminDeleteAll(adminPassModalInput)}
-                  className="bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-[10px] font-black uppercase px-3 py-2 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-1 shrink-0 disabled:opacity-60"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>{deletingAllAdmin ? 'Deleting...' : 'Delete All'}</span>
-                </button>
-              </div>
+
+              {isChatAdmin ? (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      disabled={clearingChannelAdmin || deletingAllAdmin}
+                      onClick={handleAdminClearCurrentChannel}
+                      className="bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase px-3 py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{clearingChannelAdmin ? 'Clearing...' : `Clear #${currentChannel.name}`}</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deletingAllAdmin || clearingChannelAdmin}
+                      onClick={() => executeAdminDeleteAll('')}
+                      className="bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-[10px] font-black uppercase px-3 py-2 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 disabled:opacity-60"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{deletingAllAdmin ? 'Deleting...' : 'Delete All Channels'}</span>
+                    </button>
+                  </div>
+                  {currentChannel.id !== 'general' && currentChannel.id !== 'temporary' && !currentChannel.isDirectMessage && (
+                    <button
+                      type="button"
+                      disabled={deletingChannelAdmin}
+                      onClick={() => handleAdminDeleteCustomChannel(currentChannel)}
+                      className="w-full bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-300 text-[10px] font-black uppercase px-3 py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{deletingChannelAdmin ? 'Deleting Room...' : `Delete Channel #${currentChannel.name}`}</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="password"
+                    value={adminPassModalInput}
+                    onChange={(e) => setAdminPassModalInput(e.target.value)}
+                    placeholder="Admin password..."
+                    className="flex-1 chat-surface-deep border chat-bd focus:border-rose-500 rounded-xl py-2 px-3 text-xs chat-txt outline-none chat-placeholder-mute font-mono min-w-0"
+                  />
+                  <button
+                    type="button"
+                    disabled={deletingAllAdmin}
+                    onClick={() => executeAdminDeleteAll(adminPassModalInput)}
+                    className="bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-[10px] font-black uppercase px-3 py-2 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-1 shrink-0 disabled:opacity-60"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{deletingAllAdmin ? 'Deleting...' : 'Delete All'}</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2744,49 +2892,81 @@ export default function Chat({
                   <ShieldAlert className="w-3.5 h-3.5 text-rose-400" /> Admin Controls
                 </span>
                 <span className="text-[9px] font-mono chat-txt-mute">
-                  {isOwnerAdmin || linkedAccount?.isAdmin ? 'Admin signed in' : 'Password required'}
+                  {isChatAdmin ? 'Admin signed in' : 'Password required'}
                 </span>
               </div>
               <p className="text-[11px] chat-txt-dim leading-snug">
-                Permanently delete <strong className="chat-txt font-bold">all messages from all users</strong> across
-                every channel.
+                {isChatAdmin
+                  ? 'Clear messages in the current channel, delete custom rooms, or purge all messages from all users.'
+                  : <>Permanently delete <strong className="chat-txt font-bold">all messages from all users</strong> across every channel.</>}
               </p>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  executeAdminDeleteAll(adminPassSettingsInput);
-                }}
-                className="space-y-2"
-              >
-                <div className="relative flex items-center">
-                  <Lock className="absolute left-3 w-3.5 h-3.5 chat-txt-mute" />
-                  <input
-                    type="password"
-                    value={adminPassSettingsInput}
-                    onChange={(e) => setAdminPassSettingsInput(e.target.value)}
-                    placeholder={
-                      isOwnerAdmin || linkedAccount?.isAdmin
-                        ? 'Enter admin password (or leave blank)...'
-                        : 'Enter admin password...'
-                    }
-                    className="w-full chat-surface-deep border chat-bd focus:border-rose-500 rounded-xl py-2 pl-9 pr-3 text-xs chat-txt outline-none chat-placeholder-mute font-mono"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={deletingAllAdmin}
-                  className="w-full bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-[11px] font-black uppercase py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 disabled:opacity-60"
-                >
-                  {deletingAllAdmin ? (
-                    <span className="animate-pulse">Deleting All...</span>
-                  ) : (
-                    <>
+
+              {isChatAdmin ? (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    disabled={clearingChannelAdmin || deletingAllAdmin}
+                    onClick={handleAdminClearCurrentChannel}
+                    className="w-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-[11px] font-black uppercase py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{clearingChannelAdmin ? 'Clearing...' : `Clear #${currentChannel.name} Messages`}</span>
+                  </button>
+                  {currentChannel.id !== 'general' && currentChannel.id !== 'temporary' && !currentChannel.isDirectMessage && (
+                    <button
+                      type="button"
+                      disabled={deletingChannelAdmin}
+                      onClick={() => handleAdminDeleteCustomChannel(currentChannel)}
+                      className="w-full bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-300 text-[11px] font-black uppercase py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
+                    >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete All (Admin)</span>
-                    </>
+                      <span>{deletingChannelAdmin ? 'Deleting...' : `Delete Channel #${currentChannel.name}`}</span>
+                    </button>
                   )}
-                </button>
-              </form>
+                  <button
+                    type="button"
+                    disabled={deletingAllAdmin || clearingChannelAdmin}
+                    onClick={() => executeAdminDeleteAll('')}
+                    className="w-full bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-[11px] font-black uppercase py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 disabled:opacity-60"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{deletingAllAdmin ? 'Deleting All...' : 'Delete All Messages (Every Channel)'}</span>
+                  </button>
+                </div>
+              ) : (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    executeAdminDeleteAll(adminPassSettingsInput);
+                  }}
+                  className="space-y-2"
+                >
+                  <div className="relative flex items-center">
+                    <Lock className="absolute left-3 w-3.5 h-3.5 chat-txt-mute" />
+                    <input
+                      type="password"
+                      value={adminPassSettingsInput}
+                      onChange={(e) => setAdminPassSettingsInput(e.target.value)}
+                      placeholder="Enter admin password..."
+                      className="w-full chat-surface-deep border chat-bd focus:border-rose-500 rounded-xl py-2 pl-9 pr-3 text-xs chat-txt outline-none chat-placeholder-mute font-mono"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={deletingAllAdmin}
+                    className="w-full bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-[11px] font-black uppercase py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 disabled:opacity-60"
+                  >
+                    {deletingAllAdmin ? (
+                      <span className="animate-pulse">Deleting All...</span>
+                    ) : (
+                      <>
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete All (Admin)</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </div>
