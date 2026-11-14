@@ -6,6 +6,7 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  limit,
   limitToLast,
   onSnapshot,
   orderBy,
@@ -421,6 +422,7 @@ export default function Chat({
   const [customChannels, setCustomChannels] = useState([]);
   const [localChannels, setLocalChannels] = useState(() => filterValidRooms(safeParse('local_custom_channels', [])));
   const [unlockedChannels, setUnlockedChannels] = useState(() => safeParse('unlocked_chat_channels', {}));
+  const [unreadChannels, setUnreadChannels] = useState({});
 
   const [messages, setMessages] = useState([]);
   const [searchFilter, setSearchFilter] = useState('');
@@ -474,6 +476,12 @@ export default function Chat({
 
   useEffect(() => {
     activeChannelIdRef.current = activeChannelId;
+    setUnreadChannels((prev) => {
+      if (!prev[activeChannelId]) return prev;
+      const next = { ...prev };
+      delete next[activeChannelId];
+      return next;
+    });
   }, [activeChannelId]);
 
   const showToast = useCallback((msg) => {
@@ -870,6 +878,7 @@ export default function Chat({
       }
     });
 
+    let snapInitialized = false;
     const colRef = collection(lobbyDb, 'channels', cId, 'messages');
     const q = query(colRef, orderBy('timestamp', 'asc'), limitToLast(150));
 
@@ -928,23 +937,26 @@ export default function Chat({
 
         if (msgs.length > 0) {
           const latestMsg = msgs.reduce((latest, m) => Math.max(latest, Number(m.timestamp || 0)), 0);
+          const wasInitialized = snapInitialized;
+          snapInitialized = true;
           if (latestMsg > latestLobbyTsRef.current) {
-            const wasInitialized = latestLobbyTsRef.current > 0;
             latestLobbyTsRef.current = latestMsg;
-            if (wasInitialized) {
-              try {
-                localStorage.setItem('lobby-chat-latest', String(latestMsg));
-                localStorage.setItem('lobby-chat-notification', String(latestMsg));
-                const lobbyBus = new BroadcastChannel('urnperiodic_lobby_bus');
-                lobbyBus.postMessage({ type: 'lobby-chat-message', timestamp: latestMsg, channel: cId });
-                setTimeout(() => {
-                  try {
-                    lobbyBus.close();
-                  } catch {}
-                }, 400);
-              } catch {}
-            }
           }
+          if (wasInitialized && latestMsg > 0) {
+            try {
+              localStorage.setItem('lobby-chat-latest', String(latestMsg));
+              localStorage.setItem('lobby-chat-notification', String(latestMsg));
+              const lobbyBus = new BroadcastChannel('urnperiodic_lobby_bus');
+              lobbyBus.postMessage({ type: 'lobby-chat-message', timestamp: latestMsg, channel: cId });
+              setTimeout(() => {
+                try {
+                  lobbyBus.close();
+                } catch {}
+              }, 400);
+            } catch {}
+          }
+        } else {
+          snapInitialized = true;
         }
       },
       (err) => {
@@ -959,6 +971,55 @@ export default function Chat({
       unsub();
     };
   }, [currentChannel.id, isCurrentLocked, isPermanentChannel]);
+
+  // Watch background channels for red unread dots when user is chatting in another room
+  useEffect(() => {
+    const channelUnsubs = new Map();
+    const watchChannels = allChannels.filter((c) => {
+      if (!c?.id || c.id === activeChannelId) return false;
+      if (c.isPasswordProtected && !unlockedChannels[c.id]) return false;
+      return true;
+    });
+
+    watchChannels.forEach((ch) => {
+      let initialized = false;
+      try {
+        const bgQuery = query(
+          collection(lobbyDb, 'channels', ch.id, 'messages'),
+          orderBy('timestamp', 'desc'),
+          limit(1),
+        );
+        const unsub = onSnapshot(
+          bgQuery,
+          (snap) => {
+            const latest = Number(snap.docs[0]?.data()?.timestamp || 0);
+            if (!initialized) {
+              initialized = true;
+              return;
+            }
+            if (latest && activeChannelIdRef.current !== ch.id) {
+              setUnreadChannels((prev) => (prev[ch.id] ? prev : { ...prev, [ch.id]: true }));
+            }
+          },
+          (err) => {
+            if (isFirestorePermissionError(err)) {
+              handleFirestoreError(err, OperationType.GET, `channels/${ch.id}/messages`);
+            }
+          },
+        );
+        channelUnsubs.set(ch.id, unsub);
+      } catch {}
+    });
+
+    return () => {
+      channelUnsubs.forEach((u) => {
+        try {
+          u();
+        } catch {}
+      });
+      channelUnsubs.clear();
+    };
+  }, [allChannels, activeChannelId, unlockedChannels]);
 
   const displayedMessages = useMemo(() => {
     const isPerm = isPermanentChannel(currentChannel.id);
@@ -1630,6 +1691,15 @@ export default function Chat({
                   title={`${ch.name} — ${ch.description || ''}`}
                 >
                   {renderChannelGlyph(ch, locked)}
+                  {unreadChannels[ch.id] && !active && (
+                    <span
+                      className="absolute -top-0.5 -left-0.5 flex h-2.5 w-2.5 pointer-events-none z-20"
+                      aria-label="Unread messages in channel"
+                    >
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border border-[#0b0e14]" />
+                    </span>
+                  )}
                   {isCustom && ch.createdAt && (
                     <span className="absolute -top-1 -right-1 text-[7px] font-mono font-black bg-rose-500/20 text-rose-400 border border-rose-500/30 px-1 rounded-full">
                       1h
@@ -1905,11 +1975,14 @@ export default function Chat({
                   e.stopPropagation();
                   setDropdownOpen((prev) => !prev);
                 }}
-                className="chat-surface-elev border chat-bd py-1 px-2.5 rounded-lg text-[10px] font-extrabold uppercase outline-none chat-accent flex items-center gap-1.5 cursor-pointer hover:bg-white/5 active:scale-95 transition-all shadow-sm"
+                className="relative chat-surface-elev border chat-bd py-1 px-2.5 rounded-lg text-[10px] font-extrabold uppercase outline-none chat-accent flex items-center gap-1.5 cursor-pointer hover:bg-white/5 active:scale-95 transition-all shadow-sm"
               >
                 <span className="truncate max-w-[95px] font-mono">
                   {isCurrentLocked ? '🔒 ' : ''}#{currentChannel.name}
                 </span>
+                {Object.keys(unreadChannels).length > 0 && (
+                  <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" aria-label="Unread room message" />
+                )}
                 <ChevronDown className="w-3 h-3 chat-txt-mute shrink-0" />
               </button>
 
@@ -1935,6 +2008,9 @@ export default function Chat({
                           <div className="flex items-center gap-2 min-w-0 truncate">
                             {renderChannelGlyph(c, locked, 'w-3.5 h-3.5 shrink-0 opacity-85')}
                             <span className="truncate font-mono uppercase tracking-wide">#{c.name}</span>
+                            {unreadChannels[c.id] && !active && (
+                              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                            )}
                           </div>
                           {remMins !== null && (
                             <span className="text-[8.5px] font-mono text-rose-400 font-bold ml-auto shrink-0 px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">
