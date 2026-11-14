@@ -1534,20 +1534,32 @@ export default function App() {
     return latest > lastRead;
   });
   const filterRef = useRef(filter);
-  const markLobbyUnread = (latest) => {
+  const isViewingLobbyChatRef = useRef(false);
+  const markLobbyUnread = useCallback((latest) => {
     const timestamp = Number(latest || 0);
     if (!timestamp) return;
-    safeStorage.setItem('lobby-chat-latest', String(timestamp));
+    const prevLatest = Number(safeStorage.getItem('lobby-chat-latest') || 0);
+    if (timestamp > prevLatest) {
+      safeStorage.setItem('lobby-chat-latest', String(timestamp));
+    }
     const lastRead = Number(safeStorage.getItem('lobby-chat-last-read') || 0);
-    if (filterRef.current !== 'lobbychat' && timestamp > lastRead) {
+    if (isViewingLobbyChatRef.current) {
+      if (timestamp > lastRead) {
+        safeStorage.setItem('lobby-chat-last-read', String(timestamp));
+      }
+      setHasUnreadLobby(false);
+      return;
+    }
+    if (timestamp > lastRead) {
       setHasUnreadLobby(true);
     }
-  };
+  }, []);
   useEffect(() => {
     filterRef.current = filter;
     if (filter === 'lobbychat') {
       const latest = Number(safeStorage.getItem('lobby-chat-latest') || 0);
-      if (latest > 0) safeStorage.setItem('lobby-chat-last-read', String(latest));
+      const readTs = Math.max(latest, Date.now());
+      safeStorage.setItem('lobby-chat-last-read', String(readTs));
       setHasUnreadLobby(false);
     }
   }, [filter]);
@@ -1582,10 +1594,48 @@ export default function App() {
       window.removeEventListener('message', handleLobbyMessage);
       window.removeEventListener('storage', handleLobbyStorage);
     };
-  }, []);
+  }, [markLobbyUnread]);
   useEffect(() => {
-    const unsubs = [];
+    const channelUnsubs = new Map();
+    let channelsListUnsub = null;
     let cancelled = false;
+
+    const attachChannelListener = (chanId) => {
+      if (!chanId || channelUnsubs.has(chanId)) return;
+      let initialized = false;
+      try {
+        const messagesQuery = query(
+          collection(lobbyDb, 'channels', chanId, 'messages'),
+          orderBy('timestamp', 'desc'),
+          limit(1),
+        );
+        const unsub = onSnapshot(
+          messagesQuery,
+          (snapshot) => {
+            const latest = Number(snapshot.docs[0]?.data()?.timestamp || 0);
+            if (!initialized) {
+              initialized = true;
+              if (!latest) return;
+              const storedLastRead = Number(safeStorage.getItem('lobby-chat-last-read') || 0);
+              if (latest > storedLastRead) {
+                markLobbyUnread(latest);
+              }
+              return;
+            }
+            if (latest) {
+              markLobbyUnread(latest);
+            }
+          },
+          (error) => {
+            if (isFirestorePermissionError(error)) {
+              handleFirestoreError(error, OperationType.GET, `channels/${chanId}/messages`);
+            }
+            console.warn(`Lobby unread listener error for ${chanId}:`, error);
+          },
+        );
+        channelUnsubs.set(chanId, unsub);
+      } catch {}
+    };
 
     const subscribeToLobby = async () => {
       try {
@@ -1593,33 +1643,46 @@ export default function App() {
           await signInAnonymously(lobbyAuth);
         } catch {}
         if (cancelled) return;
-        
-        const channelsToListen = ['general', 'temporary'];
-        channelsToListen.forEach((chanId) => {
-          try {
-            const messagesQuery = query(
-              collection(lobbyDb, 'channels', chanId, 'messages'),
-              orderBy('timestamp', 'desc'),
-              limit(1),
-            );
-            const unsub = onSnapshot(messagesQuery, (snapshot) => {
-              const latest = Number(snapshot.docs[0]?.data()?.timestamp || 0);
-              if (!latest) return;
-              const storedLastRead = safeStorage.getItem('lobby-chat-last-read');
-              if (storedLastRead === null) {
-                safeStorage.setItem('lobby-chat-last-read', String(latest));
-                return;
+
+        if (safeStorage.getItem('lobby-chat-last-read') === null) {
+          safeStorage.setItem('lobby-chat-last-read', String(Date.now()));
+        }
+
+        attachChannelListener('general');
+        attachChannelListener('temporary');
+
+        try {
+          channelsListUnsub = onSnapshot(
+            collection(lobbyDb, 'channels'),
+            (snap) => {
+              let unlockedMap = {};
+              try {
+                unlockedMap = JSON.parse(safeStorage.getItem('unlocked_chat_channels') || '{}') || {};
+              } catch {}
+              const now = Date.now();
+              const activeExtraIds = new Set();
+              snap.forEach((docSnap) => {
+                const data = docSnap.data();
+                if (!data || data.isDirectMessage) return;
+                if (data.createdAt && now - Number(data.createdAt) >= 60 * 60 * 1000) return;
+                if (data.isPasswordProtected && !unlockedMap[docSnap.id]) return;
+                activeExtraIds.add(docSnap.id);
+                attachChannelListener(docSnap.id);
+              });
+              for (const [id, unsub] of channelUnsubs.entries()) {
+                if (id !== 'general' && id !== 'temporary' && !activeExtraIds.has(id)) {
+                  try { unsub(); } catch {}
+                  channelUnsubs.delete(id);
+                }
               }
-              markLobbyUnread(latest);
-            }, (error) => {
+            },
+            (error) => {
               if (isFirestorePermissionError(error)) {
-                handleFirestoreError(error, OperationType.GET, `channels/${chanId}/messages`);
+                handleFirestoreError(error, OperationType.LIST, 'channels');
               }
-              console.warn(`Lobby unread listener error for ${chanId}:`, error);
-            });
-            unsubs.push(unsub);
-          } catch {}
-        });
+            },
+          );
+        } catch {}
       } catch (error) {
         console.warn('Lobby unread auth error:', error);
       }
@@ -1628,11 +1691,15 @@ export default function App() {
     subscribeToLobby();
     return () => {
       cancelled = true;
-      unsubs.forEach(u => {
+      if (channelsListUnsub) {
+        try { channelsListUnsub(); } catch {}
+      }
+      channelUnsubs.forEach((u) => {
         try { u(); } catch {}
       });
+      channelUnsubs.clear();
     };
-  }, []);
+  }, [markLobbyUnread]);
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [currentGamePage, setCurrentGamePage] = useState(1);
@@ -2439,6 +2506,17 @@ export default function App() {
   const [dockedChatWidth, setDockedChatWidth] = useState(235); // 235px lowest width
   const [dockedChatCollapsed, setDockedChatCollapsed] = useState(true);
   const [isDraggingDock, setIsDraggingDock] = useState(false);
+
+  useEffect(() => {
+    const viewingNow = filter === 'lobbychat' || (Boolean(selectedGame) && !dockedChatCollapsed);
+    isViewingLobbyChatRef.current = viewingNow;
+    if (viewingNow) {
+      const latest = Number(safeStorage.getItem('lobby-chat-latest') || 0);
+      const readTs = Math.max(latest, Date.now());
+      safeStorage.setItem('lobby-chat-last-read', String(readTs));
+      setHasUnreadLobby(false);
+    }
+  }, [filter, selectedGame, dockedChatCollapsed]);
 
   // Monitor mouse moving & mouse up for docking drag resize
   useEffect(() => {
@@ -6327,7 +6405,7 @@ export default function App() {
               {canLobbyChatAccess && (
                 <button
                   onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); }}
-                  className={`p-1 rounded-md text-xs transition-all duration-200 ${
+                  className={`relative p-1 rounded-md text-xs transition-all duration-200 ${
                     filter === 'lobbychat'
                       ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
                       : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
