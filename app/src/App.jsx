@@ -1576,6 +1576,13 @@ export default function App() {
     try {
       lobbyBus = new BroadcastChannel('urnperiodic_lobby_bus');
       lobbyBus.onmessage = (event) => {
+        if (event.data?.type === 'dm-thread-deleted' && event.data?.channelId) {
+          try {
+            localStorage.removeItem(`local_messages_${event.data.channelId}`);
+          } catch {}
+          setChatHeaderNotice((prev) => (prev?.channelId === event.data.channelId ? null : prev));
+          return;
+        }
         if (event.data?.timestamp) {
           markLobbyUnread(event.data.timestamp);
         }
@@ -2835,6 +2842,13 @@ export default function App() {
             return;
           }
           for (const change of snapshot.docChanges()) {
+            if (change.type === 'removed') {
+              const removedId = change.doc.id;
+              seenLastTs.delete(removedId);
+              safeStorage.removeItem(`local_messages_${removedId}`);
+              setChatHeaderNotice((prev) => (prev?.channelId === removedId ? null : prev));
+              continue;
+            }
             if (change.type !== 'added' && change.type !== 'modified') continue;
             const docSnap = change.doc;
             const data = docSnap.data();
@@ -2909,57 +2923,107 @@ export default function App() {
   );
 
   const renderChatHeaderNotice = (variant = 'compact') => {
-    if (!canLobbyChatAccess || !chatHeaderNotice) return null;
-    const isDm = Boolean(chatHeaderNotice.isDirectMessage);
+    if (!canLobbyChatAccess) return null;
+    const isDm = Boolean(chatHeaderNotice?.isDirectMessage);
+    const isLight = mode === 'light';
     const widthClass =
       variant === 'game'
-        ? 'max-w-[165px] sm:max-w-[250px] lg:max-w-[330px]'
+        ? 'max-w-[175px] sm:max-w-[260px] lg:max-w-[340px]'
         : variant === 'expanded'
-          ? 'max-w-[180px] sm:max-w-[240px] lg:max-w-[300px]'
-          : 'max-w-[130px] sm:max-w-[200px] lg:max-w-[260px]';
+          ? 'max-w-[190px] sm:max-w-[255px] lg:max-w-[310px]'
+          : 'max-w-[145px] sm:max-w-[215px] lg:max-w-[275px]';
+
+    const containerTone = isDm
+      ? isLight
+        ? 'border-emerald-500/45 bg-gradient-to-r from-emerald-50 via-white to-teal-50/90 text-emerald-950 shadow-[0_2px_10px_rgba(16,185,129,0.16)] hover:border-emerald-600 hover:shadow-[0_4px_14px_rgba(16,185,129,0.24)]'
+        : 'border-emerald-400/45 bg-gradient-to-r from-emerald-950/90 via-[#0d1f19] to-teal-950/80 text-emerald-50 shadow-[0_2px_14px_rgba(16,185,129,0.24)] hover:border-emerald-300/80 hover:shadow-[0_4px_18px_rgba(16,185,129,0.34)]'
+      : isLight
+        ? 'border-[var(--accent-color)]/45 bg-[var(--card-bg)] text-[var(--text-primary)] shadow-[0_2px_10px_rgba(0,0,0,0.08)] hover:border-[var(--accent-color)]'
+        : 'border-[var(--accent-color)]/45 bg-[var(--bg-secondary)] text-[var(--text-primary)] shadow-[0_2px_12px_var(--accent-shadow)] hover:border-[var(--accent-color)]';
 
     return (
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => openChatFromHeaderNotice(chatHeaderNotice)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            openChatFromHeaderNotice(chatHeaderNotice);
-          }
-        }}
-        title={`${isDm ? 'DM' : chatHeaderNotice.channelName} from ${chatHeaderNotice.senderName}: ${chatHeaderNotice.text}`}
-        className={`flex items-center gap-1.5 min-w-0 ${widthClass} h-6 px-2 rounded-full border cursor-pointer transition-all shrink select-none ${
-          isDm
-            ? 'border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300'
-            : 'border-[var(--accent-color)]/40 bg-[var(--accent-color)]/15 hover:bg-[var(--accent-color)]/25 text-[var(--accent-color)]'
-        }`}
-      >
-        {isDm ? (
-          <MessageCircle className="w-3 h-3 shrink-0 text-emerald-400" />
-        ) : (
-          <MessageSquare className="w-3 h-3 shrink-0" />
+      <AnimatePresence mode="wait">
+        {chatHeaderNotice && (
+          <motion.div
+            key={chatHeaderNotice.id}
+            initial={animationsEnabled ? { opacity: 0, y: -10, scale: 0.9 } : false}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={animationsEnabled ? { opacity: 0, y: -6, scale: 0.92 } : undefined}
+            transition={
+              animationsEnabled
+                ? { type: 'spring', stiffness: 430, damping: 25, mass: 0.78 }
+                : { duration: 0 }
+            }
+            role="button"
+            tabIndex={0}
+            onClick={() => openChatFromHeaderNotice(chatHeaderNotice)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openChatFromHeaderNotice(chatHeaderNotice);
+              }
+            }}
+            title={`${isDm ? 'DM' : chatHeaderNotice.channelName} from ${chatHeaderNotice.senderName}: ${chatHeaderNotice.text}`}
+            className={`group flex items-center gap-1.5 min-w-0 ${widthClass} h-[26px] pl-1 pr-1.5 rounded-full border cursor-pointer transition-all shrink select-none backdrop-blur-sm ${containerTone}`}
+          >
+            <span
+              className={`relative w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0 shadow-xs ${
+                isDm
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-[var(--accent-color)] text-[var(--bg-color)]'
+              }`}
+            >
+              {isDm ? (
+                <MessageCircle className="w-2.5 h-2.5" />
+              ) : (
+                <MessageSquare className="w-2.5 h-2.5" />
+              )}
+              {animationsEnabled && (
+                <span
+                  className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${
+                    isDm ? 'bg-emerald-300' : 'bg-[var(--accent-color)]'
+                  } animate-ping`}
+                />
+              )}
+            </span>
+            <span
+              className={`px-1.5 py-[1px] rounded-full text-[8px] font-black uppercase tracking-wider shrink-0 leading-tight ${
+                isDm
+                  ? isLight
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/35'
+                  : isLight
+                    ? 'bg-black/10 text-[var(--text-primary)]'
+                    : 'bg-white/10 text-[var(--accent-color)]'
+              }`}
+            >
+              {isDm ? 'DM' : chatHeaderNotice.channelName}
+            </span>
+            <span className="text-[10.5px] truncate min-w-0 flex-1 leading-none">
+              <span className="font-bold">{chatHeaderNotice.senderName}</span>
+              <span className="opacity-75 font-medium">: {chatHeaderNotice.text}</span>
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setChatHeaderNotice(null);
+              }}
+              className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors shrink-0 cursor-pointer ${
+                isDm
+                  ? isLight
+                    ? 'text-emerald-800/70 hover:text-emerald-950 hover:bg-emerald-500/20'
+                    : 'text-emerald-200/70 hover:text-white hover:bg-white/15'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-black/10 dark:hover:bg-white/15'
+              }`}
+              title="Dismiss notification"
+              aria-label="Dismiss notification"
+            >
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </motion.div>
         )}
-        <span className="text-[9px] font-black uppercase tracking-wider shrink-0">
-          {isDm ? 'DM' : chatHeaderNotice.channelName}
-        </span>
-        <span className="text-[10.5px] font-medium text-[var(--text-primary)] truncate min-w-0 flex-1">
-          {chatHeaderNotice.senderName}: {chatHeaderNotice.text}
-        </span>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setChatHeaderNotice(null);
-          }}
-          className="p-0.5 rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
-          title="Dismiss notification"
-          aria-label="Dismiss notification"
-        >
-          <X className="w-2.5 h-2.5" />
-        </button>
-      </div>
+      </AnimatePresence>
     );
   };
 

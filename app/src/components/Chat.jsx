@@ -60,6 +60,7 @@ import {
   clearChannelMessages,
   deleteAllChatMessages,
   deleteCustomChannel,
+  deleteDmThreadAndTraces,
   deleteSingleChatMessage,
 } from '../utils/chatModeration';
 
@@ -498,6 +499,8 @@ export default function Chat({
   const [clearingChannelAdmin, setClearingChannelAdmin] = useState(false);
   const [confirmDeleteChanId, setConfirmDeleteChanId] = useState(null);
   const [deletingChannelAdmin, setDeletingChannelAdmin] = useState(false);
+  const [confirmDeleteDmId, setConfirmDeleteDmId] = useState(null);
+  const [deletingDmThread, setDeletingDmThread] = useState(false);
 
   const [toastMsg, setToastMsg] = useState('');
   const [tickNow, setTickNow] = useState(() => Date.now());
@@ -514,6 +517,7 @@ export default function Chat({
 
   useEffect(() => {
     activeChannelIdRef.current = activeChannelId;
+    setConfirmDeleteDmId(null);
     if (onActiveChannelChange) onActiveChannelChange(activeChannelId);
     setUnreadChannels((prev) => {
       if (!prev[activeChannelId]) return prev;
@@ -587,6 +591,24 @@ export default function Chat({
           setActiveChannelId('general');
           setMessages([]);
           showToast('🗑️ Channel deleted by admin');
+        }
+      } else if (data.type === 'dm-thread-deleted' && data.channelId) {
+        try {
+          localStorage.removeItem(`local_messages_${data.channelId}`);
+        } catch {}
+        setDmThreads((prev) => prev.filter((t) => t.id !== data.channelId));
+        setPendingDmChannel((prev) => (prev?.id === data.channelId ? null : prev));
+        setUnreadChannels((prev) => {
+          if (!prev[data.channelId]) return prev;
+          const next = { ...prev };
+          delete next[data.channelId];
+          return next;
+        });
+        if (activeChannelIdRef.current === data.channelId) {
+          setActiveChannelId('general');
+          setMessages([]);
+          setReplyTo(null);
+          showToast('🗑️ DM conversation & traces deleted');
         }
       } else if (data.type === 'admin-purge-user' && data.usernameLower) {
         const target = String(data.usernameLower).toLowerCase();
@@ -721,6 +743,32 @@ export default function Chat({
     const unsub = onSnapshot(
       q,
       (snap) => {
+        const removedIds = [];
+        snap.docChanges().forEach((change) => {
+          if (change.type === 'removed') {
+            removedIds.push(change.doc.id);
+          }
+        });
+        if (removedIds.length > 0) {
+          removedIds.forEach((remId) => {
+            try {
+              localStorage.removeItem(`local_messages_${remId}`);
+            } catch {}
+            setPendingDmChannel((prev) => (prev?.id === remId ? null : prev));
+            setUnreadChannels((prev) => {
+              if (!prev[remId]) return prev;
+              const next = { ...prev };
+              delete next[remId];
+              return next;
+            });
+            if (activeChannelIdRef.current === remId) {
+              setActiveChannelId('general');
+              setMessages([]);
+              setReplyTo(null);
+              showToast('🗑️ DM conversation & traces were deleted');
+            }
+          });
+        }
         const loaded = [];
         snap.forEach((docSnap) => {
           const data = docSnap.data();
@@ -1908,6 +1956,49 @@ export default function Chat({
     }
   };
 
+  const handleDeleteDmTraces = async (targetChannel) => {
+    const dmId = targetChannel?.id || currentChannel?.id;
+    if (!dmId || !String(dmId).startsWith('dm__')) return;
+    setDeletingDmThread(true);
+    try {
+      const scrubIds = [];
+      if (activeChannelIdRef.current === dmId) {
+        messages.forEach((m) => {
+          if (m?.id) scrubIds.push(String(m.id));
+          if (m?.key) scrubIds.push(String(m.key));
+        });
+      }
+      getLocalMessages(dmId).forEach((m) => {
+        if (m?.id) scrubIds.push(String(m.id));
+        if (m?.key) scrubIds.push(String(m.key));
+      });
+
+      await deleteDmThreadAndTraces(lobbyDb, dmId, scrubIds);
+
+      setDmThreads((prev) => prev.filter((t) => t.id !== dmId));
+      setPendingDmChannel((prev) => (prev?.id === dmId ? null : prev));
+      setUnreadChannels((prev) => {
+        if (!prev[dmId]) return prev;
+        const next = { ...prev };
+        delete next[dmId];
+        return next;
+      });
+      if (activeChannelIdRef.current === dmId) {
+        setActiveChannelId('general');
+        setMessages([]);
+        setReplyTo(null);
+      }
+      setConfirmDeleteDmId(null);
+      setDeleteAllModalOpen(false);
+      setSettingsModalOpen(false);
+      showToast('🗑️ Deleted DM conversation and all traces');
+    } catch {
+      showToast('⚠️ Could not delete DM conversation');
+    } finally {
+      setDeletingDmThread(false);
+    }
+  };
+
   const executeAdminDeleteAll = async (passwordValue) => {
     const val = (passwordValue || '').trim();
     const isAuthorizedAdmin =
@@ -2062,27 +2153,68 @@ export default function Chat({
                 </span>
                 {dmChannels.map((dm) => {
                   const active = currentChannel.id === dm.id;
+                  const confirming = confirmDeleteDmId === dm.id;
                   return (
-                    <button
-                      key={dm.id}
-                      type="button"
-                      onClick={() => switchChannel(dm.id)}
-                      className={`w-full flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all cursor-pointer ${
-                        active ? 'chat-accent-bg shadow-sm' : 'hover:bg-white/[0.06] chat-txt-dim hover:chat-txt'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span
-                          className={`w-2 h-2 rounded-full shrink-0 ${
-                            dm.partnerOnline ? 'bg-emerald-400' : 'bg-neutral-500/60'
-                          }`}
-                        />
-                        <span className="text-[11px] font-mono font-bold truncate">{dm.name}</span>
-                      </div>
-                      {unreadChannels[dm.id] && !active && (
-                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                    <div key={dm.id} className="flex items-center gap-1 min-w-0">
+                      {confirming ? (
+                        <div className="flex-1 flex items-center justify-between gap-1 px-1.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/35 min-w-0">
+                          <span className="text-[9px] font-bold text-rose-300 truncate">Delete traces?</span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              disabled={deletingDmThread}
+                              onClick={() => handleDeleteDmTraces(dm)}
+                              className="px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[8.5px] font-black uppercase cursor-pointer disabled:opacity-60"
+                            >
+                              {deletingDmThread ? '...' : 'Delete'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteDmId(null)}
+                              className="p-0.5 rounded hover:bg-white/10 text-neutral-300 cursor-pointer"
+                              title="Cancel"
+                              aria-label="Cancel DM deletion"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => switchChannel(dm.id)}
+                            className={`flex-1 min-w-0 flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all cursor-pointer ${
+                              active ? 'chat-accent-bg shadow-sm' : 'hover:bg-white/[0.06] chat-txt-dim hover:chat-txt'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span
+                                className={`w-2 h-2 rounded-full shrink-0 ${
+                                  dm.partnerOnline ? 'bg-emerald-400' : 'bg-neutral-500/60'
+                                }`}
+                              />
+                              <span className="text-[11px] font-mono font-bold truncate">{dm.name}</span>
+                            </div>
+                            {unreadChannels[dm.id] && !active && (
+                              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmDeleteDmId(dm.id);
+                            }}
+                            className="p-1 rounded-md text-rose-400/75 hover:text-rose-300 hover:bg-rose-500/15 cursor-pointer shrink-0 transition-colors"
+                            title={`Delete all traces of DM with ${dm.name}`}
+                            aria-label={`Delete DM with ${dm.name}`}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -2365,15 +2497,46 @@ export default function Chat({
                   )}
                 </h1>
                 {currentChannel.isDirectMessage ? (
-                  <span
-                    className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded shrink-0"
-                    title="Private encrypted direct message"
-                  >
-                    <Lock className="w-2.5 h-2.5 text-emerald-400" />
-                    <span className="hidden sm:inline">
-                      {currentChannel.partnerOnline ? 'DM · Online' : 'Direct Message'}
+                  <>
+                    <span
+                      className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded shrink-0"
+                      title="Private encrypted direct message"
+                    >
+                      <Lock className="w-2.5 h-2.5 text-emerald-400" />
+                      <span className="hidden sm:inline">
+                        {currentChannel.partnerOnline ? 'DM · Online' : 'Direct Message'}
+                      </span>
                     </span>
-                  </span>
+                    {confirmDeleteDmId === currentChannel.id ? (
+                      <div className="inline-flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          disabled={deletingDmThread}
+                          onClick={() => handleDeleteDmTraces(currentChannel)}
+                          className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[9px] font-black uppercase cursor-pointer disabled:opacity-60"
+                        >
+                          {deletingDmThread ? 'Deleting...' : 'Delete All Traces'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteDmId(null)}
+                          className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-[9px] font-bold cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteDmId(currentChannel.id)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[9px] font-bold uppercase cursor-pointer shrink-0 transition-all"
+                        title="Permanently delete this DM conversation, all messages, and local traces"
+                      >
+                        <Trash2 className="w-2.5 h-2.5" />
+                        <span className="hidden lg:inline">Delete DM</span>
+                      </button>
+                    )}
+                  </>
                 ) : isPerm ? (
                   <span
                     className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded shrink-0"
@@ -2639,26 +2802,41 @@ export default function Chat({
                   {dmChannels.map((c) => {
                     const active = currentChannel.id === c.id;
                     return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => switchChannel(c.id)}
-                        className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between text-[11px] font-bold transition-all cursor-pointer ${
-                          active ? 'chat-accent-bg shadow-sm' : 'chat-txt-dim hover:chat-txt hover:bg-white/5'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0 truncate">
-                          <span
-                            className={`w-2 h-2 rounded-full shrink-0 ${
-                              c.partnerOnline ? 'bg-emerald-400' : 'bg-neutral-500/60'
-                            }`}
-                          />
-                          <span className="truncate font-mono">{c.name}</span>
-                          {unreadChannels[c.id] && !active && (
-                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-                          )}
-                        </div>
-                      </button>
+                      <div key={c.id} className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => switchChannel(c.id)}
+                          className={`flex-1 min-w-0 text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between text-[11px] font-bold transition-all cursor-pointer ${
+                            active ? 'chat-accent-bg shadow-sm' : 'chat-txt-dim hover:chat-txt hover:bg-white/5'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0 truncate">
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${
+                                c.partnerOnline ? 'bg-emerald-400' : 'bg-neutral-500/60'
+                              }`}
+                            />
+                            <span className="truncate font-mono">{c.name}</span>
+                            {unreadChannels[c.id] && !active && (
+                              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                            )}
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deletingDmThread}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDropdownOpen(false);
+                            handleDeleteDmTraces(c);
+                          }}
+                          className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/20 border border-transparent hover:border-rose-500/30 cursor-pointer shrink-0 transition-all disabled:opacity-50"
+                          title={`Delete DM & all traces with ${c.name}`}
+                          aria-label={`Delete DM with ${c.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     );
                   })}
 
@@ -3523,6 +3701,28 @@ export default function Chat({
                 )}
               </button>
             </div>
+
+            {currentChannel.isDirectMessage && (
+              <div className="pt-3 border-t chat-bd space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 flex items-center gap-1">
+                    <Trash2 className="w-3.5 h-3.5" /> Erase DM Conversation & Traces
+                  </span>
+                </div>
+                <p className="text-[11px] chat-txt-dim leading-snug">
+                  Permanently delete this entire DM thread with <strong className="chat-txt">{currentChannel.name}</strong>, including all messages for both participants, thread history, and local traces.
+                </p>
+                <button
+                  type="button"
+                  disabled={deletingDmThread}
+                  onClick={() => handleDeleteDmTraces(currentChannel)}
+                  className="w-full bg-rose-600/90 hover:bg-rose-500 active:scale-95 text-white text-[10px] font-black uppercase py-2 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 disabled:opacity-60"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{deletingDmThread ? 'Erasing DM Traces...' : `Delete DM & All Traces (${currentChannel.name})`}</span>
+                </button>
+              </div>
+            )}
 
             {/* Admin Delete Actions at the bottom */}
             <div className="pt-3 border-t chat-bd space-y-2">

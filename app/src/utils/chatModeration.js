@@ -174,6 +174,52 @@ export async function deleteCustomChannel(db, channelId) {
   return true;
 }
 
+export async function deleteDmThreadAndTraces(db, dmId, messageIdsToScrub = []) {
+  if (!db || !dmId || !String(dmId).startsWith('dm__')) {
+    throw new Error('Invalid direct message thread.');
+  }
+
+  await clearChannelMessages(db, dmId);
+
+  const dmPath = `directMessages/${dmId}`;
+  try {
+    await deleteDoc(doc(db, 'directMessages', dmId));
+  } catch (err) {
+    if (isFirestorePermissionError(err)) {
+      handleFirestoreError(err, OperationType.DELETE, dmPath);
+    }
+    throw err;
+  }
+
+  try {
+    localStorage.removeItem(`local_messages_${dmId}`);
+    if (Array.isArray(messageIdsToScrub) && messageIdsToScrub.length > 0) {
+      const scrubSet = new Set(messageIdsToScrub.map((id) => String(id)));
+      const rawSent = localStorage.getItem('my_sent_message_ids');
+      if (rawSent) {
+        const parsedSent = JSON.parse(rawSent);
+        if (Array.isArray(parsedSent)) {
+          localStorage.setItem(
+            'my_sent_message_ids',
+            JSON.stringify(parsedSent.filter((id) => !scrubSet.has(String(id))))
+          );
+        }
+      }
+    }
+  } catch {}
+
+  broadcastLobbyEvent({ type: 'dm-thread-deleted', channelId: dmId });
+
+  try {
+    const chatIframe = /** @type {HTMLIFrameElement | null} */ (document.getElementById('chat-decoy-iframe'));
+    if (chatIframe && chatIframe.contentWindow) {
+      chatIframe.contentWindow.postMessage({ type: 'dm-thread-deleted', channelId: dmId }, '*');
+    }
+  } catch {}
+
+  return true;
+}
+
 export async function deleteAllChatMessages(db, extraChannelIds = []) {
   if (!db) return 0;
   const channelIds = new Set(['general', 'temporary', ...extraChannelIds.filter(Boolean)]);

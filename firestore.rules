@@ -228,7 +228,7 @@ service cloud.firestore {
         && incoming().diff(existing()).affectedKeys().hasOnly([
           'lastSenderId', 'lastSenderName', 'lastMessageText', 'lastMessageAt', 'updatedAt'
         ]);
-      allow delete: if false;
+      allow delete: if isValidId(dmId);
 
       match /messages/{messageId} {
         allow get: if isValidId(dmId) && isValidId(messageId);
