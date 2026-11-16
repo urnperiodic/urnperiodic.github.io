@@ -43,13 +43,13 @@ export const games = [...gamesData].map((game, index) => {
 
   return normalizedGame;
 }).sort((a, b) => {
-  const aAi = a.isAiGenerated === true || a.isAiGenerated === 'true';
-  const bAi = b.isAiGenerated === true || b.isAiGenerated === 'true';
+  const aAi = a.isAiGenerated === true || String(a.isAiGenerated) === 'true';
+  const bAi = b.isAiGenerated === true || String(b.isAiGenerated) === 'true';
   if (aAi && !bAi) return 1;
   if (!aAi && bAi) return -1;
 
-  const aFeatured = a.featured === true || a.featured === 'true';
-  const bFeatured = b.featured === true || b.featured === 'true';
+  const aFeatured = a.featured === true || String(a.featured) === 'true';
+  const bFeatured = b.featured === true || String(b.featured) === 'true';
   if (aFeatured && !bFeatured) return -1;
   if (!aFeatured && bFeatured) return 1;
   return 0;

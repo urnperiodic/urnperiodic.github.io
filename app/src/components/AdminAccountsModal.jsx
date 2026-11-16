@@ -114,6 +114,7 @@ export default function AdminAccountsModal({
   const [newIsActive, setNewIsActive] = useState(true);
   const [newIsAdmin, setNewIsAdmin] = useState(false);
   const [newAllowGlobalOverride, setNewAllowGlobalOverride] = useState(false);
+  const [newAllowAiOverride, setNewAllowAiOverride] = useState(false);
   const [newPerms, setNewPerms] = useState(DEFAULT_CREATE_PERMS);
   const [creating, setCreating] = useState(false);
 
@@ -133,6 +134,9 @@ export default function AdminAccountsModal({
     workspaceConfig?.lockdownMessage || DEFAULT_WORKSPACE_CONFIG.lockdownMessage,
   );
   const [globalBusyKey, setGlobalBusyKey] = useState(null);
+  const [pendingGlobalAction, setPendingGlobalAction] = useState(null); // 'siteLockdown' | 'disableAll' | null
+  const [adminConfirmPass, setAdminConfirmPass] = useState('');
+  const [adminConfirmError, setAdminConfirmError] = useState('');
 
   // Chat & content moderation tab state
   const [customChannels, setCustomChannels] = useState([]);
@@ -195,7 +199,11 @@ export default function AdminAccountsModal({
       },
       (err) => {
         if (isFirestorePermissionError(err)) {
-          handleFirestoreError(err, OperationType.LIST, 'channels');
+          try {
+            handleFirestoreError(err, OperationType.LIST, 'channels');
+          } catch (wrappedErr) {
+            console.error(wrappedErr);
+          }
         }
       },
     );
@@ -231,7 +239,11 @@ export default function AdminAccountsModal({
         if (!active) return;
         setChatLoading(false);
         if (isFirestorePermissionError(err)) {
-          handleFirestoreError(err, OperationType.LIST, `channels/${selectedChannelId}/messages`);
+          try {
+            handleFirestoreError(err, OperationType.LIST, `channels/${selectedChannelId}/messages`);
+          } catch (wrappedErr) {
+            console.error(wrappedErr);
+          }
         }
         setFeedback({ type: 'error', text: err?.message || 'Could not load channel messages.' });
       },
@@ -306,6 +318,7 @@ export default function AdminAccountsModal({
         isActive: newIsActive,
         isAdmin: newIsAdmin,
         allowGlobalOverride: newAllowGlobalOverride,
+        allowAiOverride: newAllowAiOverride,
         ...newPerms,
       });
       setNewUsername('');
@@ -315,6 +328,7 @@ export default function AdminAccountsModal({
       setNewIsActive(true);
       setNewIsAdmin(false);
       setNewAllowGlobalOverride(false);
+      setNewAllowAiOverride(false);
       showNotice('success', `Created account @${created.username}${created.isAdmin ? ' (Admin)' : ''}`);
     } catch (err) {
       showNotice('error', err?.message || 'Failed to create account.');
@@ -326,7 +340,12 @@ export default function AdminAccountsModal({
   const handleToggleField = async (acc, field) => {
     setBusyKey(`${acc.usernameLower}:${field}`);
     try {
-      await updateManagedAccount(db, auth, acc.usernameLower, { [field]: !acc[field] });
+      const nextVal = !acc[field];
+      const patch = { [field]: nextVal };
+      if (field === 'allowAiOverride' && nextVal && !acc.aiAccess) {
+        patch.aiAccess = true;
+      }
+      await updateManagedAccount(db, auth, acc.usernameLower, patch);
     } catch (err) {
       showNotice('error', err?.message || 'Failed to update account.');
     } finally {
@@ -477,10 +496,41 @@ export default function AdminAccountsModal({
     setGlobalBusyKey(busyLabel);
     try {
       await updateWorkspaceConfig(db, auth, patch);
+      return true;
     } catch (err) {
       showNotice('error', err?.message || 'Failed to save global workspace access.');
+      return false;
     } finally {
       setGlobalBusyKey(null);
+    }
+  };
+
+  const requestAdminPasswordForGlobalAction = (action) => {
+    setPendingGlobalAction(action);
+    setAdminConfirmPass('');
+    setAdminConfirmError('');
+  };
+
+  const handleConfirmGlobalPassword = async (e) => {
+    e.preventDefault();
+    if (adminConfirmPass.trim() !== '06091006Tt') {
+      setAdminConfirmError('Incorrect admin password.');
+      return;
+    }
+    const action = pendingGlobalAction;
+    setPendingGlobalAction(null);
+    setAdminConfirmPass('');
+    setAdminConfirmError('');
+    if (action === 'siteLockdown') {
+      const ok = await handleGlobalUpdate({ siteLockdown: true }, 'siteLockdown');
+      if (ok) showNotice('success', "Everyone's access turned OFF (Site Lockdown enabled).");
+    } else if (action === 'disableAll') {
+      const patch = {};
+      WORKSPACE_ACCESS_KEYS.forEach(({ key }) => {
+        patch[key] = false;
+      });
+      const ok = await handleGlobalUpdate(patch, 'disableAll');
+      if (ok) showNotice('success', 'All workspaces turned OFF globally.');
     }
   };
 
@@ -629,9 +679,13 @@ export default function AdminAccountsModal({
                     <button
                       type="button"
                       disabled={globalBusyKey === 'siteLockdown'}
-                      onClick={() =>
-                        handleGlobalUpdate({ siteLockdown: !workspaceConfig?.siteLockdown }, 'siteLockdown')
-                      }
+                      onClick={() => {
+                        if (!workspaceConfig?.siteLockdown) {
+                          requestAdminPasswordForGlobalAction('siteLockdown');
+                        } else {
+                          handleGlobalUpdate({ siteLockdown: false }, 'siteLockdown');
+                        }
+                      }}
                       className={`px-3 py-1.5 rounded-lg border text-[11px] font-mono font-black uppercase cursor-pointer shrink-0 transition-all ${
                         workspaceConfig?.siteLockdown
                           ? 'bg-rose-600 border-rose-500 text-white'
@@ -644,12 +698,65 @@ export default function AdminAccountsModal({
                     </button>
                   </div>
 
+                  {pendingGlobalAction === 'siteLockdown' && (
+                    <form
+                      onSubmit={handleConfirmGlobalPassword}
+                      className={`p-3 rounded-xl border space-y-2 animate-fade-in ${
+                        isLight ? 'bg-rose-50 border-rose-200' : 'bg-rose-950/40 border-rose-500/40'
+                      }`}
+                    >
+                      <div className="text-[10.5px] font-mono font-bold uppercase text-rose-400 flex items-center gap-1.5">
+                        <Lock className="w-3 h-3" />
+                        <span>Enter Admin Password to Turn Everyone&apos;s Access Off</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="password"
+                          required
+                          autoFocus
+                          value={adminConfirmPass}
+                          onChange={(e) => {
+                            setAdminConfirmPass(e.target.value);
+                            if (adminConfirmError) setAdminConfirmError('');
+                          }}
+                          placeholder="Admin password..."
+                          className={`flex-1 px-2.5 py-1.5 rounded-lg border text-xs font-mono outline-none ${
+                            isLight ? 'bg-white border-neutral-300 text-neutral-900' : 'bg-black/50 border-white/15 text-white'
+                          }`}
+                        />
+                        <button
+                          type="submit"
+                          disabled={globalBusyKey === 'siteLockdown'}
+                          className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-black uppercase cursor-pointer"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPendingGlobalAction(null);
+                            setAdminConfirmPass('');
+                            setAdminConfirmError('');
+                          }}
+                          className={`px-2.5 py-1.5 rounded-lg text-[10px] cursor-pointer ${
+                            isLight ? 'bg-neutral-200 text-neutral-700' : 'bg-white/10 text-neutral-300'
+                          }`}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      {adminConfirmError && (
+                        <div className="text-[10.5px] font-semibold text-rose-400">{adminConfirmError}</div>
+                      )}
+                    </form>
+                  )}
+
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
-                      handleGlobalUpdate({ lockdownMessage: lockdownMsgDraft }, 'lockdownMsg').then(() =>
-                        showNotice('success', 'Lockdown notice saved.'),
-                      );
+                      handleGlobalUpdate({ lockdownMessage: lockdownMsgDraft }, 'lockdownMsg').then((ok) => {
+                        if (ok) showNotice('success', 'Lockdown notice saved.');
+                      });
                     }}
                     className="flex items-center gap-2 pt-1"
                   >
@@ -689,7 +796,7 @@ export default function AdminAccountsModal({
                         <span>Account Global-OFF Overrides</span>
                       </div>
                       <p className={`text-[11px] mt-1 leading-relaxed ${isLight ? 'text-neutral-600' : 'text-neutral-400'}`}>
-                        Controls whether specific accounts with &quot;Override Global OFF&quot; enabled can still open workspaces that are turned OFF below. Turn this OFF to enforce global OFF for everyone.
+                        Controls whether specific accounts with &quot;Override Global OFF&quot; enabled can still open workspaces that are turned OFF below.
                       </p>
                     </div>
                     <button
@@ -713,6 +820,42 @@ export default function AdminAccountsModal({
                     </button>
                   </div>
 
+                  {/* Custom AI-Only Override Policy */}
+                  <div
+                    className={`pt-2.5 border-t flex items-center justify-between gap-3 ${
+                      isLight ? 'border-neutral-200' : 'border-white/10'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 font-black text-[11px] uppercase tracking-wider">
+                        <Sparkles className={`w-3.5 h-3.5 ${workspaceConfig?.allowAiOverrides !== false ? 'text-cyan-400' : 'text-neutral-400'}`} />
+                        <span>Custom AI-Only Overrides</span>
+                      </div>
+                      <p className={`text-[10.5px] mt-0.5 leading-snug ${isLight ? 'text-neutral-600' : 'text-neutral-400'}`}>
+                        Lets accounts with &quot;AI Override&quot; access AI Chat even when AI Chat is globally OFF (and when general overrides are blocked).
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={globalBusyKey === 'allowAiOverrides'}
+                      onClick={() =>
+                        handleGlobalUpdate(
+                          { allowAiOverrides: workspaceConfig?.allowAiOverrides === false },
+                          'allowAiOverrides',
+                        )
+                      }
+                      className={`px-2.5 py-1 rounded-lg border text-[10px] font-mono font-black uppercase cursor-pointer shrink-0 transition-all ${
+                        workspaceConfig?.allowAiOverrides !== false
+                          ? 'bg-cyan-600 border-cyan-500 text-white'
+                          : isLight
+                            ? 'bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-100'
+                            : 'bg-white/5 border-white/15 text-neutral-300 hover:bg-white/10'
+                      }`}
+                    >
+                      {workspaceConfig?.allowAiOverrides !== false ? 'AI Override ON' : 'Blocked'}
+                    </button>
+                  </div>
+
                   <div className={`text-[11px] flex items-center gap-1.5 ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>
                     <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                     <span>Shared public passcodes remain disabled — only assigned accounts &amp; owner can sign in.</span>
@@ -730,7 +873,7 @@ export default function AdminAccountsModal({
                   <div>
                     <h3 className="text-xs font-black uppercase tracking-wider">Site-Wide Workspace Controls</h3>
                     <p className={`text-[11px] ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>
-                      Turn a workspace OFF globally. Specific accounts can still access it if &quot;Override Global OFF&quot; is enabled on their account and allowed above.
+                      Turn a workspace OFF globally. Specific accounts can still access it if &quot;Override Global OFF&quot; (or &quot;AI Override&quot; for AI Chat) is enabled.
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -742,7 +885,9 @@ export default function AdminAccountsModal({
                         WORKSPACE_ACCESS_KEYS.forEach(({ key }) => {
                           patch[key] = true;
                         });
-                        handleGlobalUpdate(patch, 'enableAll').then(() => showNotice('success', 'All workspaces enabled globally.'));
+                        handleGlobalUpdate(patch, 'enableAll').then((ok) => {
+                          if (ok) showNotice('success', 'All workspaces enabled globally.');
+                        });
                       }}
                       className="px-2.5 py-1 rounded-lg border border-emerald-500/40 bg-emerald-500/15 text-emerald-400 text-[10px] font-mono font-bold uppercase cursor-pointer"
                     >
@@ -751,15 +896,7 @@ export default function AdminAccountsModal({
                     <button
                       type="button"
                       disabled={globalBusyKey === 'disableAll'}
-                      onClick={() => {
-                        const patch = {};
-                        WORKSPACE_ACCESS_KEYS.forEach(({ key }) => {
-                          patch[key] = false;
-                        });
-                        handleGlobalUpdate(patch, 'disableAll').then(() =>
-                          showNotice('success', 'All workspaces turned OFF globally.'),
-                        );
-                      }}
+                      onClick={() => requestAdminPasswordForGlobalAction('disableAll')}
                       className="px-2.5 py-1 rounded-lg border border-rose-500/40 bg-rose-500/15 text-rose-400 text-[10px] font-mono font-bold uppercase cursor-pointer"
                     >
                       Global OFF All
@@ -767,12 +904,67 @@ export default function AdminAccountsModal({
                   </div>
                 </div>
 
+                {pendingGlobalAction === 'disableAll' && (
+                  <form
+                    onSubmit={handleConfirmGlobalPassword}
+                    className={`p-3 rounded-xl border space-y-2 animate-fade-in ${
+                      isLight ? 'bg-rose-50 border-rose-200' : 'bg-rose-950/40 border-rose-500/40'
+                    }`}
+                  >
+                    <div className="text-[10.5px] font-mono font-bold uppercase text-rose-400 flex items-center gap-1.5">
+                      <Lock className="w-3 h-3" />
+                      <span>Enter Admin Password to Turn All Workspaces OFF Globally</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="password"
+                        required
+                        autoFocus
+                        value={adminConfirmPass}
+                        onChange={(e) => {
+                          setAdminConfirmPass(e.target.value);
+                          if (adminConfirmError) setAdminConfirmError('');
+                        }}
+                        placeholder="Admin password..."
+                        className={`flex-1 min-w-[180px] px-2.5 py-1.5 rounded-lg border text-xs font-mono outline-none ${
+                          isLight ? 'bg-white border-neutral-300 text-neutral-900' : 'bg-black/50 border-white/15 text-white'
+                        }`}
+                      />
+                      <button
+                        type="submit"
+                        disabled={globalBusyKey === 'disableAll'}
+                        className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-black uppercase cursor-pointer"
+                      >
+                        Confirm Global OFF
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPendingGlobalAction(null);
+                          setAdminConfirmPass('');
+                          setAdminConfirmError('');
+                        }}
+                        className={`px-2.5 py-1.5 rounded-lg text-[10px] cursor-pointer ${
+                          isLight ? 'bg-neutral-200 text-neutral-700' : 'bg-white/10 text-neutral-300'
+                        }`}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {adminConfirmError && (
+                      <div className="text-[10.5px] font-semibold text-rose-400">{adminConfirmError}</div>
+                    )}
+                  </form>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                   {WORKSPACE_ACCESS_KEYS.map(({ key, label, description }) => {
                     const Icon = WORKSPACE_ICONS[key] || Shield;
                     const enabled = workspaceConfig?.[key] !== false;
                     const overridesPermitted =
-                      !workspaceConfig?.siteLockdown && workspaceConfig?.allowAccountOverrides !== false;
+                      !workspaceConfig?.siteLockdown &&
+                      (workspaceConfig?.allowAccountOverrides !== false ||
+                        (key === 'aiAccess' && workspaceConfig?.allowAiOverrides !== false));
                     return (
                       <button
                         key={key}
@@ -798,7 +990,9 @@ export default function AdminAccountsModal({
                             {enabled
                               ? description
                               : overridesPermitted
-                                ? 'OFF (Override accounts OK)'
+                                ? key === 'aiAccess' && workspaceConfig?.allowAccountOverrides === false
+                                  ? 'OFF (AI Override OK)'
+                                  : 'OFF (Override accounts OK)'
                                 : 'OFF (Blocked for all)'}
                           </div>
                         </div>
@@ -1238,6 +1432,30 @@ export default function AdminAccountsModal({
                       <span>{newAllowGlobalOverride ? 'Override Global OFF: ON' : 'Override Global OFF: OFF'}</span>
                     </button>
 
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNewAllowAiOverride((prev) => {
+                          const next = !prev;
+                          if (next) {
+                            setNewPerms((p) => ({ ...p, aiAccess: true }));
+                          }
+                          return next;
+                        })
+                      }
+                      className={`px-2.5 py-1 rounded-lg border text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                        newAllowAiOverride
+                          ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300'
+                          : isLight
+                            ? 'bg-white border-neutral-300 text-neutral-500'
+                            : 'bg-white/5 border-white/10 text-neutral-400'
+                      }`}
+                      title="Custom AI Override: grant this account access to AI Chat even when AI Chat is turned OFF globally"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>{newAllowAiOverride ? 'AI Override: ON' : 'AI Override: OFF'}</span>
+                    </button>
+
                     {WORKSPACE_ACCESS_KEYS.map(({ key, label }) => {
                       const Icon = WORKSPACE_ICONS[key] || Shield;
                       const enabled = Boolean(newPerms[key]);
@@ -1478,6 +1696,37 @@ export default function AdminAccountsModal({
 
                             <button
                               type="button"
+                              disabled={acc.isAdmin || busyKey === `${acc.usernameLower}:allowAiOverride`}
+                              onClick={() => handleToggleField(acc, 'allowAiOverride')}
+                              className={`px-2 py-1 rounded-lg border text-[10px] font-mono font-bold flex items-center gap-1 transition-all ${
+                                acc.isAdmin ? 'cursor-default opacity-75' : 'cursor-pointer'
+                              } ${
+                                acc.isAdmin || acc.allowAiOverride
+                                  ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300'
+                                  : isLight
+                                    ? 'bg-neutral-100 border-neutral-300 text-neutral-500'
+                                    : 'bg-white/5 border-white/10 text-neutral-400'
+                              }`}
+                              title={
+                                acc.isAdmin
+                                  ? 'Admins always have AI access'
+                                  : acc.allowAiOverride
+                                    ? 'Custom AI Override ON: this account can access AI Chat even when AI Chat is globally OFF (click to turn off)'
+                                    : 'Custom AI Override OFF: click to grant this account AI Chat access even when globally OFF'
+                              }
+                            >
+                              <Sparkles className="w-3 h-3" />
+                              <span>
+                                {acc.isAdmin
+                                  ? 'AI Override (Admin)'
+                                  : acc.allowAiOverride
+                                    ? 'AI Override: ON'
+                                    : 'AI Override'}
+                              </span>
+                            </button>
+
+                            <button
+                              type="button"
                               disabled={busyKey === `${acc.usernameLower}:isActive`}
                               onClick={() => handleToggleField(acc, 'isActive')}
                               className={`px-2 py-1 rounded-lg border text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
@@ -1659,16 +1908,24 @@ export default function AdminAccountsModal({
                           </span>
                           {WORKSPACE_ACCESS_KEYS.map(({ key, label }) => {
                             const Icon = WORKSPACE_ICONS[key] || Shield;
-                            const enabled = acc.isAdmin ? true : Boolean(acc[key]);
+                            const enabled = acc.isAdmin
+                              ? true
+                              : Boolean(acc[key] || (key === 'aiAccess' && acc.allowAiOverride));
                             const globalDisabled = !acc.isAdmin && workspaceConfig?.[key] === false;
                             const lockdownActive = !acc.isAdmin && Boolean(workspaceConfig?.siteLockdown);
+                            const hasGeneralOverride =
+                              Boolean(acc.allowGlobalOverride) &&
+                              workspaceConfig?.allowAccountOverrides !== false;
+                            const hasAiOnlyOverride =
+                              key === 'aiAccess' &&
+                              Boolean(acc.allowAiOverride) &&
+                              workspaceConfig?.allowAiOverrides !== false;
                             const hasEffectiveOverride =
                               !acc.isAdmin &&
                               enabled &&
                               globalDisabled &&
                               !lockdownActive &&
-                              Boolean(acc.allowGlobalOverride) &&
-                              workspaceConfig?.allowAccountOverrides !== false;
+                              (hasGeneralOverride || hasAiOnlyOverride);
                             const isBlockedByGlobal =
                               !acc.isAdmin && enabled && (lockdownActive || (globalDisabled && !hasEffectiveOverride));
 
@@ -1684,11 +1941,15 @@ export default function AdminAccountsModal({
                                     : lockdownActive
                                       ? `${label} (Blocked — "Turn Everyone's Access Off" Lockdown is active)`
                                       : hasEffectiveOverride
-                                        ? `${label} (ALLOWED via Account Override even though globally OFF)`
+                                        ? hasAiOnlyOverride
+                                          ? `${label} (ALLOWED via Custom AI Override even though globally OFF)`
+                                          : `${label} (ALLOWED via Account Override even though globally OFF)`
                                         : isBlockedByGlobal
-                                          ? workspaceConfig?.allowAccountOverrides === false
-                                            ? `${label} (Blocked — globally OFF and Account Overrides are blocked in Global Access)`
-                                            : `${label} (Blocked by Global OFF — enable "Override OFF" on this account to grant access)`
+                                          ? key === 'aiAccess'
+                                            ? `${label} (Blocked by Global OFF — enable "AI Override" or "Override OFF" on this account)`
+                                            : workspaceConfig?.allowAccountOverrides === false
+                                              ? `${label} (Blocked — globally OFF and Account Overrides are blocked in Global Access)`
+                                              : `${label} (Blocked by Global OFF — enable "Override OFF" on this account to grant access)`
                                           : `Toggle ${label} access for @${acc.username}`
                                 }
                                 className={`px-2 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 transition-all ${
@@ -1696,7 +1957,9 @@ export default function AdminAccountsModal({
                                 } ${
                                   enabled
                                     ? hasEffectiveOverride
-                                      ? 'bg-violet-500/20 border-violet-400/60 text-violet-300 shadow-sm'
+                                      ? hasAiOnlyOverride
+                                        ? 'bg-cyan-500/20 border-cyan-400/60 text-cyan-200 shadow-sm'
+                                        : 'bg-violet-500/20 border-violet-400/60 text-violet-300 shadow-sm'
                                       : isBlockedByGlobal
                                         ? 'bg-amber-500/10 border-amber-500/30 text-amber-300/75'
                                         : 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
@@ -1707,7 +1970,7 @@ export default function AdminAccountsModal({
                               >
                                 <Icon className="w-2.5 h-2.5" />
                                 <span>{label}</span>
-                                {hasEffectiveOverride && <span className="text-[8px] text-violet-200">★</span>}
+                                {hasEffectiveOverride && <span className="text-[8px] text-cyan-200">★</span>}
                                 {isBlockedByGlobal && <Lock className="w-2.5 h-2.5 opacity-80" />}
                               </button>
                             );

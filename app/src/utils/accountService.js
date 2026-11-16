@@ -62,6 +62,7 @@ export const DEFAULT_WORKSPACE_CONFIG = {
   lockdownMessage: 'Workspace access is currently restricted by the administrator.',
   allowSharedPasscodes: false,
   allowAccountOverrides: true,
+  allowAiOverrides: true,
   gamesAccess: true,
   moviesAccess: true,
   moreMoviesAccess: true,
@@ -83,6 +84,7 @@ export function sanitizeWorkspaceConfig(data) {
         : DEFAULT_WORKSPACE_CONFIG.lockdownMessage,
     allowSharedPasscodes: false,
     allowAccountOverrides: data.allowAccountOverrides !== false,
+    allowAiOverrides: data.allowAiOverrides !== false,
     gamesAccess: data.gamesAccess !== false,
     moviesAccess: data.moviesAccess !== false,
     moreMoviesAccess: data.moreMoviesAccess !== false,
@@ -266,6 +268,7 @@ export function sanitizeAccountDoc(docId, data) {
     isActive: data.isActive !== false,
     isAdmin: Boolean(data.isAdmin),
     allowGlobalOverride: Boolean(data.allowGlobalOverride),
+    allowAiOverride: Boolean(data.allowAiOverride),
     gamesAccess: data.gamesAccess !== false,
     moviesAccess: data.moviesAccess !== false,
     moreMoviesAccess: data.moreMoviesAccess !== false,
@@ -333,9 +336,9 @@ export function clearSessionActivity() {
 
 export function isAutoSignOutOnIdleEnabled() {
   try {
-    return localStorage.getItem(AUTO_SIGNOUT_IDLE_KEY) !== 'false';
+    return localStorage.getItem(AUTO_SIGNOUT_IDLE_KEY) === 'true';
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -453,7 +456,7 @@ export function syncChatLinkedAccountStorage(account) {
   } catch {}
 
   try {
-    const iframe = document.getElementById('chat-decoy-iframe');
+    const iframe = /** @type {HTMLIFrameElement | null} */ (document.getElementById('chat-decoy-iframe'));
     if (iframe && iframe.contentWindow) {
       iframe.contentWindow.postMessage(
         { type: 'urnperiodic-account-sync', account: payload },
@@ -644,12 +647,13 @@ export async function createManagedAccount(db, auth, payload) {
     isActive: payload.isActive !== false,
     isAdmin: Boolean(payload.isAdmin),
     allowGlobalOverride: Boolean(payload.allowGlobalOverride),
+    allowAiOverride: Boolean(payload.allowAiOverride),
     gamesAccess: payload.gamesAccess !== false,
     moviesAccess: payload.moviesAccess !== false,
     moreMoviesAccess: payload.moreMoviesAccess !== false,
     youtubeAccess: payload.youtubeAccess !== false,
     lobbyChatAccess: payload.lobbyChatAccess !== false,
-    aiAccess: Boolean(payload.aiAccess),
+    aiAccess: Boolean(payload.aiAccess || payload.allowAiOverride),
     decoysAccess: Boolean(payload.decoysAccess),
     downloadAccess: payload.downloadAccess !== false,
     chatMuted: Boolean(payload.chatMuted),
@@ -687,6 +691,7 @@ export async function updateManagedAccount(db, auth, currentUsernameLower, updat
   if (typeof updates.isActive === 'boolean') patch.isActive = updates.isActive;
   if (typeof updates.isAdmin === 'boolean') patch.isAdmin = updates.isAdmin;
   if (typeof updates.allowGlobalOverride === 'boolean') patch.allowGlobalOverride = updates.allowGlobalOverride;
+  if (typeof updates.allowAiOverride === 'boolean') patch.allowAiOverride = updates.allowAiOverride;
   if (typeof updates.gamesAccess === 'boolean') patch.gamesAccess = updates.gamesAccess;
   if (typeof updates.moviesAccess === 'boolean') patch.moviesAccess = updates.moviesAccess;
   if (typeof updates.moreMoviesAccess === 'boolean') patch.moreMoviesAccess = updates.moreMoviesAccess;

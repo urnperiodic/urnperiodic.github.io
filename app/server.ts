@@ -196,6 +196,12 @@ Always focus on being genuinely useful and producing high-quality answers.`
   // Serve the website download bundle from the repo root in all modes
   app.use('/Websitedownload', express.static(path.join(process.cwd(), 'Websitedownload')));
 
+  const publicPath = path.join(process.cwd(), 'public');
+  app.use('/Gmfiles', express.static(path.join(publicPath, 'Gmfiles')));
+  app.use('/Gmfiles', (_req, res) => {
+    res.status(404).send('Game file not found');
+  });
+
   // Vite development middleware integration
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -206,7 +212,6 @@ Always focus on being genuinely useful and producing high-quality answers.`
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    const publicPath = path.join(process.cwd(), 'public');
 
     app.use(express.static(distPath));
     app.use(express.static(publicPath));

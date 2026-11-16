@@ -64,9 +64,10 @@ function broadcastLobbyEvent(payload) {
 
 export async function deleteSingleChatMessage(db, channelId, messageId) {
   if (!db || !channelId || !messageId) return false;
-  const path = `channels/${channelId}/messages/${messageId}`;
+  const rootCol = String(channelId).startsWith('dm__') ? 'directMessages' : 'channels';
+  const path = `${rootCol}/${channelId}/messages/${messageId}`;
   try {
-    await deleteDoc(doc(db, 'channels', channelId, 'messages', String(messageId)));
+    await deleteDoc(doc(db, rootCol, channelId, 'messages', String(messageId)));
   } catch (err) {
     if (isFirestorePermissionError(err)) {
       handleFirestoreError(err, OperationType.DELETE, path);
@@ -91,12 +92,13 @@ export async function deleteSingleChatMessage(db, channelId, messageId) {
 
 export async function clearChannelMessages(db, channelId) {
   if (!db || !channelId) return 0;
-  const listPath = `channels/${channelId}/messages`;
+  const rootCol = String(channelId).startsWith('dm__') ? 'directMessages' : 'channels';
+  const listPath = `${rootCol}/${channelId}/messages`;
   let deleted = 0;
 
   let msgSnap;
   try {
-    msgSnap = await getDocs(collection(db, 'channels', channelId, 'messages'));
+    msgSnap = await getDocs(collection(db, rootCol, channelId, 'messages'));
   } catch (err) {
     if (isFirestorePermissionError(err)) {
       handleFirestoreError(err, OperationType.LIST, listPath);
@@ -108,7 +110,7 @@ export async function clearChannelMessages(db, channelId) {
   msgSnap.forEach((docSnap) => {
     const docPath = `${listPath}/${docSnap.id}`;
     tasks.push(
-      deleteDoc(doc(db, 'channels', channelId, 'messages', docSnap.id))
+      deleteDoc(doc(db, rootCol, channelId, 'messages', docSnap.id))
         .then(() => {
           deleted += 1;
         })
@@ -201,7 +203,7 @@ export async function deleteAllChatMessages(db, extraChannelIds = []) {
   broadcastLobbyEvent({ type: 'admin-delete-all-messages' });
 
   try {
-    const chatIframe = document.getElementById('chat-decoy-iframe');
+    const chatIframe = /** @type {HTMLIFrameElement | null} */ (document.getElementById('chat-decoy-iframe'));
     if (chatIframe && chatIframe.contentWindow) {
       chatIframe.contentWindow.postMessage({ type: 'admin-delete-all-messages' }, '*');
     }

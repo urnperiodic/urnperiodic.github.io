@@ -40,7 +40,7 @@ service cloud.firestore {
         ])
         && data.keys().hasOnly([
           'username', 'usernameLower', 'passwordSalt', 'passwordHash',
-          'isActive', 'isAdmin', 'allowGlobalOverride', 'gamesAccess', 'moviesAccess', 'moreMoviesAccess',
+          'isActive', 'isAdmin', 'allowGlobalOverride', 'allowAiOverride', 'gamesAccess', 'moviesAccess', 'moreMoviesAccess',
           'youtubeAccess', 'lobbyChatAccess', 'aiAccess', 'decoysAccess',
           'downloadAccess', 'chatMuted', 'chatBanned', 'roleBadge',
           'badgeColor', 'favorites', 'recentlyPlayed', 'preferredTheme',
@@ -56,6 +56,7 @@ service cloud.firestore {
         && data.isActive is bool
         && isOptionalBool(data, 'isAdmin')
         && isOptionalBool(data, 'allowGlobalOverride')
+        && isOptionalBool(data, 'allowAiOverride')
         && data.gamesAccess is bool
         && data.moviesAccess is bool
         && data.moreMoviesAccess is bool
@@ -93,7 +94,7 @@ service cloud.firestore {
           'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess', 'updatedAt'
         ])
         && data.keys().hasOnly([
-          'siteLockdown', 'lockdownMessage', 'allowSharedPasscodes', 'allowAccountOverrides',
+          'siteLockdown', 'lockdownMessage', 'allowSharedPasscodes', 'allowAccountOverrides', 'allowAiOverrides',
           'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'youtubeAccess',
           'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess', 'updatedAt'
         ])
@@ -101,6 +102,7 @@ service cloud.firestore {
         && data.lockdownMessage is string && data.lockdownMessage.size() <= 200
         && data.allowSharedPasscodes is bool
         && isOptionalBool(data, 'allowAccountOverrides')
+        && isOptionalBool(data, 'allowAiOverrides')
         && data.gamesAccess is bool
         && data.moviesAccess is bool
         && data.moreMoviesAccess is bool
@@ -145,6 +147,35 @@ service cloud.firestore {
         && data.channelId is string && data.channelId == chanId && data.channelId.size() <= 128;
     }
 
+    function isValidDmThread(data, dmId) {
+      return data.keys().hasAll(['participants', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'participants', 'lastSenderId', 'lastSenderName',
+          'lastMessageText', 'lastMessageAt', 'createdAt', 'updatedAt'
+        ])
+        && data.participants is list
+        && data.participants.size() == 2
+        && data.participants[0] is string && data.participants[0].size() >= 2 && data.participants[0].size() <= 20
+        && data.participants[0].matches('^[a-z0-9_\\-]+$')
+        && data.participants[1] is string && data.participants[1].size() >= 2 && data.participants[1].size() <= 20
+        && data.participants[1].matches('^[a-z0-9_\\-]+$')
+        && data.participants[0] < data.participants[1]
+        && dmId == ('dm__' + data.participants[0] + '__' + data.participants[1])
+        && isOptionalString(data, 'lastSenderId', 20)
+        && isOptionalString(data, 'lastSenderName', 40)
+        && isOptionalString(data, 'lastMessageText', 20000)
+        && isOptionalNumber(data, 'lastMessageAt')
+        && data.createdAt is number
+        && data.updatedAt is number;
+    }
+
+    function isValidDmThreadUpdate(data, dmId) {
+      return isValidDmThread(data, dmId)
+        && data.participants == existing().participants
+        && data.createdAt == existing().createdAt
+        && data.updatedAt >= existing().updatedAt;
+    }
+
     // Managed user accounts
     match /siteAccounts/{accountId} {
       allow get: if isValidId(accountId);
@@ -153,7 +184,7 @@ service cloud.firestore {
       allow update: if isValidId(accountId)
         && isValidAccountUpdate(incoming(), accountId)
         && incoming().diff(existing()).affectedKeys().hasOnly([
-          'username', 'passwordSalt', 'passwordHash', 'isActive', 'isAdmin', 'allowGlobalOverride',
+          'username', 'passwordSalt', 'passwordHash', 'isActive', 'isAdmin', 'allowGlobalOverride', 'allowAiOverride',
           'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'youtubeAccess',
           'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess',
           'chatMuted', 'chatBanned', 'roleBadge', 'badgeColor',
@@ -184,6 +215,27 @@ service cloud.firestore {
         allow create: if isValidId(channelId) && isValidId(messageId) && isValidMessage(incoming(), channelId);
         allow update: if false;
         allow delete: if isValidId(channelId) && isValidId(messageId);
+      }
+    }
+
+    // Direct Messages threads & messages
+    match /directMessages/{dmId} {
+      allow get: if isValidId(dmId);
+      allow list: if true;
+      allow create: if isValidId(dmId) && isValidDmThread(incoming(), dmId);
+      allow update: if isValidId(dmId)
+        && isValidDmThreadUpdate(incoming(), dmId)
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'lastSenderId', 'lastSenderName', 'lastMessageText', 'lastMessageAt', 'updatedAt'
+        ]);
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow get: if isValidId(dmId) && isValidId(messageId);
+        allow list: if isValidId(dmId);
+        allow create: if isValidId(dmId) && isValidId(messageId) && isValidMessage(incoming(), dmId);
+        allow update: if false;
+        allow delete: if isValidId(dmId) && isValidId(messageId);
       }
     }
 

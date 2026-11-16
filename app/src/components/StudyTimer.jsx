@@ -76,9 +76,9 @@ export default function StudyTimer() {
   const playCompletionSound = () => {
     if (isMuted) return;
     try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      const ctx = new AudioContext();
+      const AudioContextCtor = window.AudioContext || window['webkitAudioContext'];
+      if (!AudioContextCtor) return;
+      const ctx = new AudioContextCtor();
       
       // Beep 1
       const osc1 = ctx.createOscillator();

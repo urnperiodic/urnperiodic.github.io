@@ -43,6 +43,10 @@
           "type": "boolean",
           "description": "Whether this account can access its enabled workspaces even when those workspaces are turned off globally."
         },
+        "allowAiOverride": {
+          "type": "boolean",
+          "description": "Custom override granting this account access to AI Chat even when AI Chat is turned off globally."
+        },
         "gamesAccess": {
           "type": "boolean",
           "description": "Access to Games & Portals catalog."
@@ -175,6 +179,10 @@
         "allowAccountOverrides": {
           "type": "boolean",
           "description": "Whether specific accounts with allowGlobalOverride can access workspaces that are turned off globally."
+        },
+        "allowAiOverrides": {
+          "type": "boolean",
+          "description": "Whether specific accounts with allowAiOverride can access AI Chat even when AI Chat is turned off globally."
         },
         "gamesAccess": {
           "type": "boolean",
@@ -334,6 +342,45 @@
         }
       },
       "required": ["name", "text", "timestamp", "channelId"]
+    },
+    "DirectMessageThread": {
+      "title": "Direct Message Thread",
+      "description": "One-to-one direct message conversation metadata between two online/registered users.",
+      "type": "object",
+      "properties": {
+        "participants": {
+          "type": "array",
+          "description": "Sorted two-element array of participant lowercase account IDs."
+        },
+        "lastSenderId": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Lowercase account ID of the most recent sender."
+        },
+        "lastSenderName": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Display name of the most recent sender."
+        },
+        "lastMessageText": {
+          "type": "string",
+          "maxLength": 20000,
+          "description": "Encrypted preview of the most recent DM."
+        },
+        "lastMessageAt": {
+          "type": "number",
+          "description": "Epoch millisecond timestamp of the most recent DM."
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Epoch millisecond creation timestamp."
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Epoch millisecond last update timestamp."
+        }
+      },
+      "required": ["participants", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -352,6 +399,14 @@
     "/channels/{channelId}/messages/{messageId}": {
       "schema": { "$ref": "#/entities/ChatMessage" },
       "description": "Messages posted inside each Lobby Chat channel."
+    },
+    "/directMessages/{dmId}": {
+      "schema": { "$ref": "#/entities/DirectMessageThread" },
+      "description": "Direct message thread metadata keyed deterministically by sorted participant IDs."
+    },
+    "/directMessages/{dmId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Encrypted messages inside a direct message conversation."
     }
   }
 }

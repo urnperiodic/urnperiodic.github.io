@@ -5,12 +5,15 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   limit,
   limitToLast,
   onSnapshot,
   orderBy,
   query,
+  setDoc,
+  updateDoc,
   where,
 } from 'firebase/firestore';
 import {
@@ -18,6 +21,7 @@ import {
   Ban,
   Check,
   ChevronDown,
+  ChevronLeft,
   Clock,
   Copy,
   Hash,
@@ -28,6 +32,7 @@ import {
   MessageCircle,
   MessageSquare,
   Palette,
+  PanelLeft,
   Plus,
   Reply,
   Search,
@@ -153,6 +158,32 @@ function filterValidRooms(channelList, now = Date.now()) {
     if (c.createdAt && now - c.createdAt >= ROOM_TTL_MS) return false;
     return true;
   });
+}
+
+function getDmParticipants(userA, userB) {
+  const a = String(userA || '').trim().toLowerCase();
+  const b = String(userB || '').trim().toLowerCase();
+  if (!a || !b || a === b) return null;
+  return [a, b].sort();
+}
+
+function getDmId(userA, userB) {
+  const pair = getDmParticipants(userA, userB);
+  return pair ? `dm__${pair[0]}__${pair[1]}` : null;
+}
+
+function parseDmPartnerFromId(dmId, myId) {
+  if (typeof dmId !== 'string' || !dmId.startsWith('dm__') || !myId) return null;
+  const me = String(myId).trim().toLowerCase();
+  const prefix = `dm__${me}__`;
+  if (dmId.startsWith(prefix)) {
+    return dmId.slice(prefix.length) || null;
+  }
+  const suffix = `__${me}`;
+  if (dmId.endsWith(suffix) && dmId.length > 4 + suffix.length) {
+    return dmId.slice(4, dmId.length - suffix.length) || null;
+  }
+  return null;
 }
 
 function getClientId() {
@@ -394,6 +425,8 @@ export default function Chat({
   activeAccount = null,
   isOwnerAdmin = false,
   onOpenAccountModal = null,
+  targetChannelRequest = null,
+  onActiveChannelChange = null,
 }) {
   const [theme, setTheme] = useState(() => {
     try {
@@ -410,6 +443,10 @@ export default function Chat({
     normalizeLinkedAccount(activeAccount) || normalizeLinkedAccount(safeParse(LINKED_ACCOUNT_STORAGE_KEY, null))
   );
   const [onlineAccounts, setOnlineAccounts] = useState([]);
+  const [dmThreads, setDmThreads] = useState([]);
+  const [pendingDmChannel, setPendingDmChannel] = useState(null);
+  const [dmSidebarOpen, setDmSidebarOpen] = useState(true);
+  const [miniLeftDrawerOpen, setMiniLeftDrawerOpen] = useState(false);
   const [tempNick, setTempNick] = useState(() => getStoredTempNickname());
   const [nickInput, setNickInput] = useState(() => {
     const initialAcc =
@@ -464,6 +501,7 @@ export default function Chat({
 
   const [toastMsg, setToastMsg] = useState('');
   const [tickNow, setTickNow] = useState(() => Date.now());
+  const [customChannelsLoaded, setCustomChannelsLoaded] = useState(false);
 
   const messagesPanelRef = useRef(null);
   const composeInputRef = useRef(null);
@@ -476,13 +514,14 @@ export default function Chat({
 
   useEffect(() => {
     activeChannelIdRef.current = activeChannelId;
+    if (onActiveChannelChange) onActiveChannelChange(activeChannelId);
     setUnreadChannels((prev) => {
       if (!prev[activeChannelId]) return prev;
       const next = { ...prev };
       delete next[activeChannelId];
       return next;
     });
-  }, [activeChannelId]);
+  }, [activeChannelId, onActiveChannelChange]);
 
   const showToast = useCallback((msg) => {
     setToastMsg(msg);
@@ -621,7 +660,11 @@ export default function Chat({
       },
       (err) => {
         if (isFirestorePermissionError(err)) {
-          handleFirestoreError(err, OperationType.GET, `siteAccounts/${linkedUsernameLower}`);
+          try {
+            handleFirestoreError(err, OperationType.GET, `siteAccounts/${linkedUsernameLower}`);
+          } catch (wrappedErr) {
+            console.error(wrappedErr);
+          }
         }
       }
     );
@@ -654,6 +697,63 @@ export default function Chat({
     return () => unsub();
   }, []);
 
+  const isAccountLinked = Boolean(linkedAccount && linkedAccount.username && linkedAccount.isActive !== false);
+  const isOwnerSession = Boolean(isOwnerAdmin && !isAccountLinked);
+  const isChatAdmin = Boolean(isOwnerAdmin || linkedAccount?.isAdmin);
+  const hasAccountIdentity = isAccountLinked || isOwnerSession;
+  const myDmIdentity = isAccountLinked ? linkedAccount.usernameLower : isOwnerSession ? '__owner__' : null;
+  const effectiveChatName = isAccountLinked
+    ? linkedAccount.username
+    : isOwnerSession
+      ? 'Owner'
+      : tempNick.trim();
+
+  // Real-time DM threads subscription for signed-in account or Owner
+  useEffect(() => {
+    if (!myDmIdentity) {
+      setDmThreads([]);
+      return;
+    }
+    const q = query(
+      collection(lobbyDb, 'directMessages'),
+      where('participants', 'array-contains', myDmIdentity),
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const loaded = [];
+        snap.forEach((docSnap) => {
+          const data = docSnap.data();
+          const participants = Array.isArray(data?.participants) ? data.participants : [];
+          if (participants.length !== 2) return;
+          const partnerId = participants.find((p) => p !== myDmIdentity) || participants[0];
+          loaded.push({
+            id: docSnap.id,
+            participants,
+            partnerId,
+            lastSenderId: data.lastSenderId || null,
+            lastSenderName: data.lastSenderName || null,
+            lastMessageAt: Number(data.lastMessageAt || 0),
+            createdAt: Number(data.createdAt || 0),
+            updatedAt: Number(data.updatedAt || 0),
+          });
+        });
+        loaded.sort((a, b) => (b.lastMessageAt || b.updatedAt || b.createdAt) - (a.lastMessageAt || a.updatedAt || a.createdAt));
+        setDmThreads(loaded);
+      },
+      (err) => {
+        if (isFirestorePermissionError(err)) {
+          try {
+            handleFirestoreError(err, OperationType.LIST, 'directMessages');
+          } catch (wrappedErr) {
+            console.error(wrappedErr);
+          }
+        }
+      },
+    );
+    return () => unsub();
+  }, [myDmIdentity]);
+
   const onlineUserSet = useMemo(() => {
     const set = new Set();
     onlineAccounts.forEach((acc) => {
@@ -663,6 +763,12 @@ export default function Chat({
     });
     return set;
   }, [onlineAccounts, tickNow, linkedUsernameLower]);
+
+  const onlineOtherUsers = useMemo(() => {
+    return onlineAccounts.filter(
+      (acc) => onlineUserSet.has(acc.usernameLower) && acc.usernameLower !== myDmIdentity,
+    );
+  }, [onlineAccounts, onlineUserSet, myDmIdentity]);
 
   const onlineUsernames = useMemo(() => {
     const names = onlineAccounts
@@ -674,8 +780,49 @@ export default function Chat({
     return names;
   }, [onlineAccounts, onlineUserSet, isOwnerAdmin, linkedUsernameLower]);
 
-  // Combined valid channel list
-  const allChannels = useMemo(() => {
+  const accountLookup = useMemo(() => {
+    const map = new Map();
+    onlineAccounts.forEach((acc) => {
+      map.set(acc.usernameLower, acc);
+    });
+    return map;
+  }, [onlineAccounts]);
+
+  const dmChannels = useMemo(() => {
+    const list = dmThreads.map((t) => {
+      const acc = accountLookup.get(t.partnerId);
+      const partnerDisplay = t.partnerId === '__owner__' ? 'Owner' : acc?.username || t.partnerId;
+      const partnerOnline = t.partnerId === '__owner__' ? false : onlineUserSet.has(t.partnerId);
+      return {
+        id: t.id,
+        name: t.partnerId === '__owner__' ? 'Owner' : `@${partnerDisplay}`,
+        partnerId: t.partnerId,
+        partnerUsername: partnerDisplay,
+        partnerOnline,
+        description: `Direct message with ${t.partnerId === '__owner__' ? 'Owner' : `@${partnerDisplay}`}`,
+        isDirectMessage: true,
+        isPermanent: true,
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt,
+        lastMessageAt: t.lastMessageAt,
+        lastSenderId: t.lastSenderId,
+      };
+    });
+    if (pendingDmChannel && !list.some((c) => c.id === pendingDmChannel.id)) {
+      const acc = accountLookup.get(pendingDmChannel.partnerId);
+      const partnerDisplay =
+        pendingDmChannel.partnerId === '__owner__' ? 'Owner' : acc?.username || pendingDmChannel.partnerUsername || pendingDmChannel.partnerId;
+      list.unshift({
+        ...pendingDmChannel,
+        name: pendingDmChannel.partnerId === '__owner__' ? 'Owner' : `@${partnerDisplay}`,
+        partnerUsername: partnerDisplay,
+        partnerOnline: pendingDmChannel.partnerId === '__owner__' ? false : onlineUserSet.has(pendingDmChannel.partnerId),
+      });
+    }
+    return list;
+  }, [dmThreads, pendingDmChannel, accountLookup, onlineUserSet]);
+
+  const publicChannels = useMemo(() => {
     const validLocals = filterValidRooms(localChannels, tickNow);
     const validCustoms = filterValidRooms(customChannels, tickNow);
     const base = [
@@ -689,28 +836,53 @@ export default function Chat({
     return base;
   }, [localChannels, customChannels, fallbackInviteChannel, tickNow]);
 
+  // Combined valid channel list (public + DMs)
+  const allChannels = useMemo(() => {
+    return [...publicChannels, ...dmChannels];
+  }, [publicChannels, dmChannels]);
+
   const currentChannel = useMemo(() => {
     return allChannels.find((c) => c.id === activeChannelId) || DEFAULT_CHANNELS[0];
   }, [allChannels, activeChannelId]);
 
   const isPermanentChannel = useCallback(
     (chId) => {
+      if (typeof chId === 'string' && chId.startsWith('dm__')) return true;
       const ch = allChannels.find((c) => c.id === chId) || currentChannel;
-      return Boolean(ch?.isPermanent || ch?.id === 'general');
+      return Boolean(ch?.isPermanent || ch?.isDirectMessage || ch?.id === 'general');
     },
     [allChannels, currentChannel]
   );
 
   const isCurrentLocked = Boolean(currentChannel.isPasswordProtected && !unlockedChannels[currentChannel.id]);
-  const isAccountLinked = Boolean(linkedAccount && linkedAccount.username && linkedAccount.isActive !== false);
-  const isOwnerSession = Boolean(isOwnerAdmin && !isAccountLinked);
-  const isChatAdmin = Boolean(isOwnerAdmin || linkedAccount?.isAdmin);
-  const hasAccountIdentity = isAccountLinked || isOwnerSession;
-  const effectiveChatName = isAccountLinked
-    ? linkedAccount.username
-    : isOwnerSession
-      ? 'Owner'
-      : tempNick.trim();
+
+  // Handle external channel/DM navigation requests (e.g. clicking the header notification pill)
+  useEffect(() => {
+    const reqId = targetChannelRequest?.id;
+    if (!reqId) return;
+    if (reqId.startsWith('dm__')) {
+      if (!myDmIdentity) return;
+      const partnerId = parseDmPartnerFromId(reqId, myDmIdentity);
+      if (partnerId && !dmThreads.some((t) => t.id === reqId)) {
+        const acc = accountLookup.get(partnerId);
+        const partnerDisplay = partnerId === '__owner__' ? 'Owner' : acc?.username || partnerId;
+        setPendingDmChannel({
+          id: reqId,
+          name: partnerId === '__owner__' ? 'Owner' : `@${partnerDisplay}`,
+          partnerId,
+          partnerUsername: partnerDisplay,
+          partnerOnline: partnerId === '__owner__' ? false : onlineUserSet.has(partnerId),
+          description: `Direct message with ${partnerId === '__owner__' ? 'Owner' : `@${partnerDisplay}`}`,
+          isDirectMessage: true,
+          isPermanent: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          lastMessageAt: 0,
+        });
+      }
+    }
+    setActiveChannelId(reqId);
+  }, [targetChannelRequest?.nonce, targetChannelRequest?.id, myDmIdentity, dmThreads, accountLookup, onlineUserSet]);
 
   // Check invite query params (?channel=...&invite=true)
   useEffect(() => {
@@ -786,10 +958,16 @@ export default function Chat({
           }
         });
         setCustomChannels(list);
+        setCustomChannelsLoaded(true);
       },
       (err) => {
+        setCustomChannelsLoaded(true);
         if (isFirestorePermissionError(err)) {
-          handleFirestoreError(err, OperationType.LIST, 'channels');
+          try {
+            handleFirestoreError(err, OperationType.LIST, 'channels');
+          } catch (wrappedErr) {
+            console.error(wrappedErr);
+          }
         }
       }
     );
@@ -819,15 +997,16 @@ export default function Chat({
   // Redirect to #general if active custom room expired
   useEffect(() => {
     if (
+      customChannelsLoaded &&
       activeChannelId !== 'general' &&
       activeChannelId !== 'temporary' &&
-      customChannels.length + localChannels.length > 0 &&
+      !activeChannelId.startsWith('dm__') &&
       !allChannels.some((c) => c.id === activeChannelId)
     ) {
       setActiveChannelId('general');
       showToast('⏰ The custom room expired after 1 hour.');
     }
-  }, [allChannels, activeChannelId, customChannels.length, localChannels.length, showToast]);
+  }, [allChannels, activeChannelId, customChannelsLoaded, showToast]);
 
   // Close mobile channel dropdown on outside click
   useEffect(() => {
@@ -841,9 +1020,10 @@ export default function Chat({
     return () => document.removeEventListener('click', onDocClick);
   }, [dropdownOpen]);
 
-  // Firestore messages subscription for active channel
+  // Firestore messages subscription for active channel or DM thread
   useEffect(() => {
     const cId = currentChannel.id;
+    const isDm = Boolean(currentChannel.isDirectMessage || String(cId).startsWith('dm__'));
     const isPerm = isPermanentChannel(cId);
 
     if (isCurrentLocked) {
@@ -879,7 +1059,9 @@ export default function Chat({
     });
 
     let snapInitialized = false;
-    const colRef = collection(lobbyDb, 'channels', cId, 'messages');
+    const colRef = isDm
+      ? collection(lobbyDb, 'directMessages', cId, 'messages')
+      : collection(lobbyDb, 'channels', cId, 'messages');
     const q = query(colRef, orderBy('timestamp', 'asc'), limitToLast(150));
 
     const unsub = onSnapshot(
@@ -961,7 +1143,15 @@ export default function Chat({
       },
       (err) => {
         if (isFirestorePermissionError(err)) {
-          handleFirestoreError(err, OperationType.LIST, `channels/${cId}/messages`);
+          try {
+            handleFirestoreError(
+              err,
+              OperationType.LIST,
+              isDm ? `directMessages/${cId}/messages` : `channels/${cId}/messages`
+            );
+          } catch (wrappedErr) {
+            console.error(wrappedErr);
+          }
         }
       }
     );
@@ -970,9 +1160,9 @@ export default function Chat({
       cancelled = true;
       unsub();
     };
-  }, [currentChannel.id, isCurrentLocked, isPermanentChannel]);
+  }, [currentChannel.id, currentChannel.isDirectMessage, isCurrentLocked, isPermanentChannel]);
 
-  // Watch background channels for red unread dots when user is chatting in another room
+  // Watch background channels & DMs for red unread dots when user is chatting in another room
   useEffect(() => {
     const channelUnsubs = new Map();
     const watchChannels = allChannels.filter((c) => {
@@ -983,18 +1173,23 @@ export default function Chat({
 
     watchChannels.forEach((ch) => {
       let initialized = false;
+      const rootCol = ch.isDirectMessage ? 'directMessages' : 'channels';
       try {
         const bgQuery = query(
-          collection(lobbyDb, 'channels', ch.id, 'messages'),
+          collection(lobbyDb, rootCol, ch.id, 'messages'),
           orderBy('timestamp', 'desc'),
           limit(1),
         );
         const unsub = onSnapshot(
           bgQuery,
           (snap) => {
-            const latest = Number(snap.docs[0]?.data()?.timestamp || 0);
+            const docData = snap.docs[0]?.data();
+            const latest = Number(docData?.timestamp || 0);
             if (!initialized) {
               initialized = true;
+              return;
+            }
+            if (ch.isDirectMessage && myDmIdentity && docData?.accountId === myDmIdentity) {
               return;
             }
             if (latest && activeChannelIdRef.current !== ch.id) {
@@ -1003,7 +1198,11 @@ export default function Chat({
           },
           (err) => {
             if (isFirestorePermissionError(err)) {
-              handleFirestoreError(err, OperationType.GET, `channels/${ch.id}/messages`);
+              try {
+                handleFirestoreError(err, OperationType.GET, `${rootCol}/${ch.id}/messages`);
+              } catch (wrappedErr) {
+                console.error(wrappedErr);
+              }
             }
           },
         );
@@ -1019,7 +1218,7 @@ export default function Chat({
       });
       channelUnsubs.clear();
     };
-  }, [allChannels, activeChannelId, unlockedChannels]);
+  }, [allChannels, activeChannelId, unlockedChannels, myDmIdentity]);
 
   const displayedMessages = useMemo(() => {
     const isPerm = isPermanentChannel(currentChannel.id);
@@ -1081,7 +1280,7 @@ export default function Chat({
   const switchChannel = (id) => {
     const target = allChannels.find((c) => c.id === id);
     if (!target) return;
-    if (target.isDirectMessage && !isAccountLinked) {
+    if (target.isDirectMessage && !hasAccountIdentity) {
       showToast('🔒 Sign in with an assigned account to access direct messages.');
       return;
     }
@@ -1089,7 +1288,51 @@ export default function Chat({
     setActiveChannelId(id);
     setSearchFilter('');
     setDropdownOpen(false);
+    setMiniLeftDrawerOpen(false);
   };
+
+  const openDirectMessage = useCallback(
+    (targetAccountId, targetDisplayName = '') => {
+      if (!hasAccountIdentity || !myDmIdentity) {
+        if (onOpenAccountModal) {
+          showToast('Sign in with your account to send direct messages.');
+          onOpenAccountModal();
+        } else {
+          showToast('Sign in with your account to send direct messages.');
+        }
+        return;
+      }
+      const targetLower = String(targetAccountId || '').trim().toLowerCase();
+      if (!targetLower || targetLower === myDmIdentity) return;
+      const dmId = getDmId(myDmIdentity, targetLower);
+      if (!dmId) return;
+      const matchedAcc = accountLookup.get(targetLower);
+      const display =
+        targetDisplayName || matchedAcc?.username || (targetLower === '__owner__' ? 'Owner' : targetLower);
+      if (!dmThreads.some((t) => t.id === dmId)) {
+        setPendingDmChannel({
+          id: dmId,
+          name: targetLower === '__owner__' ? 'Owner' : `@${display}`,
+          partnerId: targetLower,
+          partnerUsername: display,
+          partnerOnline: targetLower === '__owner__' ? false : onlineUserSet.has(targetLower),
+          description: `Direct message with ${targetLower === '__owner__' ? 'Owner' : `@${display}`}`,
+          isDirectMessage: true,
+          isPermanent: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          lastMessageAt: 0,
+        });
+      }
+      clearPastedImage();
+      setActiveChannelId(dmId);
+      setSearchFilter('');
+      setMiniLeftDrawerOpen(false);
+      setDropdownOpen(false);
+      setTimeout(() => composeInputRef.current?.focus(), 60);
+    },
+    [hasAccountIdentity, myDmIdentity, onOpenAccountModal, showToast, accountLookup, dmThreads, onlineUserSet],
+  );
 
   const copyInviteLink = async (channelId) => {
     const c = allChannels.find((x) => x.id === channelId) || currentChannel;
@@ -1276,7 +1519,11 @@ export default function Chat({
       composeInputRef.current?.focus();
 
       try {
-        const docRef = await addDoc(collection(lobbyDb, 'channels', cId, 'messages'), {
+        const isDm = Boolean(currentChannel.isDirectMessage || String(cId).startsWith('dm__'));
+        const msgCol = isDm
+          ? collection(lobbyDb, 'directMessages', cId, 'messages')
+          : collection(lobbyDb, 'channels', cId, 'messages');
+        const docRef = await addDoc(msgCol, {
           name: msgData.name,
           userId: msgData.userId,
           senderId: msgData.senderId,
@@ -1295,9 +1542,49 @@ export default function Chat({
         if (docRef?.id) {
           recordMySentMessage(docRef.id);
         }
+        if (isDm && myDmIdentity && currentChannel.partnerId) {
+          const participants = getDmParticipants(myDmIdentity, currentChannel.partnerId);
+          if (participants) {
+            const previewEncrypted = encryptedText || (imageUrl ? await encryptPayload('Sent an image', cId) : '');
+            const dmThreadRef = doc(lobbyDb, 'directMessages', cId);
+            let threadExists = dmThreads.some((t) => t.id === cId);
+            if (!threadExists) {
+              try {
+                const existingSnap = await getDoc(dmThreadRef);
+                threadExists = existingSnap.exists();
+              } catch {}
+            }
+            if (threadExists) {
+              await updateDoc(dmThreadRef, {
+                lastSenderId: myDmIdentity,
+                lastSenderName: currentName,
+                lastMessageText: previewEncrypted,
+                lastMessageAt: ts,
+                updatedAt: ts,
+              });
+            } else {
+              await setDoc(dmThreadRef, {
+                participants,
+                lastSenderId: myDmIdentity,
+                lastSenderName: currentName,
+                lastMessageText: previewEncrypted,
+                lastMessageAt: ts,
+                createdAt: ts,
+                updatedAt: ts,
+              });
+            }
+          }
+        }
       } catch (err) {
         if (isFirestorePermissionError(err)) {
-          handleFirestoreError(err, OperationType.CREATE, `channels/${cId}/messages`);
+          const errPath = currentChannel.isDirectMessage
+            ? `directMessages/${cId}/messages`
+            : `channels/${cId}/messages`;
+          try {
+            handleFirestoreError(err, OperationType.CREATE, errPath);
+          } catch (wrappedErr) {
+            console.error(wrappedErr);
+          }
         }
         showToast('Not synced online. Your message is kept locally where storage is available.');
       }
@@ -1417,9 +1704,14 @@ export default function Chat({
       return;
     }
     const cId = currentChannel.id;
+    const isDm = Boolean(currentChannel.isDirectMessage || String(cId).startsWith('dm__'));
     try {
       if (msg.id) {
-        await deleteSingleChatMessage(lobbyDb, cId, String(msg.id));
+        if (isDm) {
+          await deleteDoc(doc(lobbyDb, 'directMessages', cId, 'messages', String(msg.id)));
+        } else {
+          await deleteSingleChatMessage(lobbyDb, cId, String(msg.id));
+        }
       } else {
         const locals = getLocalMessages(cId).filter((m) => String(m.id || m.key) !== String(msgId));
         try {
@@ -1454,7 +1746,7 @@ export default function Chat({
   const handleReplyClick = (name, bodyText) => {
     let cleanSnippet = bodyText || '';
     const match = cleanSnippet.match(/^>\s*@[^:]+:\s*"[^"]*"\s*(.*)$/s);
-    if (match) cleanSnippet = match[3];
+    if (match) cleanSnippet = match[1] || '';
     cleanSnippet = cleanSnippet.replace(/[\r\n]+/g, ' ').trim();
     if (cleanSnippet.length > 80) cleanSnippet = cleanSnippet.substring(0, 80) + '…';
     setReplyTo({ name, text: cleanSnippet });
@@ -1475,6 +1767,7 @@ export default function Chat({
 
       for (const ch of targetChannels) {
         const chId = ch.id;
+        const rootCol = ch.isDirectMessage ? 'directMessages' : 'channels';
         const isTargetActive = chId === currentChannel.id;
         const msgsInScope = isTargetActive ? [...messages] : getLocalMessages(chId);
         const docIdsToDelete = new Set();
@@ -1492,7 +1785,7 @@ export default function Chat({
         try {
           if (clientId) {
             const snapSender = await getDocs(
-              query(collection(lobbyDb, 'channels', chId, 'messages'), where('senderId', '==', clientId))
+              query(collection(lobbyDb, rootCol, chId, 'messages'), where('senderId', '==', clientId))
             );
             snapSender.forEach((d) => docIdsToDelete.add(d.id));
           }
@@ -1501,7 +1794,7 @@ export default function Chat({
         try {
           if (myAuthUid) {
             const snapUser = await getDocs(
-              query(collection(lobbyDb, 'channels', chId, 'messages'), where('userId', '==', myAuthUid))
+              query(collection(lobbyDb, rootCol, chId, 'messages'), where('userId', '==', myAuthUid))
             );
             snapUser.forEach((d) => docIdsToDelete.add(d.id));
           }
@@ -1511,7 +1804,7 @@ export default function Chat({
           if (linkedAccount?.usernameLower) {
             const snapAcc = await getDocs(
               query(
-                collection(lobbyDb, 'channels', chId, 'messages'),
+                collection(lobbyDb, rootCol, chId, 'messages'),
                 where('accountId', '==', linkedAccount.usernameLower)
               )
             );
@@ -1522,7 +1815,7 @@ export default function Chat({
         for (const docId of docIdsToDelete) {
           if (docId.startsWith('local_')) continue;
           try {
-            await deleteDoc(doc(lobbyDb, 'channels', chId, 'messages', docId));
+            await deleteDoc(doc(lobbyDb, rootCol, chId, 'messages', docId));
             totalDeleted += 1;
           } catch {}
         }
@@ -1575,7 +1868,9 @@ export default function Chat({
       setMessages([]);
       setDeleteAllModalOpen(false);
       setSettingsModalOpen(false);
-      showToast(`🗑️ Cleared #${currentChannel.name} (${count} removed)`);
+      showToast(
+        `🗑️ Cleared ${currentChannel.isDirectMessage ? currentChannel.name : `#${currentChannel.name}`} (${count} removed)`
+      );
     } catch {
       showToast('⚠️ Failed to clear channel messages');
     } finally {
@@ -1658,6 +1953,146 @@ export default function Chat({
     sendingMessage;
   const isPerm = isPermanentChannel(currentChannel.id);
 
+  const hasUnreadDm = useMemo(
+    () => dmChannels.some((dm) => unreadChannels[dm.id] && dm.id !== currentChannel.id),
+    [dmChannels, unreadChannels, currentChannel.id],
+  );
+
+  const toggleDmSidebar = () => {
+    if (!isMini && typeof window !== 'undefined' && window.innerWidth >= 768) {
+      setDmSidebarOpen((prev) => !prev);
+    } else {
+      setMiniLeftDrawerOpen((prev) => !prev);
+    }
+  };
+
+  const renderDmSidebarContent = (isDrawer = false) => (
+    <>
+      <div className="px-2.5 py-2 border-b chat-bd flex items-center justify-between gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <MessageCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <span className="text-[10px] font-black uppercase tracking-wider chat-txt truncate">
+            Direct Messages
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => (isDrawer ? setMiniLeftDrawerOpen(false) : setDmSidebarOpen(false))}
+          className="p-1 rounded hover:bg-white/10 chat-txt-mute hover:chat-txt cursor-pointer shrink-0 transition-colors"
+          title={isDrawer ? 'Close sidebar' : 'Collapse DM sidebar'}
+          aria-label="Collapse DM sidebar"
+        >
+          {isDrawer ? <X className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-2 space-y-3 chat-scrollbar">
+        {!hasAccountIdentity ? (
+          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col gap-2">
+            <p className="text-[10px] text-amber-300 font-semibold leading-snug">
+              Sign in with your account to message online users.
+            </p>
+            {onOpenAccountModal && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (isDrawer) setMiniLeftDrawerOpen(false);
+                  onOpenAccountModal();
+                }}
+                className="w-full py-1.5 rounded-lg chat-accent-bg text-[10px] font-black uppercase cursor-pointer"
+              >
+                Sign In
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400">
+                  Online Now
+                </span>
+                <span className="text-[9px] font-mono font-bold text-emerald-400">
+                  {onlineOtherUsers.length}
+                </span>
+              </div>
+              {onlineOtherUsers.length === 0 ? (
+                <p className="text-[10px] chat-txt-mute px-1.5 py-1 leading-snug">
+                  No other users online right now.
+                </p>
+              ) : (
+                onlineOtherUsers.map((acc) => {
+                  const targetDmId = myDmIdentity ? getDmId(myDmIdentity, acc.usernameLower) : '';
+                  const active = Boolean(targetDmId && currentChannel.id === targetDmId);
+                  return (
+                    <button
+                      key={acc.usernameLower}
+                      type="button"
+                      onClick={() => openDirectMessage(acc.usernameLower, acc.username)}
+                      className={`w-full flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all cursor-pointer border ${
+                        active
+                          ? 'chat-accent-bg border-transparent shadow-sm'
+                          : 'bg-white/[0.03] hover:bg-emerald-500/15 border-transparent hover:border-emerald-500/30 chat-txt'
+                      }`}
+                      title={`Direct message @${acc.username}`}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                        <span className="text-[11px] font-mono font-bold truncate">@{acc.username}</span>
+                      </div>
+                      <span
+                        className={`text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded shrink-0 ${
+                          active
+                            ? 'bg-black/20'
+                            : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                        }`}
+                      >
+                        DM
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {dmChannels.length > 0 && (
+              <div className="flex flex-col gap-1 border-t chat-bd pt-2">
+                <span className="text-[9px] font-black uppercase tracking-wider chat-txt-mute px-1">
+                  Conversations
+                </span>
+                {dmChannels.map((dm) => {
+                  const active = currentChannel.id === dm.id;
+                  return (
+                    <button
+                      key={dm.id}
+                      type="button"
+                      onClick={() => switchChannel(dm.id)}
+                      className={`w-full flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all cursor-pointer ${
+                        active ? 'chat-accent-bg shadow-sm' : 'hover:bg-white/[0.06] chat-txt-dim hover:chat-txt'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 ${
+                            dm.partnerOnline ? 'bg-emerald-400' : 'bg-neutral-500/60'
+                          }`}
+                        />
+                        <span className="text-[11px] font-mono font-bold truncate">{dm.name}</span>
+                      </div>
+                      {unreadChannels[dm.id] && !active && (
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </>
+  );
+
   return (
     <div
       id="portal-chat-root"
@@ -1665,11 +2100,11 @@ export default function Chat({
       data-scheme={theme === 'light' ? 'light' : 'dark'}
       className="w-full h-full flex chat-surface chat-txt overflow-hidden select-none relative"
     >
-      {/* ============ LEFT SIDEBAR: CHANNEL RAIL ============ */}
+      {/* ============ LEFT SIDEBAR 1: CHANNEL RAIL ============ */}
       {!isMini && (
         <aside className="hidden md:flex flex-col w-14 border-r chat-bd chat-surface-deep shrink-0 items-center py-3 gap-2">
           <nav className="flex flex-col gap-1.5 w-full px-1 items-center justify-start overflow-y-auto max-h-[60vh] no-scrollbar">
-            {allChannels.map((ch) => {
+            {publicChannels.map((ch) => {
               const active = currentChannel.id === ch.id;
               const locked = Boolean(ch.isPasswordProtected && !unlockedChannels[ch.id]);
               const isCustom = ch.id !== 'general' && !ch.isDirectMessage;
@@ -1706,10 +2141,7 @@ export default function Chat({
                     </span>
                   )}
                   <span className="absolute left-11 top-1/2 -translate-y-1/2 chat-surface border chat-bd2 text-[9px] chat-txt font-semibold rounded px-2 py-1 shadow-lg whitespace-nowrap hidden group-hover:block z-50">
-                    <span className="font-extrabold uppercase chat-accent">
-                      {ch.isDirectMessage ? '' : '#'}
-                      {ch.name}
-                    </span>
+                    <span className="font-extrabold uppercase chat-accent">#{ch.name}</span>
                     {ch.isPasswordProtected && (
                       <span className="text-[7px] text-amber-500 font-bold ml-1">(Protected)</span>
                     )}
@@ -1726,6 +2158,38 @@ export default function Chat({
                 </button>
               );
             })}
+
+            <div className="w-6 h-px bg-white/10 my-0.5 shrink-0" />
+
+            <button
+              type="button"
+              onClick={() => setDmSidebarOpen((prev) => !prev)}
+              className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all relative group cursor-pointer shrink-0 border ${
+                dmSidebarOpen
+                  ? 'chat-accent border chat-accent-bd chat-accent-soft'
+                  : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+              }`}
+              title={`${dmSidebarOpen ? 'Hide' : 'Show'} Direct Messages Sidebar (${onlineOtherUsers.length} online)`}
+            >
+              <MessageCircle className="w-4 h-4" />
+              {onlineOtherUsers.length > 0 && (
+                <span className="absolute -top-1 -right-1 text-[8px] font-mono font-black bg-emerald-500 text-black px-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center leading-none">
+                  {onlineOtherUsers.length}
+                </span>
+              )}
+              {hasUnreadDm && !dmSidebarOpen && (
+                <span className="absolute -top-0.5 -left-0.5 flex h-2.5 w-2.5 pointer-events-none z-20">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border border-[#0b0e14]" />
+                </span>
+              )}
+              <span className="absolute left-11 top-1/2 -translate-y-1/2 chat-surface border chat-bd2 text-[9px] chat-txt font-semibold rounded px-2 py-1 shadow-lg whitespace-nowrap hidden group-hover:block z-50">
+                <span className="font-extrabold uppercase text-emerald-400">Direct Messages Sidebar</span>
+                <span className="block text-[8px] chat-txt-mute font-normal">
+                  {onlineOtherUsers.length} online user{onlineOtherUsers.length === 1 ? '' : 's'}
+                </span>
+              </span>
+            </button>
           </nav>
 
           <div className="w-6 h-px bg-white/10 my-1" />
@@ -1759,21 +2223,132 @@ export default function Chat({
         </aside>
       )}
 
+      {/* ============ LEFT SIDEBAR 2: DM & ONLINE USERS SIDEBAR (BESIDE CHANNEL RAIL) ============ */}
+      {!isMini && dmSidebarOpen && (
+        <aside className="hidden md:flex flex-col w-48 lg:w-52 border-r chat-bd chat-surface-deep shrink-0 h-full overflow-hidden">
+          {renderDmSidebarContent(false)}
+        </aside>
+      )}
+
+      {/* ============ MINI / MOBILE DUAL LEFT SIDEBAR DRAWER ============ */}
+      {miniLeftDrawerOpen && (
+        <div
+          onClick={() => setMiniLeftDrawerOpen(false)}
+          className={`${isMini ? 'flex' : 'flex md:hidden'} absolute inset-0 z-[65] bg-black/55 backdrop-blur-[1px]`}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex h-full max-w-[92%] chat-surface-deep border-r chat-bd2 shadow-2xl overflow-hidden"
+          >
+            {/* Slim Channel Rail */}
+            <aside className="flex flex-col w-10 border-r chat-bd chat-surface-deep shrink-0 items-center py-2 gap-1.5 overflow-y-auto no-scrollbar">
+              {publicChannels.map((ch) => {
+                const active = currentChannel.id === ch.id;
+                const locked = Boolean(ch.isPasswordProtected && !unlockedChannels[ch.id]);
+                return (
+                  <button
+                    key={ch.id}
+                    type="button"
+                    onClick={() => switchChannel(ch.id)}
+                    className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all relative cursor-pointer shrink-0 ${
+                      active
+                        ? 'chat-accent border chat-accent-bd chat-accent-soft'
+                        : 'chat-txt-mute hover:chat-txt hover:bg-white/5'
+                    }`}
+                    title={`#${ch.name}`}
+                  >
+                    {renderChannelGlyph(ch, locked, 'w-3.5 h-3.5 shrink-0')}
+                    {unreadChannels[ch.id] && !active && (
+                      <span className="absolute -top-0.5 -left-0.5 h-2 w-2 rounded-full bg-red-500" />
+                    )}
+                  </button>
+                );
+              })}
+
+              <div className="w-5 h-px bg-white/10 my-0.5 shrink-0" />
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMiniLeftDrawerOpen(false);
+                  setCreateModalOpen(true);
+                }}
+                className="w-7 h-7 flex items-center justify-center rounded-lg border border-dashed border-white/20 chat-txt-mute hover:chat-accent hover:bg-white/5 cursor-pointer shrink-0"
+                title="Create Custom Channel"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+
+              {!isMini && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMiniLeftDrawerOpen(false);
+                    setThemeModalOpen(true);
+                  }}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg chat-txt-mute hover:chat-accent hover:bg-white/5 cursor-pointer shrink-0"
+                  title="Theme"
+                >
+                  <Palette className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMiniLeftDrawerOpen(false);
+                  setSettingsModalOpen(true);
+                }}
+                className="mt-auto w-7 h-7 flex items-center justify-center rounded-lg border border-white/10 chat-txt-mute hover:chat-accent hover:bg-white/5 cursor-pointer shrink-0"
+                title="Settings"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </button>
+            </aside>
+
+            {/* Adjacent DM & Online Users Sidebar */}
+            <aside className="flex flex-col w-[172px] sm:w-48 h-full min-w-0 overflow-hidden">
+              {renderDmSidebarContent(true)}
+            </aside>
+          </div>
+        </div>
+      )}
+
       {/* ============ MAIN PANEL ============ */}
-      <section className="flex-1 flex flex-col h-full overflow-hidden chat-surface min-w-0">
+      <section className="flex-1 flex flex-col h-full min-h-0 overflow-hidden chat-surface min-w-0 relative">
         {/* HEADER */}
-        <header className="px-3 py-2 border-b chat-bd chat-surface-deep flex items-center justify-between gap-2 shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
-            {!isMini && <span className="chat-txt-mute font-extrabold text-[11px] hidden md:inline">#</span>}
+        <header className={`${isMini ? 'px-2 py-1.5 gap-1.5' : 'px-3 py-2 gap-2'} border-b chat-bd chat-surface-deep flex items-center justify-between shrink-0`}>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <button
+              type="button"
+              onClick={() => setMiniLeftDrawerOpen((prev) => !prev)}
+              className={`${isMini ? 'flex' : 'flex md:hidden'} relative items-center gap-1 chat-surface-elev border chat-bd hover:border-emerald-500/40 rounded-lg px-2 py-1 text-[10px] font-mono font-bold text-emerald-400 cursor-pointer shrink-0 transition-all`}
+              title="Open Channels & Direct Messages Sidebar"
+            >
+              <PanelLeft className="w-3.5 h-3.5 shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <span>{onlineOtherUsers.length}</span>
+              {hasUnreadDm && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              )}
+            </button>
+
             {!isMini && (
               <>
                 <h1 className="text-[11px] font-black chat-txt tracking-tight flex items-center gap-1 uppercase truncate">
                   {currentChannel.isPasswordProtected && <Lock className="w-3 h-3 text-amber-500 shrink-0" />}
-                  {currentChannel.isDirectMessage && <MessageCircle className="w-3.5 h-3.5 chat-accent shrink-0" />}
+                  {currentChannel.isDirectMessage && (
+                    <MessageCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  )}
                   <span className="truncate">
-                    {currentChannel.isDirectMessage ? '' : '#'}
-                    {currentChannel.name}
+                    {currentChannel.isDirectMessage ? currentChannel.name : `#${currentChannel.name}`}
                   </span>
+                  {currentChannel.isDirectMessage && currentChannel.partnerOnline && (
+                    <span
+                      className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ml-0.5"
+                      title="Online now"
+                    />
+                  )}
                   {!currentChannel.isDirectMessage && (
                     <button
                       type="button"
@@ -1789,7 +2364,17 @@ export default function Chat({
                     </button>
                   )}
                 </h1>
-                {isPerm ? (
+                {currentChannel.isDirectMessage ? (
+                  <span
+                    className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded shrink-0"
+                    title="Private encrypted direct message"
+                  >
+                    <Lock className="w-2.5 h-2.5 text-emerald-400" />
+                    <span className="hidden sm:inline">
+                      {currentChannel.partnerOnline ? 'DM · Online' : 'Direct Message'}
+                    </span>
+                  </span>
+                ) : isPerm ? (
                   <span
                     className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded shrink-0"
                     title="Default section: Messages are saved and never deleted"
@@ -1843,16 +2428,24 @@ export default function Chat({
 
           {!isMini && (
             <div className="hidden sm:flex items-center gap-2 shrink-0">
-              {onlineUsernames.length > 0 && (
-                <div
-                  className="flex items-center gap-1.5 chat-surface-elev border border-emerald-500/30 bg-emerald-500/10 rounded-lg px-2 py-1 text-[10px] font-mono font-bold text-emerald-400"
-                  title={`Online now: ${onlineUsernames.join(', ')}`}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                  <Users className="w-3 h-3 shrink-0" />
-                  <span>{onlineUsernames.length} online</span>
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={toggleDmSidebar}
+                className={`flex items-center gap-1.5 chat-surface-elev border rounded-lg px-2 py-1 text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                  dmSidebarOpen
+                    ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300'
+                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                }`}
+                title={
+                  onlineUsernames.length > 0
+                    ? `Online now: ${onlineUsernames.join(', ')} — Toggle DM sidebar`
+                    : 'Toggle Direct Messages Sidebar'
+                }
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <Users className="w-3 h-3 shrink-0" />
+                <span>{onlineOtherUsers.length} online · DMs</span>
+              </button>
 
               {hasAccountIdentity ? (
                 <button
@@ -1975,10 +2568,12 @@ export default function Chat({
                   e.stopPropagation();
                   setDropdownOpen((prev) => !prev);
                 }}
-                className="relative chat-surface-elev border chat-bd py-1 px-2.5 rounded-lg text-[10px] font-extrabold uppercase outline-none chat-accent flex items-center gap-1.5 cursor-pointer hover:bg-white/5 active:scale-95 transition-all shadow-sm"
+                className={`relative chat-surface-elev border chat-bd py-1 ${isMini ? 'px-2' : 'px-2.5'} rounded-lg text-[10px] font-extrabold uppercase outline-none chat-accent flex items-center gap-1 cursor-pointer hover:bg-white/5 active:scale-95 transition-all shadow-sm`}
               >
-                <span className="truncate max-w-[95px] font-mono">
-                  {isCurrentLocked ? '🔒 ' : ''}#{currentChannel.name}
+                <span className={`truncate ${isMini ? 'max-w-[64px]' : 'max-w-[95px]'} font-mono`}>
+                  {isCurrentLocked ? '🔒 ' : ''}
+                  {currentChannel.isDirectMessage ? '' : '#'}
+                  {currentChannel.name}
                 </span>
                 {Object.keys(unreadChannels).length > 0 && (
                   <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" aria-label="Unread room message" />
@@ -1987,8 +2582,8 @@ export default function Chat({
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-60 chat-surface-elev border chat-bd rounded-xl shadow-2xl p-1.5 z-50 flex flex-col gap-1">
-                  {allChannels.map((c) => {
+                <div className={`absolute right-0 top-full mt-1.5 ${isMini ? 'w-52' : 'w-60'} max-h-[65vh] overflow-y-auto chat-surface-elev border chat-bd rounded-xl shadow-2xl p-1.5 z-50 flex flex-col gap-1`}>
+                  {publicChannels.map((c) => {
                     const active = currentChannel.id === c.id;
                     const locked = Boolean(c.isPasswordProtected && !unlockedChannels[c.id]);
                     const isCustom = c.id !== 'general' && !c.isDirectMessage;
@@ -2035,6 +2630,53 @@ export default function Chat({
                       </div>
                     );
                   })}
+
+                  <div className="my-1 border-t chat-bd opacity-30" />
+                  <div className="px-2 py-0.5 flex items-center justify-between text-[9px] font-black uppercase tracking-wider text-emerald-400">
+                    <span>Direct Messages</span>
+                    <span>{onlineOtherUsers.length} online</span>
+                  </div>
+                  {dmChannels.map((c) => {
+                    const active = currentChannel.id === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => switchChannel(c.id)}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between text-[11px] font-bold transition-all cursor-pointer ${
+                          active ? 'chat-accent-bg shadow-sm' : 'chat-txt-dim hover:chat-txt hover:bg-white/5'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 truncate">
+                          <span
+                            className={`w-2 h-2 rounded-full shrink-0 ${
+                              c.partnerOnline ? 'bg-emerald-400' : 'bg-neutral-500/60'
+                            }`}
+                          />
+                          <span className="truncate font-mono">{c.name}</span>
+                          {unreadChannels[c.id] && !active && (
+                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      setMiniLeftDrawerOpen(true);
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between gap-2 text-[10px] font-black uppercase text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all cursor-pointer"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>Open DM Sidebar</span>
+                    </span>
+                    <span className="font-mono text-[9px]">{onlineOtherUsers.length}</span>
+                  </button>
+
                   <div className="my-1 border-t chat-bd opacity-30" />
                   <button
                     type="button"
@@ -2100,12 +2742,15 @@ export default function Chat({
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              {onlineUsernames.length > 0 && (
-                <span className="text-[8.5px] font-mono text-emerald-400 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  {onlineUsernames.length}
-                </span>
-              )}
+              <button
+                type="button"
+                onClick={() => setMiniLeftDrawerOpen((prev) => !prev)}
+                className="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 px-1.5 py-0.5 rounded-md flex items-center gap-1 cursor-pointer transition-all"
+                title="Open Direct Messages & Online Users Sidebar"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>DM · {onlineOtherUsers.length}</span>
+              </button>
               {isMuted && (
                 <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
                   Muted
@@ -2272,7 +2917,7 @@ export default function Chat({
             {/* MESSAGES */}
             <div
               ref={messagesPanelRef}
-              className="flex-1 overflow-y-auto px-3 py-3 space-y-3 chat-scrollbar chat-selectable"
+              className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3 chat-scrollbar chat-selectable"
             >
               {displayedMessages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-6 select-none max-w-sm mx-auto">
@@ -2293,9 +2938,11 @@ export default function Chat({
                   <p className="text-[11px] chat-txt-dim mt-1.5 leading-relaxed">
                     {searchFilter
                       ? 'Try searching for a different keyword or clear the search filter.'
-                      : isPerm
-                        ? 'Messages in this default section are permanently saved.'
-                        : 'Messages in this room are temporary and automatically delete 1 hour after being sent.'}
+                      : currentChannel.isDirectMessage
+                        ? 'Send a private encrypted direct message.'
+                        : isPerm
+                          ? 'Messages in this default section are permanently saved.'
+                          : 'Messages in this room are temporary and automatically delete 1 hour after being sent.'}
                   </p>
                 </div>
               ) : (
@@ -2461,6 +3108,25 @@ export default function Chat({
                               <span>Reply</span>
                             </button>
 
+                            {!isOwner &&
+                              m.accountId &&
+                              m.accountId !== myDmIdentity &&
+                              (onlineUserSet.has(String(m.accountId).toLowerCase()) ||
+                                dmThreads.some((t) => t.partnerId === String(m.accountId).toLowerCase())) && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openDirectMessage(m.accountId, m.name);
+                                  }}
+                                  className="flex items-center gap-1 text-[9px] font-bold chat-txt-dim hover:text-emerald-300 hover:bg-emerald-500/15 px-2 py-0.5 rounded-md transition-all cursor-pointer chat-surface-elev border chat-bd"
+                                  title={`Direct Message ${m.name || 'user'}`}
+                                >
+                                  <MessageCircle className="w-2.5 h-2.5 text-emerald-400" />
+                                  <span>DM</span>
+                                </button>
+                              )}
+
                             {(isOwner || isChatAdmin) && (
                               <button
                                 type="button"
@@ -2485,7 +3151,7 @@ export default function Chat({
             </div>
 
             {/* COMPOSER */}
-            <footer className="p-2.5 border-t chat-bd chat-surface-deep shrink-0">
+            <footer className={`${isMini ? 'p-1.5' : 'p-2.5'} border-t chat-bd chat-surface-deep shrink-0`}>
               {isMuted && (
                 <div className="flex items-center gap-2 px-3 py-2 mb-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-semibold">
                   <VolumeX className="w-3.5 h-3.5 shrink-0" />
@@ -2541,9 +3207,11 @@ export default function Chat({
                 </div>
               )}
 
-              <p className="text-[10px] chat-txt-mute mb-1" aria-live="polite">
-                {imagePasteStatus}
-              </p>
+              {(!isMini || imageProcessing || imagePasteStatus !== 'Paste an image with Ctrl+V / ⌘V') && (
+                <p className="text-[10px] chat-txt-mute mb-1 truncate" aria-live="polite">
+                  {imagePasteStatus}
+                </p>
+              )}
 
               <form
                 onSubmit={handleSendMessage}
@@ -2570,11 +3238,13 @@ export default function Chat({
                       ? 'Muted by admin — read-only mode'
                       : !hasAccountIdentity && onOpenAccountModal
                         ? 'Sign in with your account to send messages…'
-                        : validName
-                          ? 'Write message… (type @ to mention)'
-                          : 'Set nickname above or start typing…'
+                        : currentChannel.isDirectMessage
+                          ? `Message ${currentChannel.name}…`
+                          : validName
+                            ? 'Write message… (type @ to mention)'
+                            : 'Set nickname above or start typing…'
                   }
-                  className="flex-1 bg-transparent border-none text-[12px] chat-txt chat-placeholder-mute pl-2 py-1.5 outline-none font-medium min-w-0"
+                  className="flex-1 bg-transparent border-none text-[12px] chat-txt chat-placeholder-mute pl-2 py-1.5 outline-none font-medium min-w-0 select-text"
                 />
                 <button
                   type="submit"
@@ -2803,7 +3473,9 @@ export default function Chat({
               <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-1.5 text-xs">
                 <div className="flex items-center justify-between text-slate-300 font-mono text-[11px]">
                   <span>Active Channel:</span>
-                  <span className="font-bold text-white">#{currentChannel.name}</span>
+                  <span className="font-bold text-white">
+                    {currentChannel.isDirectMessage ? currentChannel.name : `#${currentChannel.name}`}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-slate-300 font-mono text-[11px]">
                   <span>Your Messages in Channel:</span>
@@ -2873,7 +3545,11 @@ export default function Chat({
                       className="bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase px-3 py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>{clearingChannelAdmin ? 'Clearing...' : `Clear #${currentChannel.name}`}</span>
+                      <span>
+                        {clearingChannelAdmin
+                          ? 'Clearing...'
+                          : `Clear ${currentChannel.isDirectMessage ? currentChannel.name : `#${currentChannel.name}`}`}
+                      </span>
                     </button>
                     <button
                       type="button"
@@ -2986,7 +3662,11 @@ export default function Chat({
                     className="w-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-[11px] font-black uppercase py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>{clearingChannelAdmin ? 'Clearing...' : `Clear #${currentChannel.name} Messages`}</span>
+                    <span>
+                      {clearingChannelAdmin
+                        ? 'Clearing...'
+                        : `Clear ${currentChannel.isDirectMessage ? currentChannel.name : `#${currentChannel.name}`} Messages`}
+                    </span>
                   </button>
                   {currentChannel.id !== 'general' && currentChannel.id !== 'temporary' && !currentChannel.isDirectMessage && (
                     <button

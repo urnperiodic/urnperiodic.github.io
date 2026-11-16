@@ -1,9 +1,9 @@
 import { lazy, Suspense, useDeferredValue, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import { signInAnonymously } from 'firebase/auth';
-import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { lobbyAuth, lobbyDb, handleFirestoreError, isFirestorePermissionError, OperationType } from './firebase';
-import { deleteAllChatMessages } from './utils/chatModeration';
+import { decryptChatPayload, deleteAllChatMessages } from './utils/chatModeration';
 import { PUBLIC_GAMES_BASE_URL } from './data/gameSource';
 import { gameRankings } from './data/gameRankings';
 import { WHATS_NEW_SENTENCE, WHATS_NEW_CHANGES, WHATS_NEW_VERSION } from './whatsNewData';
@@ -108,7 +108,7 @@ const loadGameFrame = async (url, signal) => {
   } catch (error) {
     if (error.name === 'AbortError') throw error;
 
-    const filename = new URL(url).pathname.split('/').pop();
+    const filename = new URL(url, window.location.origin).pathname.split('/').pop();
     if (!filename) throw error;
 
     const localUrl = `${window.location.origin}/${filename}`;
@@ -186,6 +186,7 @@ import {
   Volume2,
   Tv,
   Film,
+  MessageCircle,
   MessageSquare,
   Globe,
   Dribbble,
@@ -498,7 +499,7 @@ const getDefaultDecoyTitle = (type) => {
   if (type === 'duolingo') return "Duolingo - Learn a language for free";
   if (type === 'ixl') return "IXL | Math, Language Arts, Science, Social Studies, and Spanish";
   if (type === 'savvas' || type === 'savvasrealize') return "Classes | Savvas Realize";
-  return "Urnperiodic StudyTools";
+  return "Study Tools";
 };
 
 const getDecoyTitle = (type, customTitles = {}) => {
@@ -1535,8 +1536,13 @@ export default function App() {
     const lastRead = Number(safeStorage.getItem('lobby-chat-last-read') || 0);
     return latest > lastRead;
   });
+  const [chatHeaderNotice, setChatHeaderNotice] = useState(null);
+  const [targetChannelRequest, setTargetChannelRequest] = useState(null);
   const filterRef = useRef(filter);
   const isViewingLobbyChatRef = useRef(false);
+  const activeLobbyChannelRef = useRef('general');
+  const myDmIdentityRef = useRef(null);
+  const canLobbyChatAccessRef = useRef(true);
   const markLobbyUnread = useCallback((latest) => {
     const timestamp = Number(latest || 0);
     if (!timestamp) return;
@@ -1613,8 +1619,10 @@ export default function App() {
         );
         const unsub = onSnapshot(
           messagesQuery,
-          (snapshot) => {
-            const latest = Number(snapshot.docs[0]?.data()?.timestamp || 0);
+          async (snapshot) => {
+            const topDoc = snapshot.docs[0];
+            const data = topDoc?.data();
+            const latest = Number(data?.timestamp || 0);
             if (!initialized) {
               initialized = true;
               if (!latest) return;
@@ -1626,11 +1634,45 @@ export default function App() {
             }
             if (latest) {
               markLobbyUnread(latest);
+              if (
+                topDoc &&
+                data &&
+                canLobbyChatAccessRef.current &&
+                (!isViewingLobbyChatRef.current || activeLobbyChannelRef.current !== chanId)
+              ) {
+                let sentByMe = false;
+                try {
+                  const sentRaw = safeStorage.getItem('my_sent_message_ids');
+                  const sentIds = sentRaw ? JSON.parse(sentRaw) : [];
+                  if (Array.isArray(sentIds) && sentIds.includes(topDoc.id)) sentByMe = true;
+                } catch {}
+                if (myDmIdentityRef.current && data.accountId === myDmIdentityRef.current) {
+                  sentByMe = true;
+                }
+                if (!sentByMe) {
+                  const dec = await decryptChatPayload(data.text || '', chanId);
+                  if (cancelled) return;
+                  const previewText = (dec?.text || '').trim() || (data.imageUrl ? 'Sent an image' : 'New message');
+                  setChatHeaderNotice({
+                    id: `${chanId}_${topDoc.id}_${latest}`,
+                    channelId: chanId,
+                    channelName: `#${chanId}`,
+                    isDirectMessage: false,
+                    senderName: data.name || 'User',
+                    text: previewText,
+                    timestamp: latest,
+                  });
+                }
+              }
             }
           },
           (error) => {
             if (isFirestorePermissionError(error)) {
-              handleFirestoreError(error, OperationType.GET, `channels/${chanId}/messages`);
+              try {
+                handleFirestoreError(error, OperationType.GET, `channels/${chanId}/messages`);
+              } catch (wrappedErr) {
+                console.error(wrappedErr);
+              }
             }
             console.warn(`Lobby unread listener error for ${chanId}:`, error);
           },
@@ -1680,7 +1722,11 @@ export default function App() {
             },
             (error) => {
               if (isFirestorePermissionError(error)) {
-                handleFirestoreError(error, OperationType.LIST, 'channels');
+                try {
+                  handleFirestoreError(error, OperationType.LIST, 'channels');
+                } catch (wrappedErr) {
+                  console.error(wrappedErr);
+                }
               }
             },
           );
@@ -2177,7 +2223,7 @@ export default function App() {
       `);
       win.document.close();
     } else {
-      alert("Popup blocked! Please allow popups for this site.");
+      console.warn("Popup blocked! Please allow popups for this site.");
     }
   };
 
@@ -2465,7 +2511,7 @@ export default function App() {
     `);
     win.document.close();
 
-    const frame = win.document.getElementById('about-blank-game-frame');
+    const frame = /** @type {HTMLIFrameElement | null} */ (win.document.getElementById('about-blank-game-frame'));
     const cachedFrame = gameHtmlCache.get(gameToOpen.url);
     const loadGameHtml = cachedFrame
       ? Promise.resolve(cachedFrame)
@@ -2517,6 +2563,7 @@ export default function App() {
       const readTs = Math.max(latest, Date.now());
       safeStorage.setItem('lobby-chat-last-read', String(readTs));
       setHasUnreadLobby(false);
+      setChatHeaderNotice((prev) => (prev && prev.channelId === activeLobbyChannelRef.current ? null : prev));
     }
   }, [filter, selectedGame, dockedChatCollapsed]);
 
@@ -2589,7 +2636,7 @@ export default function App() {
 
   const [autoLockOnClose, setAutoLockOnClose] = useState(() => {
     const saved = safeStorage.getItem('unblocked-auto-lock-on-close');
-    return saved !== 'false'; // Defaults to true
+    return saved === 'true'; // Defaults to false so reloads/closing tabs don't unexpectedly sign users out
   });
 
   const [autoSignOutOnIdle, setAutoSignOutOnIdle] = useState(() => isAutoSignOutOnIdleEnabled());
@@ -2646,8 +2693,11 @@ export default function App() {
 
   // Sign Out & Lock Workspace when tab or window is closed (if enabled in Settings)
   useEffect(() => {
-    const handleUnload = () => {
+    const handleUnload = (e) => {
       if (!autoLockOnClose) return;
+      if (e?.type === 'pagehide' && e.persisted) return;
+      // Only lock/sign out when an active unlocked workspace tab itself closes (not the background launcher tab)
+      if (viewMode !== 'games') return;
       // If the user triggered an in-website refresh or an active reload, do not sign out
       if (isRefreshingRef.current) return;
       try {
@@ -2674,7 +2724,7 @@ export default function App() {
       window.removeEventListener('beforeunload', handleUnload);
       window.removeEventListener('pagehide', handleUnload);
     };
-  }, [autoLockOnClose]);
+  }, [autoLockOnClose, viewMode]);
 
   const [passcode, setPasscode] = useState('');
   const [isShake, setIsShake] = useState(false);
@@ -2710,11 +2760,20 @@ export default function App() {
           activeAccount?.isActive &&
           activeAccount?.allowGlobalOverride,
       );
-      if (workspaceConfig && workspaceConfig[key] === false && !canOverrideGlobalOff) {
+      const canOverrideAiGlobalOff = Boolean(
+        key === 'aiAccess' &&
+          workspaceConfig?.allowAiOverrides !== false &&
+          activeAccount?.isActive &&
+          activeAccount?.allowAiOverride,
+      );
+      if (workspaceConfig && workspaceConfig[key] === false && !canOverrideGlobalOff && !canOverrideAiGlobalOff) {
         return false;
       }
       if (key === 'aiAccess') {
-        return Boolean(isAdminPassUnlocked || (activeAccount?.isActive && activeAccount?.aiAccess));
+        return Boolean(
+          isAdminPassUnlocked ||
+            (activeAccount?.isActive && (activeAccount?.aiAccess || activeAccount?.allowAiOverride)),
+        );
       }
       if (key === 'decoysAccess') {
         return Boolean(isDecoyPassUnlocked || (activeAccount?.isActive && activeAccount?.decoysAccess));
@@ -2735,6 +2794,174 @@ export default function App() {
   const canDownloadAccess = canAccessWorkspace('downloadAccess');
   const isAdminUnlocked = canAccessWorkspace('aiAccess');
   const isDecoysUnlocked = canAccessWorkspace('decoysAccess');
+
+  const myDmIdentity = activeAccount?.usernameLower || (isOwnerAdmin ? '__owner__' : null);
+
+  useEffect(() => {
+    myDmIdentityRef.current = myDmIdentity;
+  }, [myDmIdentity]);
+
+  useEffect(() => {
+    canLobbyChatAccessRef.current = canLobbyChatAccess;
+  }, [canLobbyChatAccess]);
+
+  // Listen for incoming Direct Messages for live header notifications & unread dot
+  useEffect(() => {
+    if (!myDmIdentity || !canLobbyChatAccess) return undefined;
+    let initialized = false;
+    let cancelled = false;
+    let unsub = null;
+    const seenLastTs = new Map();
+
+    const startDmListener = async () => {
+      try {
+        await signInAnonymously(lobbyAuth);
+      } catch {}
+      if (cancelled) return;
+
+      const dmQuery = query(
+        collection(lobbyDb, 'directMessages'),
+        where('participants', 'array-contains', myDmIdentity),
+      );
+      unsub = onSnapshot(
+        dmQuery,
+        async (snapshot) => {
+          if (!initialized) {
+            snapshot.forEach((docSnap) => {
+              const d = docSnap.data();
+              seenLastTs.set(docSnap.id, Number(d?.lastMessageAt || 0));
+            });
+            initialized = true;
+            return;
+          }
+          for (const change of snapshot.docChanges()) {
+            if (change.type !== 'added' && change.type !== 'modified') continue;
+            const docSnap = change.doc;
+            const data = docSnap.data();
+            const lastTs = Number(data?.lastMessageAt || 0);
+            const prevTs = seenLastTs.get(docSnap.id) || 0;
+            if (lastTs <= prevTs) continue;
+            seenLastTs.set(docSnap.id, lastTs);
+            if (data?.lastSenderId === myDmIdentity) continue;
+            markLobbyUnread(lastTs);
+            if (isViewingLobbyChatRef.current && activeLobbyChannelRef.current === docSnap.id) {
+              continue;
+            }
+            const dec = await decryptChatPayload(data?.lastMessageText || '', docSnap.id);
+            if (cancelled) return;
+            const cleanText = (dec?.text || '').trim() || 'Sent a message';
+            setChatHeaderNotice({
+              id: `${docSnap.id}_${lastTs}`,
+              channelId: docSnap.id,
+              channelName: 'DM',
+              isDirectMessage: true,
+              senderName: data?.lastSenderName || 'User',
+              text: cleanText,
+              timestamp: lastTs,
+            });
+          }
+        },
+        (error) => {
+          if (isFirestorePermissionError(error)) {
+            try {
+              handleFirestoreError(error, OperationType.LIST, 'directMessages');
+            } catch (wrappedErr) {
+              console.error(wrappedErr);
+            }
+          }
+        },
+      );
+    };
+
+    startDmListener();
+    return () => {
+      cancelled = true;
+      if (unsub) {
+        try { unsub(); } catch {}
+      }
+    };
+  }, [myDmIdentity, canLobbyChatAccess, markLobbyUnread]);
+
+  const handleActiveLobbyChannelChange = useCallback((chanId) => {
+    if (!chanId) return;
+    activeLobbyChannelRef.current = chanId;
+    setChatHeaderNotice((prev) =>
+      prev && prev.channelId === chanId && isViewingLobbyChatRef.current ? null : prev,
+    );
+  }, []);
+
+  const openChatFromHeaderNotice = useCallback(
+    (notice) => {
+      if (!notice?.channelId) return;
+      setTargetChannelRequest({ id: notice.channelId, nonce: Date.now() });
+      setChatHeaderNotice(null);
+      setHasUnreadLobby(false);
+      const latest = Number(safeStorage.getItem('lobby-chat-latest') || 0);
+      safeStorage.setItem('lobby-chat-last-read', String(Math.max(latest, Date.now())));
+      if (selectedGame) {
+        setDockedChatCollapsed(false);
+      } else {
+        setFilter('lobbychat');
+        setSelectedGame(null);
+      }
+    },
+    [selectedGame],
+  );
+
+  const renderChatHeaderNotice = (variant = 'compact') => {
+    if (!canLobbyChatAccess || !chatHeaderNotice) return null;
+    const isDm = Boolean(chatHeaderNotice.isDirectMessage);
+    const widthClass =
+      variant === 'game'
+        ? 'max-w-[165px] sm:max-w-[250px] lg:max-w-[330px]'
+        : variant === 'expanded'
+          ? 'max-w-[180px] sm:max-w-[240px] lg:max-w-[300px]'
+          : 'max-w-[130px] sm:max-w-[200px] lg:max-w-[260px]';
+
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => openChatFromHeaderNotice(chatHeaderNotice)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openChatFromHeaderNotice(chatHeaderNotice);
+          }
+        }}
+        title={`${isDm ? 'DM' : chatHeaderNotice.channelName} from ${chatHeaderNotice.senderName}: ${chatHeaderNotice.text}`}
+        className={`flex items-center gap-1.5 min-w-0 ${widthClass} h-6 px-2 rounded-full border cursor-pointer transition-all shrink select-none ${
+          isDm
+            ? 'border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300'
+            : 'border-[var(--accent-color)]/40 bg-[var(--accent-color)]/15 hover:bg-[var(--accent-color)]/25 text-[var(--accent-color)]'
+        }`}
+      >
+        {isDm ? (
+          <MessageCircle className="w-3 h-3 shrink-0 text-emerald-400" />
+        ) : (
+          <MessageSquare className="w-3 h-3 shrink-0" />
+        )}
+        <span className="text-[9px] font-black uppercase tracking-wider shrink-0">
+          {isDm ? 'DM' : chatHeaderNotice.channelName}
+        </span>
+        <span className="text-[10.5px] font-medium text-[var(--text-primary)] truncate min-w-0 flex-1">
+          {chatHeaderNotice.senderName}: {chatHeaderNotice.text}
+        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setChatHeaderNotice(null);
+          }}
+          className="p-0.5 rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
+          title="Dismiss notification"
+          aria-label="Dismiss notification"
+        >
+          <X className="w-2.5 h-2.5" />
+        </button>
+      </div>
+    );
+  };
 
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [adminError, setAdminError] = useState('');
@@ -2900,11 +3127,24 @@ export default function App() {
 
     touchSessionActivity(true);
 
+    const isInteractingWithIframe = () =>
+      document.visibilityState === 'visible' && document.activeElement?.tagName === 'IFRAME';
+
     const recordActivity = () => {
       touchSessionActivity(false);
     };
 
+    const handleWindowBlur = () => {
+      if (isInteractingWithIframe()) {
+        touchSessionActivity(true);
+      }
+    };
+
     const checkInactivity = () => {
+      if (isInteractingWithIframe()) {
+        touchSessionActivity(false);
+        return;
+      }
       const last = getLastSessionActivity();
       if (last && Date.now() - last >= INACTIVITY_TIMEOUT_MS) {
         handleAccountSignOut('inactivity');
@@ -2913,6 +3153,10 @@ export default function App() {
 
     const handleVisibilityOrFocus = () => {
       if (document.visibilityState === 'hidden') return;
+      if (isInteractingWithIframe()) {
+        touchSessionActivity(true);
+        return;
+      }
       const last = getLastSessionActivity();
       if (last && Date.now() - last >= INACTIVITY_TIMEOUT_MS) {
         handleAccountSignOut('inactivity');
@@ -2924,6 +3168,7 @@ export default function App() {
     const activityEvents = ['pointerdown', 'mousedown', 'keydown', 'touchstart', 'scroll', 'wheel', 'mousemove'];
     activityEvents.forEach((evt) => window.addEventListener(evt, recordActivity, { passive: true }));
     window.addEventListener('focus', handleVisibilityOrFocus);
+    window.addEventListener('blur', handleWindowBlur);
     document.addEventListener('visibilitychange', handleVisibilityOrFocus);
 
     const timer = setInterval(checkInactivity, 15000);
@@ -2932,6 +3177,7 @@ export default function App() {
       clearInterval(timer);
       activityEvents.forEach((evt) => window.removeEventListener(evt, recordActivity));
       window.removeEventListener('focus', handleVisibilityOrFocus);
+      window.removeEventListener('blur', handleWindowBlur);
       document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
     };
   }, [autoSignOutOnIdle, activeAccount, isOwnerAdmin, viewMode, handleAccountSignOut]);
@@ -2940,11 +3186,11 @@ export default function App() {
   useEffect(() => {
     const onStorage = (e) => {
       if (e.key === 'unblocked-auto-lock-on-close') {
-        setAutoLockOnClose(e.newValue !== 'false');
+        setAutoLockOnClose(e.newValue === 'true');
         return;
       }
       if (e.key === AUTO_SIGNOUT_IDLE_KEY) {
-        setAutoSignOutOnIdle(e.newValue !== 'false');
+        setAutoSignOutOnIdle(e.newValue === 'true');
         return;
       }
       if (e.key === LAST_ACTIVITY_KEY && e.newValue) {
@@ -2974,30 +3220,38 @@ export default function App() {
   // Restore saved account session on boot
   useEffect(() => {
     let cancelled = false;
+    let retryTimer = null;
     const saved = getSavedAccountSession();
     if (!saved) {
       syncChatLinkedAccountStorage(null);
       setAccountSessionChecked(true);
       return;
     }
-    verifySessionAccount(lobbyDb, lobbyAuth, saved)
-      .then((acc) => {
-        if (cancelled) return;
-        if (!acc) {
-          clearAccountSession();
-          setActiveAccount(null);
-          return;
-        }
-        setActiveAccount(acc);
-        applyAccountProfileToApp(acc);
-        syncChatLinkedAccountStorage(acc);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setAccountSessionChecked(true);
-      });
+    const runVerify = () => {
+      verifySessionAccount(lobbyDb, lobbyAuth, saved)
+        .then((acc) => {
+          if (cancelled) return;
+          if (!acc) {
+            clearAccountSession();
+            setActiveAccount(null);
+            setAccountSessionChecked(true);
+            return;
+          }
+          setActiveAccount(acc);
+          applyAccountProfileToApp(acc);
+          syncChatLinkedAccountStorage(acc);
+          setAccountSessionChecked(true);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          // Retry transient network errors without falsely signing out the user
+          retryTimer = setTimeout(runVerify, 5000);
+        });
+    };
+    runVerify();
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, [applyAccountProfileToApp]);
 
@@ -3190,7 +3444,13 @@ export default function App() {
       setAdminError('');
       setAdminPasswordInput('');
     } else if (val === 'sharp') {
-      if (!hasAdminAccess && workspaceConfig?.aiAccess === false) {
+      const canBypassAiGlobalOff = Boolean(
+        hasAdminAccess ||
+          (activeAccount?.isActive &&
+            ((workspaceConfig?.allowAccountOverrides !== false && activeAccount?.allowGlobalOverride) ||
+              (workspaceConfig?.allowAiOverrides !== false && activeAccount?.allowAiOverride))),
+      );
+      if (workspaceConfig?.aiAccess === false && !canBypassAiGlobalOff) {
         setAdminError('AI Chat disabled by admin');
         setAdminPasswordInput('');
         return;
@@ -3473,14 +3733,20 @@ export default function App() {
 
   // Global Panic Key Handler
   useEffect(() => {
-    let lastZeroTime = 0;
     let lastEscapeTime = 0;
+    const isEditableTarget = (target) => {
+      const el = target instanceof HTMLElement ? target : document.activeElement;
+      if (!el || !(el instanceof HTMLElement)) return false;
+      const tag = el.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+    };
     const handlePanic = (e) => {
+      if (isEditableTarget(e.target)) return;
       if (e.key === '[' || e.key === ']') {
         if (!panicKeysEnabled) return;
         e.preventDefault();
         try {
-          window.history.replaceState({ disguise: 'educational_workspace' }, 'Urnperiodic StudyTools', window.location.pathname || '/');
+          window.history.replaceState({ disguise: 'educational_workspace' }, 'Study Tools', window.location.pathname || '/');
         } catch (err) {}
         setViewModeAndSave('articles');
         setSelectedGame(null); // Instantly close active game to clear screen
@@ -3627,15 +3893,15 @@ export default function App() {
     const classroomFavicon = "https://ssl.gstatic.com/classroom/favicon.png";
 
     if (viewMode === 'articles') {
-      setBothTitles("Urnperiodic StudyTools");
+      setBothTitles("Study Tools");
       updateFavicon(customStudyFavicon);
     } else if (viewMode === 'games') {
       const activeTitle = getDecoyTitle(decoyType, customDecoyTitles);
       setBothTitles(activeTitle);
       updateFavicon(getDecoyFavicon(decoyType));
     } else {
-      // Default to StudyTools for locked/welcome screens
-      setBothTitles("Urnperiodic StudyTools");
+      // Default to Study Tools for locked/welcome screens
+      setBothTitles("Study Tools");
       updateFavicon(customStudyFavicon);
     }
   }, [viewMode, decoyType, customDecoyTitles]);
@@ -3778,7 +4044,6 @@ export default function App() {
             <div className="relative z-10 text-[9px] font-mono tracking-widest text-[#ff007f] font-black uppercase mt-12 bg-neutral-900/80 px-2.5 py-0.5 rounded border border-pink-500/20">DEFEND CORE</div>
           </div>
         );
-      case 1:
       case 'slope':
         return (
           <div className="relative w-full h-full flex items-center justify-center bg-neutral-950">
@@ -3794,7 +4059,6 @@ export default function App() {
             <div className="absolute bottom-3 w-1/2 h-[3px] bg-emerald-400/50 rounded transform rotate-12" />
           </div>
         );
-      case 2:
       case '2048':
         return (
           <div className="relative w-full h-full flex items-center justify-center bg-neutral-950">
@@ -3806,7 +4070,6 @@ export default function App() {
             </div>
           </div>
         );
-      case 3:
       case 'retro-bowl':
         return (
           <div className="relative w-full h-full flex items-center justify-center bg-neutral-950">
@@ -3818,7 +4081,6 @@ export default function App() {
             </div>
           </div>
         );
-      case 4:
       case 'flappy':
         return (
           <div className="relative w-full h-full flex items-center justify-center bg-sky-950">
@@ -3835,7 +4097,6 @@ export default function App() {
             </div>
           </div>
         );
-      case 5:
       case 'pacman':
         return (
           <div className="relative w-full h-full flex items-center justify-center gap-2 bg-neutral-950">
@@ -3845,7 +4106,6 @@ export default function App() {
             <div className="w-2 h-2 bg-white/30 rounded-full" />
           </div>
         );
-      case 6:
       case 'tunnel-rush':
         return (
           <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-neutral-950">
@@ -3854,7 +4114,6 @@ export default function App() {
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border border-white" />
           </div>
         );
-      case 7:
       case 'chess':
         return (
           <div className="relative w-full h-full flex items-center justify-center bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.05)_0%,transparent_70%)]">
@@ -3871,7 +4130,6 @@ export default function App() {
             <div className="absolute text-2xl font-semibold transform hover:scale-110 duration-200">♟️</div>
           </div>
         );
-      case 8:
       case 'bubble-shooter':
         return (
           <div className="relative w-full h-full flex items-center justify-center bg-neutral-950">
@@ -3883,7 +4141,6 @@ export default function App() {
             <div className="absolute bottom-2 w-2 h-8 bg-zinc-400 rounded-full origin-bottom rotate-45 animate-pulse" />
           </div>
         );
-      case 9:
       case 'crossy-road':
         return (
           <div className="relative w-full h-full flex items-center justify-center bg-neutral-950">
@@ -3894,7 +4151,6 @@ export default function App() {
             </div>
           </div>
         );
-      case 10:
       case 'solitaire':
         return (
           <div className="relative w-full h-full flex items-center justify-center bg-neutral-950">
@@ -3908,7 +4164,6 @@ export default function App() {
             </div>
           </div>
         );
-      case 11:
       case 'doodle-jump':
         return (
           <div className="relative w-full h-full flex items-center justify-center bg-neutral-950">
@@ -3923,7 +4178,6 @@ export default function App() {
             </div>
           </div>
         );
-      case 12:
       case 'classroom-portal':
         return (
           <div className="relative w-full h-full flex items-center justify-center bg-neutral-950">
@@ -3932,7 +4186,6 @@ export default function App() {
             </div>
           </div>
         );
-      case 13:
       case 'youtube-stealth':
         return (
           <div className="relative w-full h-full flex items-center justify-center bg-neutral-950">
@@ -3941,7 +4194,6 @@ export default function App() {
             </div>
           </div>
         );
-      case 14:
       case 'stealth-proxy':
         return (
           <div className="relative w-full h-full flex items-center justify-center bg-neutral-950">
@@ -3950,7 +4202,6 @@ export default function App() {
             </div>
           </div>
         );
-      case 15:
       case 'sim-life':
         return (
           <div className="relative w-full h-full flex items-center justify-center bg-neutral-950">
@@ -3959,7 +4210,6 @@ export default function App() {
             </div>
           </div>
         );
-      case 16:
       case 'sandbox':
         return (
           <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-neutral-950">
@@ -6108,7 +6358,11 @@ export default function App() {
   return (
     <MotionConfig reducedMotion={animationsEnabled ? "never" : "always"}>
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[var(--bg-color)] text-[var(--text-muted)] text-sm">Loading workspace...</div>}>
-        <div className={`min-h-screen flex flex-col transition-colors duration-300 relative overflow-x-clip ${viewMode === 'games' ? 'games-no-select select-none' : ''} ${selectedGame ? 'h-screen overflow-hidden' : ''}`}>
+        <div className={`flex flex-col transition-colors duration-300 relative overflow-x-clip ${viewMode === 'games' ? 'games-no-select select-none' : ''} ${
+          selectedGame || ['chat', 'lobbychat', 'movies', 'moremovies', 'youtube', 'download', 'info'].includes(filter)
+            ? 'h-[100dvh] max-h-[100dvh] overflow-hidden'
+            : 'min-h-screen'
+        }`}>
       <CursorSpotlight active={viewMode === 'games' && animationsEnabled} />
       {/* HEADER */}
       <AnimatePresence initial={false}>
@@ -6200,6 +6454,8 @@ export default function App() {
               </motion.button>
             )}
 
+            {!selectedGame && renderChatHeaderNotice('expanded')}
+
             {/* YouTube Workspace Button */}
             {canYoutubeAccess && (
               <motion.button
@@ -6232,7 +6488,7 @@ export default function App() {
                     customTitles={customDecoyTitles} 
                     onCustomTitleChange={handleCustomTitleChange}
                     isUnlocked={isDecoysUnlocked}
-                    onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                    onRequestUnlock={() => { setAccountModalOpen(true); setIsGlobalSettingsOpen(false); }}
                   />
 
                   <AutoRandomizeDecoyButton
@@ -6248,7 +6504,7 @@ export default function App() {
                     currentDecoy={decoyType}
                     mode={mode}
                     isUnlocked={isDecoysUnlocked}
-                    onRequestUnlock={() => { setIsAdminPanelOpen(true); setIsGlobalSettingsOpen(false); }}
+                    onRequestUnlock={() => { setAccountModalOpen(true); setIsGlobalSettingsOpen(false); }}
                   />
                 </>
               )}
@@ -6979,6 +7235,8 @@ export default function App() {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {!selectedGame && renderChatHeaderNotice('compact')}
             </div>
 
           {/* Top Right: Combined Animations & Settings, plus Theme Slider */}
@@ -7084,14 +7342,14 @@ export default function App() {
 
               <button
                 onClick={handleAccountSignOut}
-                className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                className={`p-0.5 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                   mode === 'light'
                     ? 'text-black hover:text-black hover:bg-black/5'
                     : 'text-[var(--text-muted)] hover:text-red-500 hover:bg-[var(--card-bg)]'
                 }`}
                 title="Sign Out (Log Out & Lock Workspace)"
               >
-                <LogOut className="w-3 h-3" style={{ color: mode === 'light' ? '#000000' : undefined }} />
+                <LogOut className="w-2.5 h-2.5" style={{ borderColor: '#ff0000', color: '#ff0000' }} />
               </button>
 
               <div className="w-[1px] h-3 bg-[var(--card-border)]/80" />
@@ -7456,7 +7714,7 @@ export default function App() {
       {/* MAIN CONTAINER: SIDEBAR + GAMES */}
       <div className={`flex-1 flex flex-col md:flex-row w-full mx-auto relative select-none games-no-select ${windowFullscreen ? 'z-[99999]' : 'z-10'} ${
         (filter === 'chat' || filter === 'movies' || filter === 'moremovies' || filter === 'lobbychat' || filter === 'youtube' || filter === 'download' || filter === 'info' || selectedGame)
-          ? 'max-w-none p-0 gap-0 border-t-0 lg:bg-[#07090e]' 
+          ? 'min-h-0 overflow-hidden max-w-none p-0 gap-0 border-t-0 lg:bg-[#07090e]' 
           : 'max-w-8xl p-4 md:p-6 gap-6 self-center'
       }`}>
         
@@ -8103,12 +8361,12 @@ export default function App() {
                   animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
                   exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
                   transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
-                  className={`flex flex-col w-full min-h-[550px] bg-[var(--bg-secondary)] ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}
+                  className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[var(--bg-secondary)]"
                 >
                   {isAdminUnlocked ? (
                     <AiChatWorkspace onClose={() => setFilter('all')} />
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full min-h-[450px] p-6 text-center select-none">
+                    <div className="flex flex-col items-center justify-center h-full min-h-[320px] p-6 text-center select-none">
                       <form onSubmit={handleAdminPasswordSubmit}>
                         <input
                           type="password"
@@ -8136,13 +8394,15 @@ export default function App() {
                   animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
                   exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
                   transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
-                  className={`flex flex-col w-full min-h-[550px] bg-[var(--bg-secondary)] ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}
+                  className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[var(--bg-secondary)]"
                 >
                   <UserChat
                     onClose={() => setFilter('all')}
                     activeAccount={activeAccount}
                     isOwnerAdmin={isOwnerAdmin}
                     onOpenAccountModal={() => setAccountModalOpen(true)}
+                    targetChannelRequest={targetChannelRequest}
+                    onActiveChannelChange={handleActiveLobbyChannelChange}
                   />
                 </motion.div>
               ) : filter === 'info' ? (
@@ -8152,7 +8412,7 @@ export default function App() {
                   animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
                   exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
                   transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
-                  className={`flex flex-col w-full bg-[var(--bg-secondary)] overflow-hidden ${headerOpen ? 'h-[calc(100vh-90px)]' : 'h-[calc(100vh-45px)]'}`}
+                  className="flex-1 flex flex-col w-full h-full min-h-0 bg-[var(--bg-secondary)] overflow-hidden"
                 >
                   <InformationSection 
                     onClose={() => setFilter('all')} 
@@ -8174,7 +8434,7 @@ export default function App() {
                   animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
                   exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
                   transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
-                  className={`flex flex-col w-full min-h-[550px] bg-[var(--bg-secondary)] ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}
+                  className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[var(--bg-secondary)]"
                 >
                   <MoviesWorkspace onClose={() => setFilter('all')} />
                 </motion.div>
@@ -8185,7 +8445,7 @@ export default function App() {
                   animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
                   exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
                   transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
-                  className={`flex flex-col w-full min-h-[550px] bg-[var(--bg-secondary)] ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}
+                  className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[var(--bg-secondary)]"
                 >
                   <MoreMoviesWorkspace onClose={() => setFilter('all')} />
                 </motion.div>
@@ -8196,7 +8456,7 @@ export default function App() {
                   animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
                   exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
                   transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
-                  className={`flex flex-col w-full min-h-[550px] bg-[#0c0a09] border border-[var(--card-border)]/60 rounded-2xl overflow-hidden ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}
+                  className="flex-1 flex flex-col w-full h-full min-h-0 bg-[#0c0a09] border border-[var(--card-border)]/60 rounded-2xl overflow-hidden"
                 >
                   <iframe 
                     src="https://urnperiodic.github.io/youtube1/" 
@@ -8212,7 +8472,7 @@ export default function App() {
                   animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
                   exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
                   transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
-                  className={`flex flex-col w-full min-h-[550px] bg-[#0c0a09] ${headerOpen ? 'h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-100px)] md:h-[calc(100vh-80px)]'}`}
+                  className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[#0c0a09]"
                 >
                   <div className="flex items-center justify-between px-3 py-1.5 bg-[#121019] border-b border-white/10 text-xs shrink-0">
                     <button
@@ -8776,24 +9036,24 @@ export default function App() {
                   </button>
                 </div>
               ) : (
-                <div className={`sticky ${gameHeaderHidden ? 'top-0' : headerOpen ? 'top-[108px] sm:top-[56px]' : 'top-[108px] md:top-[44px]'} z-[50] flex flex-row items-center justify-between border-b border-[var(--card-border)] bg-[var(--bg-secondary)] rounded-none py-1.5 px-2.5 sm:px-4 gap-2 sm:gap-3 shadow-inner min-h-[44px] h-[44px] overflow-hidden select-none`}>
+                <div className={`sticky ${gameHeaderHidden ? 'top-0' : headerOpen ? 'top-[108px] sm:top-[56px]' : 'top-[108px] md:top-[44px]'} z-[50] shrink-0 flex flex-row items-center justify-between border-b border-[var(--card-border)] bg-[var(--bg-secondary)] rounded-none py-1 px-2 sm:px-3 gap-1.5 sm:gap-2 shadow-inner min-h-[34px] h-[34px] overflow-hidden select-none`}>
                   
                   {/* Left: Back button + Auto-truncating Title & Tag */}
-                  <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden mr-1 sm:mr-2">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden mr-1">
                     <button
                       onClick={() => {
                         safeStorage.removeItem('unblocked-last-game');
                         setSelectedGame(null);
                       }}
-                      className="flex items-center gap-1.5 border border-[var(--card-border)] hover:border-[var(--accent-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)] transition-all font-mono py-1 px-2.5 sm:px-3 rounded-lg text-xs font-bold leading-normal cursor-pointer shrink-0"
+                      className="flex items-center gap-1 h-6 border border-[var(--card-border)] hover:border-[var(--accent-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)] transition-all font-mono py-0.5 px-2 rounded-md text-[11px] font-bold leading-none cursor-pointer shrink-0"
                       title="Go back to portals list"
                     >
-                      <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+                      <ArrowLeft className="w-3 h-3 shrink-0" />
                       <span className="hidden xs:inline sm:inline">Go back</span>
                     </button>
 
                     <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden" title={selectedGame.title}>
-                      <span className="font-bold text-xs sm:text-sm text-[var(--text-primary)] truncate block min-w-0 tracking-tight">
+                      <span className="font-bold text-xs text-[var(--text-primary)] truncate block min-w-0 tracking-tight">
                         {selectedGame.title}
                       </span>
                       <span className="hidden md:inline-flex text-[9px] uppercase tracking-wider font-mono px-1.5 py-0.5 rounded border border-[var(--card-border)] bg-[var(--bg-color)] text-[var(--accent-color)] shrink-0 truncate max-w-[120px]">
@@ -8807,34 +9067,35 @@ export default function App() {
                           <span>Gemini AI</span>
                         </span>
                       )}
+                      {renderChatHeaderNotice('game')}
                     </div>
                   </div>
 
-                  {/* Right: Controls toolbar (strictly single-row flex-nowrap) */}
-                  <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 flex-nowrap overflow-x-auto scrollbar-none">
+                  {/* Right: Controls toolbar (compact single-row flex-nowrap) */}
+                  <div className="flex items-center gap-1 shrink-0 flex-nowrap overflow-x-auto scrollbar-none">
                     
                     {/* Zoom controls */}
-                    <div className="flex items-center h-7 bg-[var(--bg-color)] border border-[var(--card-border)] rounded-lg overflow-hidden p-0.5 shrink-0">
+                    <div className="flex items-center h-6 bg-[var(--bg-color)] border border-[var(--card-border)] rounded-md overflow-hidden px-0.5 shrink-0">
                       <button
                         onClick={() => setZoom(z => Math.max(0.4, z - 0.1))}
-                        className="p-1 px-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)] rounded transition-colors"
+                        className="p-0.5 px-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)] rounded transition-colors cursor-pointer"
                         title="Zoom Out"
                       >
-                        <Minus className="w-3.5 h-3.5" />
+                        <Minus className="w-3 h-3" />
                       </button>
-                      <span className="text-[10px] px-2 font-mono text-[var(--text-primary)] font-bold select-none">
+                      <span className="text-[9.5px] px-1 font-mono text-[var(--text-primary)] font-bold select-none tabular-nums">
                         {Math.round(zoom * 100)}%
                       </span>
                       <button
                         onClick={() => setZoom(z => Math.min(1.8, z + 0.1))}
-                        className="p-1 px-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)] rounded transition-colors"
+                        className="p-0.5 px-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)] rounded transition-colors cursor-pointer"
                         title="Zoom In"
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="w-3 h-3" />
                       </button>
                       <button
                         onClick={() => setZoom(1)}
-                        className="p-1 px-1.5 text-xs text-[var(--accent-color)] font-mono hover:bg-[var(--card-bg)] rounded transition-colors"
+                        className="p-0.5 px-1 text-[9.5px] font-bold text-[var(--accent-color)] font-mono hover:bg-[var(--card-bg)] rounded transition-colors cursor-pointer"
                         title="Reset Zoom"
                       >
                         Reset
@@ -8844,24 +9105,24 @@ export default function App() {
                     {/* Reload button */}
                     <button
                       onClick={() => {
-                        const iframe = document.getElementById('game-frame');
+                        const iframe = /** @type {HTMLIFrameElement | null} */ (document.getElementById('game-frame'));
                         if (iframe) iframe.src = iframe.src;
                       }}
-                      className="flex items-center gap-1.5 h-7 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1 px-2 sm:px-2.5 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer shrink-0"
+                      className="flex items-center gap-1 h-6 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-0.5 px-1.5 rounded-md text-[var(--text-primary)] font-mono font-medium transition-all cursor-pointer shrink-0"
                       title="Reload Iframe (Refresh portal frame)"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Iframe</span>
+                      <RotateCcw className="w-3 h-3" />
+                      <span className="hidden sm:inline text-[9.5px] font-bold tracking-tight">Iframe</span>
                     </button>
 
                     {/* Refresh Page button */}
                     <button
                       onClick={handleRefreshPage}
-                      className="flex items-center gap-1.5 h-7 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1 px-2 sm:px-2.5 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer shrink-0"
+                      className="flex items-center gap-1 h-6 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-0.5 px-1.5 rounded-md text-[var(--text-primary)] font-mono font-medium transition-all cursor-pointer shrink-0"
                       title="Refresh Entire Page (Safe reload for about:blank)"
                     >
-                      <RotateCcw className={`w-3.5 h-3.5 text-[var(--accent-color)] ${isRefreshing ? 'animate-spin' : ''}`} />
-                      <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Page</span>
+                      <RotateCcw className={`w-3 h-3 text-[var(--accent-color)] ${isRefreshing ? 'animate-spin' : ''}`} />
+                      <span className="hidden sm:inline text-[9.5px] font-bold tracking-tight">Page</span>
                     </button>
 
                     {/* Direct Gmfiles Link button for local public games */}
@@ -8871,14 +9132,14 @@ export default function App() {
                           setGameFrame(null);
                           window.open(getDirectGmfilesUrl(selectedGame.url), '_blank');
                         }}
-                        className="flex items-center gap-1.5 h-7 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1 px-2 sm:px-2.5 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer shrink-0"
+                        className="flex items-center gap-1 h-6 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-0.5 px-1.5 rounded-md text-[var(--text-primary)] font-mono font-medium transition-all cursor-pointer shrink-0"
                         title={`Open Direct Link (${getDirectGmfilesUrl(selectedGame.url)})`}
                       >
-                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
                           <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
                         </svg>
-                        <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Link</span>
+                        <span className="hidden sm:inline text-[9.5px] font-bold tracking-tight">Link</span>
                       </button>
                     )}
 
@@ -8893,10 +9154,10 @@ export default function App() {
                           link.click();
                           document.body.removeChild(link);
                         }}
-                        className="flex items-center gap-1.5 h-7 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1 px-2 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer shrink-0"
+                        className="flex items-center gap-1 h-6 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-0.5 px-1.5 rounded-md text-[var(--text-primary)] font-mono font-medium transition-all cursor-pointer shrink-0"
                         title="Download Offline (.html)"
                       >
-                        <Download className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                        <Download className="w-3 h-3 text-[var(--accent-color)]" />
                       </button>
                     )}
 
@@ -8912,35 +9173,35 @@ export default function App() {
                           }
                         }
                       }}
-                      className="flex items-center gap-1.5 h-7 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1 px-2 sm:px-2.5 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer shrink-0"
+                      className="flex items-center gap-1 h-6 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-0.5 px-1.5 rounded-md text-[var(--text-primary)] font-mono font-medium transition-all cursor-pointer shrink-0"
                       title="Toggle Fullscreen Arena (FS)"
                     >
-                      <Expand className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline text-[10px] font-bold tracking-tight">FS</span>
+                      <Expand className="w-3 h-3" />
+                      <span className="hidden sm:inline text-[9.5px] font-bold tracking-tight">FS</span>
                     </button>
 
                     {/* Window Fullscreen Button */}
                     <button
                       onClick={() => setWindowFullscreen(!windowFullscreen)}
-                      className={`flex items-center gap-1.5 h-7 border py-1 px-2 sm:px-2.5 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer shrink-0 ${
+                      className={`flex items-center gap-1 h-6 border py-0.5 px-1.5 rounded-md font-mono font-medium transition-all cursor-pointer shrink-0 ${
                         windowFullscreen
                           ? 'border-amber-500 bg-amber-500/15 text-amber-500 font-bold shadow-[0_0_8px_rgba(245,158,11,0.2)]'
-                          : 'border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)]'
+                          : 'border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)]'
                       }`}
                       title={windowFullscreen ? "Exit Win FS" : "Win FS (Window Fullscreen)"}
                     >
-                      {windowFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-                      <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Win FS</span>
+                      {windowFullscreen ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+                      <span className="hidden sm:inline text-[9.5px] font-bold tracking-tight">Win FS</span>
                     </button>
 
                     {/* Open in New Tab (Blank) button */}
                     <button
                       onClick={() => openGameInAboutBlank(selectedGame)}
-                      className="flex items-center gap-1.5 h-7 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-1 px-2 sm:px-2.5 rounded-lg text-xs font-mono text-[var(--text-primary)] font-medium transition-all cursor-pointer shrink-0"
+                      className="flex items-center gap-1 h-6 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] py-0.5 px-1.5 rounded-md text-[var(--text-primary)] font-mono font-medium transition-all cursor-pointer shrink-0"
                       title="Open in Blank (about:blank)"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline text-[10px] font-bold tracking-tight">Abt:Blank</span>
+                      <ExternalLink className="w-3 h-3" />
+                      <span className="hidden sm:inline text-[9.5px] font-bold tracking-tight">Abt:Blank</span>
                     </button>
 
                     {/* Lobby Chat (Slideout Chat) Toggle Button - icon only */}
@@ -8950,14 +9211,14 @@ export default function App() {
                           setDockedChatCollapsed(!dockedChatCollapsed);
                           if (dockedChatCollapsed) setHasUnreadLobby(false);
                         }}
-                        className={`relative flex items-center gap-1.5 h-7 border py-1 px-2 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer shrink-0 ${
+                        className={`relative flex items-center gap-1 h-6 border py-0.5 px-1.5 rounded-md font-mono font-medium transition-all cursor-pointer shrink-0 ${
                           !dockedChatCollapsed 
                             ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)] font-bold shadow-[0_0_8px_rgba(0,229,176,0.15)]' 
                             : 'border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)]'
                         }`}
                         title="Toggle Slideout Chat inside Portal Arena"
                       >
-                        <MessageSquare className="w-3.5 h-3.5" />
+                        <MessageSquare className="w-3 h-3" />
                         <LobbyUnreadIndicator visible={hasUnreadLobby} />
                       </button>
                     )}
@@ -8967,7 +9228,7 @@ export default function App() {
                       whileHover={animationsEnabled ? { scale: 1.03 } : undefined}
                       whileTap={animationsEnabled ? { scale: 0.97 } : undefined}
                       onClick={() => setGameHeaderHidden(!gameHeaderHidden)}
-                      className="flex items-center gap-1.5 h-7 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)] py-1 px-2.5 rounded-lg text-xs font-mono font-medium transition-all duration-200 cursor-pointer relative shrink-0"
+                      className="flex items-center gap-1 h-6 border border-[var(--card-border)] hover:border-[var(--accent-color)] bg-[var(--bg-color)] text-[var(--text-primary)] hover:text-[var(--accent-color)] py-0.5 px-1.5 rounded-md font-mono font-medium transition-all duration-200 cursor-pointer relative shrink-0"
                       title={gameHeaderHidden ? "Show Main Website Header" : "Hide Main Website Header"}
                     >
                       <motion.div
@@ -8975,9 +9236,9 @@ export default function App() {
                         transition={animationsEnabled ? { type: "spring", stiffness: 200, damping: 15 } : { duration: 0 }}
                         className="flex items-center justify-center"
                       >
-                        {gameHeaderHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        {gameHeaderHidden ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                       </motion.div>
-                      <span className="hidden sm:inline text-[10px] font-bold tracking-tight">
+                      <span className="hidden sm:inline text-[9.5px] font-bold tracking-tight">
                         {gameHeaderHidden ? 'SHOW HEADER' : 'HIDE HEADER'}
                       </span>
                     </motion.button>
@@ -8985,13 +9246,13 @@ export default function App() {
                     {/* Emergency Panic Button */}
                     <button
                       onClick={triggerPanicToClassroom}
-                      className="flex items-center gap-1.5 h-7 border-2 border-red-500 hover:border-red-600 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white py-1 px-2 sm:px-2.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shadow-sm active:scale-95 group shrink-0"
+                      className="flex items-center gap-1 h-6 border border-red-500 hover:border-red-600 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white py-0.5 px-1.5 rounded-md font-mono font-bold transition-all cursor-pointer shadow-sm active:scale-95 group shrink-0"
                       title="Emergency Panic: Instantly opens Google Classroom. You can also press: [ , ] , ` , \ , or Double Escape"
                       aria-label="Emergency Panic Button"
                     >
-                      <ShieldAlert className="w-3.5 h-3.5 text-red-500 group-hover:text-white shrink-0 animate-pulse" />
-                      <span className="text-[10px] font-black tracking-tight uppercase">Panic</span>
-                      <span className="text-[9px] px-1 py-0.2 rounded bg-red-500/20 group-hover:bg-white/20 border border-red-500/30 text-red-400 group-hover:text-white font-mono font-bold">
+                      <ShieldAlert className="w-3 h-3 text-red-500 group-hover:text-white shrink-0 animate-pulse" />
+                      <span className="text-[9.5px] font-black tracking-tight uppercase">Panic</span>
+                      <span className="text-[8.5px] leading-tight px-1 py-0 rounded bg-red-500/20 group-hover:bg-white/20 border border-red-500/30 text-red-400 group-hover:text-white font-mono font-bold">
                         Keys: [ ] \
                       </span>
                     </button>
@@ -9197,17 +9458,18 @@ export default function App() {
 
                 {/* DOCKED LIVE LOBBY CHAT */}
                 {canLobbyChatAccess && !dockedChatCollapsed && (
-                  <div 
-                    style={{ width: window.innerWidth >= 1024 ? '235px' : '100%' }}
-                    className="w-full lg:h-full h-[320px] shrink-0 flex flex-col bg-[#070a11] border-t lg:border-t-0 lg:border-l border-[var(--card-border)]/50 rounded-none overflow-hidden"
+                  <div
+                    className="w-full lg:w-[235px] lg:h-full h-[320px] shrink-0 flex flex-col bg-[#070a11] border-t lg:border-t-0 lg:border-l border-[var(--card-border)]/50 rounded-none overflow-hidden"
                   >
-                    <div className="flex-1 min-h-0">
+                    <div className="flex-1 min-h-0 h-full flex flex-col">
                       <UserChat
                         onClose={() => {}}
                         isMini={true}
                         activeAccount={activeAccount}
                         isOwnerAdmin={isOwnerAdmin}
                         onOpenAccountModal={() => setAccountModalOpen(true)}
+                        targetChannelRequest={targetChannelRequest}
+                        onActiveChannelChange={handleActiveLobbyChannelChange}
                       />
                     </div>
                   </div>
