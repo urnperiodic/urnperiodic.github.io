@@ -216,6 +216,25 @@
           "type": "boolean",
           "description": "Global toggle for Website Downloads."
         },
+        "broadcastId": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Unique identifier of the current global admin broadcast announcement."
+        },
+        "broadcastMessage": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Site-wide announcement text sent by an administrator."
+        },
+        "broadcastSender": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Display name of the administrator who sent the broadcast."
+        },
+        "broadcastAt": {
+          "type": "number",
+          "description": "Epoch millisecond timestamp of when the broadcast was sent or null."
+        },
         "updatedAt": {
           "type": "number",
           "description": "Epoch millisecond timestamp of last update."

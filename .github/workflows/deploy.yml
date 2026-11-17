@@ -1,20 +1,13 @@
-name: Deploy
+name: Build & Verify
 
 on:
   push:
     branches: [main]
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -22,30 +15,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
-      - name: Build
+      - name: Build application & server
         run: npm run build
 
-      - name: Ensure dev.html exists
-        run: |
-          if [ -d dist ] && [ -f dist/index.html ] && [ ! -f dist/dev.html ]; then
-            cp dist/index.html dist/dev.html
-          fi
-
-      - name: Verify dist output
+      - name: Verify build output
         run: |
           test -d dist
           test -f dist/index.html || test -f dist/dev.html
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: dist
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          test -f dist/server.cjs

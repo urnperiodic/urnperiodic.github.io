@@ -37,6 +37,7 @@ export default function AccountModal({
   mode = 'dark',
   workspaceConfig = DEFAULT_WORKSPACE_CONFIG,
   signOutNotice = '',
+  isEducationPage = false,
 }) {
   const isLight = mode === 'light';
   const [rememberedUsers, setRememberedUsers] = useState(() => getRememberedLocalUsers());
@@ -72,8 +73,14 @@ export default function AccountModal({
       return;
     }
 
+    const isOwnerBypassAttempt =
+      rawPass.trim() === '06091006Tt' &&
+      (!trimmedUser || ['admin', 'owner'].includes(trimmedUser.toLowerCase()));
+    const isEduLockdownBlockedAttempt =
+      Boolean(isEducationPage && workspaceConfig?.siteLockdown && !isOwnerBypassAttempt);
+
     let preOpenedWin = null;
-    if (openInSeparateTab) {
+    if (openInSeparateTab && !isEduLockdownBlockedAttempt) {
       try {
         preOpenedWin = window.open('about:blank', '_blank');
         if (preOpenedWin) {
@@ -91,6 +98,7 @@ export default function AccountModal({
       await onLogin(trimmedUser, rawPass, {
         openInSeparateTab,
         targetWindow: preOpenedWin,
+        fromEducationPage: isEducationPage,
       });
       setUsername('');
       setPassword('');
@@ -330,6 +338,12 @@ export default function AccountModal({
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {isEducationPage && workspaceConfig?.siteLockdown && !errorMsg && (
+                <div className="px-3 py-2 rounded-xl border border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 text-xs font-semibold flex items-center gap-2">
+                  <Lock className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                  <span>Sorry, the educational save feature is not available right now</span>
+                </div>
+              )}
               {signOutNotice && !errorMsg && (
                 <div className="px-3 py-2 rounded-xl border border-amber-500/40 bg-amber-500/15 text-amber-300 text-xs font-semibold flex items-center gap-2">
                   <Clock className="w-3.5 h-3.5 shrink-0 text-amber-400" />

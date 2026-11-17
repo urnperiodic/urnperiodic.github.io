@@ -96,7 +96,8 @@ service cloud.firestore {
         && data.keys().hasOnly([
           'siteLockdown', 'lockdownMessage', 'allowSharedPasscodes', 'allowAccountOverrides', 'allowAiOverrides',
           'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'youtubeAccess',
-          'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess', 'updatedAt'
+          'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess',
+          'broadcastId', 'broadcastMessage', 'broadcastSender', 'broadcastAt', 'updatedAt'
         ])
         && data.siteLockdown is bool
         && data.lockdownMessage is string && data.lockdownMessage.size() <= 200
@@ -111,6 +112,10 @@ service cloud.firestore {
         && data.aiAccess is bool
         && data.decoysAccess is bool
         && data.downloadAccess is bool
+        && isOptionalString(data, 'broadcastId', 64)
+        && isOptionalString(data, 'broadcastMessage', 500)
+        && isOptionalString(data, 'broadcastSender', 40)
+        && isOptionalNumber(data, 'broadcastAt')
         && data.updatedAt is number;
     }
 

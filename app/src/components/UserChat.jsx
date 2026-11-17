@@ -8,6 +8,7 @@ export default function UserChat({
   onOpenAccountModal = null,
   targetChannelRequest = null,
   onActiveChannelChange = null,
+  workspaceConfig = null,
 }) {
   return (
     <div id="chat-workspace-container" className="relative w-full h-full flex flex-col bg-[#000000] text-white overflow-hidden">
@@ -20,6 +21,7 @@ export default function UserChat({
           onOpenAccountModal={onOpenAccountModal}
           targetChannelRequest={targetChannelRequest}
           onActiveChannelChange={onActiveChannelChange}
+          workspaceConfig={workspaceConfig}
         />
       </div>
     </div>

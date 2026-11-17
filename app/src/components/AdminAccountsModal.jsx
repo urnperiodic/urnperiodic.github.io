@@ -15,6 +15,7 @@ import {
   Key,
   Layers,
   Lock,
+  Megaphone,
   MessageSquare,
   Plus,
   RefreshCw,
@@ -53,6 +54,8 @@ import {
   generateStrongPassword,
   isAccountOnline,
   subscribeToAllManagedAccounts,
+  sendAdminBroadcast,
+  clearAdminBroadcast,
   updateManagedAccount,
   updateWorkspaceConfig,
 } from '../utils/accountService';
@@ -133,6 +136,8 @@ export default function AdminAccountsModal({
   const [lockdownMsgDraft, setLockdownMsgDraft] = useState(
     workspaceConfig?.lockdownMessage || DEFAULT_WORKSPACE_CONFIG.lockdownMessage,
   );
+  const [broadcastDraft, setBroadcastDraft] = useState('');
+  const [broadcastBusy, setBroadcastBusy] = useState(false);
   const [globalBusyKey, setGlobalBusyKey] = useState(null);
   const [pendingGlobalAction, setPendingGlobalAction] = useState(null); // 'siteLockdown' | 'disableAll' | null
   const [adminConfirmPass, setAdminConfirmPass] = useState('');
@@ -861,6 +866,104 @@ export default function AdminAccountsModal({
                     <span>Shared public passcodes remain disabled — only assigned accounts &amp; owner can sign in.</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Message Everyone (Global Admin Broadcast) */}
+              <div
+                className={`rounded-xl border p-4 space-y-3 ${
+                  workspaceConfig?.broadcastMessage
+                    ? 'border-[var(--accent-color)]/50 bg-[var(--accent-color)]/10'
+                    : isLight
+                      ? 'bg-neutral-50 border-neutral-200'
+                      : 'bg-white/[0.03] border-white/10'
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2 font-black text-xs uppercase tracking-wider">
+                      <Megaphone className="w-4 h-4 text-[var(--accent-color)]" />
+                      <span>Message Everyone (Global Broadcast)</span>
+                    </div>
+                    <p className={`text-[11px] mt-1 leading-relaxed ${isLight ? 'text-neutral-600' : 'text-neutral-400'}`}>
+                      Send a live announcement banner to every active user across all unlocked workspaces.
+                    </p>
+                  </div>
+                  {workspaceConfig?.broadcastMessage && (
+                    <button
+                      type="button"
+                      disabled={broadcastBusy}
+                      onClick={async () => {
+                        setBroadcastBusy(true);
+                        try {
+                          await clearAdminBroadcast(db, auth);
+                          showNotice('success', 'Global broadcast cleared.');
+                        } catch (err) {
+                          showNotice('error', err?.message || 'Failed to clear broadcast.');
+                        } finally {
+                          setBroadcastBusy(false);
+                        }
+                      }}
+                      className="px-2.5 py-1 rounded-lg border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-[10px] font-mono font-black uppercase cursor-pointer shrink-0 disabled:opacity-50"
+                    >
+                      Clear Broadcast
+                    </button>
+                  )}
+                </div>
+
+                {workspaceConfig?.broadcastMessage && (
+                  <div
+                    className={`p-2.5 rounded-lg border text-xs flex items-start justify-between gap-2 ${
+                      isLight ? 'bg-white border-neutral-200 text-neutral-800' : 'bg-black/40 border-white/15 text-neutral-200'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-mono font-bold uppercase text-[var(--accent-color)]">
+                        Active from {workspaceConfig.broadcastSender || 'Admin'}
+                        {workspaceConfig.broadcastAt ? ` · ${formatLastSeen(workspaceConfig.broadcastAt, presenceNow)}` : ''}
+                      </div>
+                      <p className="mt-0.5 break-words leading-snug">{workspaceConfig.broadcastMessage}</p>
+                    </div>
+                  </div>
+                )}
+
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const msg = broadcastDraft.trim();
+                    if (!msg || broadcastBusy) return;
+                    setBroadcastBusy(true);
+                    try {
+                      const senderLabel = activeAccount?.username ? `@${activeAccount.username}` : 'Owner';
+                      await sendAdminBroadcast(db, auth, msg, senderLabel);
+                      setBroadcastDraft('');
+                      showNotice('success', 'Broadcast sent to everyone!');
+                    } catch (err) {
+                      showNotice('error', err?.message || 'Could not send broadcast.');
+                    } finally {
+                      setBroadcastBusy(false);
+                    }
+                  }}
+                  className="flex flex-col sm:flex-row gap-2"
+                >
+                  <input
+                    type="text"
+                    value={broadcastDraft}
+                    onChange={(e) => setBroadcastDraft(e.target.value)}
+                    maxLength={500}
+                    placeholder="Type an announcement for everyone (max 500 chars)..."
+                    className={`flex-1 px-3 py-2 rounded-lg border text-xs outline-none ${
+                      isLight ? 'bg-white border-neutral-300 text-neutral-900' : 'bg-black/40 border-white/15 text-white'
+                    }`}
+                  />
+                  <button
+                    type="submit"
+                    disabled={broadcastBusy || !broadcastDraft.trim()}
+                    className="px-4 py-2 rounded-lg bg-[var(--accent-color)] text-[var(--bg-color)] text-[10.5px] font-black uppercase tracking-wider cursor-pointer hover:opacity-90 disabled:opacity-50 shrink-0 flex items-center justify-center gap-1.5"
+                  >
+                    <Megaphone className="w-3.5 h-3.5" />
+                    <span>{broadcastBusy ? 'Sending...' : 'Send to Everyone'}</span>
+                  </button>
+                </form>
               </div>
 
               {/* Site-Wide Workspace Access Grid */}

@@ -29,6 +29,7 @@ import {
   Key,
   Link as LinkIcon,
   Lock,
+  Megaphone,
   MessageCircle,
   MessageSquare,
   Palette,
@@ -45,6 +46,7 @@ import {
   Unlock,
   UserPlus,
   Users,
+  Volume2,
   VolumeX,
   X,
 } from 'lucide-react';
@@ -55,7 +57,7 @@ import {
   lobbyAuth,
   lobbyDb,
 } from '../firebase';
-import { isAccountOnline } from '../utils/accountService';
+import { clearAdminBroadcast, isAccountOnline, sendAdminBroadcast } from '../utils/accountService';
 import {
   clearChannelMessages,
   deleteAllChatMessages,
@@ -63,6 +65,17 @@ import {
   deleteDmThreadAndTraces,
   deleteSingleChatMessage,
 } from '../utils/chatModeration';
+import {
+  USER_MUTE_HOURS_OPTIONS,
+  buildMuteTargetKey,
+  findMuteForTarget,
+  formatMuteRemaining,
+  getActiveMutedUsers,
+  isSenderMuted,
+  muteUserForHours,
+  subscribeUserMutes,
+  unmuteUserByKey,
+} from '../utils/userMute';
 
 const DEFAULT_CHANNELS = [
   {
@@ -428,6 +441,7 @@ export default function Chat({
   onOpenAccountModal = null,
   targetChannelRequest = null,
   onActiveChannelChange = null,
+  workspaceConfig = null,
 }) {
   const [theme, setTheme] = useState(() => {
     try {
@@ -477,6 +491,10 @@ export default function Chat({
   const [themeModalOpen, setThemeModalOpen] = useState(false);
   const [deleteAllModalOpen, setDeleteAllModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
+  const [broadcastText, setBroadcastText] = useState('');
+  const [broadcastAlsoPostGeneral, setBroadcastAlsoPostGeneral] = useState(false);
+  const [broadcastBusy, setBroadcastBusy] = useState(false);
 
   const [tipDismissed, setTipDismissed] = useState(() => {
     try {
@@ -501,6 +519,9 @@ export default function Chat({
   const [deletingChannelAdmin, setDeletingChannelAdmin] = useState(false);
   const [confirmDeleteDmId, setConfirmDeleteDmId] = useState(null);
   const [deletingDmThread, setDeletingDmThread] = useState(false);
+  const [mutedUsers, setMutedUsers] = useState(() => getActiveMutedUsers());
+  const [mutePickerKey, setMutePickerKey] = useState(null);
+  const [showMutedMessages, setShowMutedMessages] = useState(false);
 
   const [toastMsg, setToastMsg] = useState('');
   const [tickNow, setTickNow] = useState(() => Date.now());
@@ -513,11 +534,27 @@ export default function Chat({
   const imagePasteRevRef = useRef(0);
   const latestLobbyTsRef = useRef(0);
   const activeChannelIdRef = useRef(activeChannelId);
+  const activeMutedUsersRef = useRef(mutedUsers);
   const clientId = useMemo(() => getClientId(), []);
+
+  const activeMutedUsers = useMemo(
+    () => mutedUsers.filter((entry) => Number(entry?.mutedUntil || 0) > tickNow),
+    [mutedUsers, tickNow],
+  );
+
+  useEffect(() => {
+    activeMutedUsersRef.current = activeMutedUsers;
+  }, [activeMutedUsers]);
+
+  useEffect(() => {
+    const unsub = subscribeUserMutes((next) => setMutedUsers(next));
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     activeChannelIdRef.current = activeChannelId;
     setConfirmDeleteDmId(null);
+    setMutePickerKey(null);
     if (onActiveChannelChange) onActiveChannelChange(activeChannelId);
     setUnreadChannels((prev) => {
       if (!prev[activeChannelId]) return prev;
@@ -1165,19 +1202,23 @@ export default function Chat({
           } catch {}
         }
 
-        if (msgs.length > 0) {
-          const latestMsg = msgs.reduce((latest, m) => Math.max(latest, Number(m.timestamp || 0)), 0);
+        const latestUnmutedMsg = msgs.reduce((latest, m) => {
+          if (isSenderMuted(m, activeMutedUsersRef.current)) return latest;
+          return Math.max(latest, Number(m.timestamp || 0));
+        }, 0);
+
+        if (latestUnmutedMsg > 0) {
           const wasInitialized = snapInitialized;
           snapInitialized = true;
-          if (latestMsg > latestLobbyTsRef.current) {
-            latestLobbyTsRef.current = latestMsg;
+          if (latestUnmutedMsg > latestLobbyTsRef.current) {
+            latestLobbyTsRef.current = latestUnmutedMsg;
           }
-          if (wasInitialized && latestMsg > 0) {
+          if (wasInitialized) {
             try {
-              localStorage.setItem('lobby-chat-latest', String(latestMsg));
-              localStorage.setItem('lobby-chat-notification', String(latestMsg));
+              localStorage.setItem('lobby-chat-latest', String(latestUnmutedMsg));
+              localStorage.setItem('lobby-chat-notification', String(latestUnmutedMsg));
               const lobbyBus = new BroadcastChannel('urnperiodic_lobby_bus');
-              lobbyBus.postMessage({ type: 'lobby-chat-message', timestamp: latestMsg, channel: cId });
+              lobbyBus.postMessage({ type: 'lobby-chat-message', timestamp: latestUnmutedMsg, channel: cId });
               setTimeout(() => {
                 try {
                   lobbyBus.close();
@@ -1240,6 +1281,19 @@ export default function Chat({
             if (ch.isDirectMessage && myDmIdentity && docData?.accountId === myDmIdentity) {
               return;
             }
+            if (
+              docData &&
+              isSenderMuted(
+                {
+                  accountId: docData.accountId || (ch.isDirectMessage ? ch.partnerId : null),
+                  senderId: docData.senderId || null,
+                  name: docData.name || '',
+                },
+                activeMutedUsersRef.current,
+              )
+            ) {
+              return;
+            }
             if (latest && activeChannelIdRef.current !== ch.id) {
               setUnreadChannels((prev) => (prev[ch.id] ? prev : { ...prev, [ch.id]: true }));
             }
@@ -1268,17 +1322,28 @@ export default function Chat({
     };
   }, [allChannels, activeChannelId, unlockedChannels, myDmIdentity]);
 
-  const displayedMessages = useMemo(() => {
+  const { displayedMessages, mutedHiddenCount } = useMemo(() => {
     const isPerm = isPermanentChannel(currentChannel.id);
     const validMsgs = isPerm
       ? messages
       : messages.filter((m) => tickNow - (m.timestamp || tickNow) < MESSAGE_TTL_MS);
     const q = searchFilter.trim().toLowerCase();
-    if (!q) return validMsgs;
-    return validMsgs.filter(
-      (m) => (m.name || '').toLowerCase().includes(q) || (m.text || '').toLowerCase().includes(q)
-    );
-  }, [messages, currentChannel.id, isPermanentChannel, tickNow, searchFilter]);
+    const searchedMsgs = q
+      ? validMsgs.filter(
+          (m) => (m.name || '').toLowerCase().includes(q) || (m.text || '').toLowerCase().includes(q),
+        )
+      : validMsgs;
+    let hiddenCount = 0;
+    const filtered = searchedMsgs.filter((m) => {
+      const muted = isSenderMuted(m, activeMutedUsers, tickNow);
+      if (muted) {
+        hiddenCount += 1;
+        return showMutedMessages;
+      }
+      return true;
+    });
+    return { displayedMessages: filtered, mutedHiddenCount: hiddenCount };
+  }, [messages, currentChannel.id, isPermanentChannel, tickNow, searchFilter, activeMutedUsers, showMutedMessages]);
 
   useEffect(() => {
     const panel = messagesPanelRef.current;
@@ -1643,6 +1708,66 @@ export default function Chat({
     }
   };
 
+  const handleSendGlobalBroadcast = async (e) => {
+    e.preventDefault();
+    if (!isChatAdmin) return;
+    const text = broadcastText.trim();
+    if (!text) {
+      showToast('Enter a broadcast message first.');
+      return;
+    }
+    setBroadcastBusy(true);
+    try {
+      const senderLabel = isAccountLinked ? `@${linkedAccount.username}` : isOwnerSession ? 'Owner' : effectiveChatName || 'Admin';
+      await sendAdminBroadcast(lobbyDb, lobbyAuth, text, senderLabel);
+      if (broadcastAlsoPostGeneral) {
+        const ts = Date.now();
+        const encryptedText = await encryptPayload(`📢 [ADMIN BROADCAST] ${text}`, 'general');
+        const myAuthUid = lobbyAuth.currentUser?.uid || clientId;
+        const msgPayload = {
+          name: isAccountLinked ? linkedAccount.username : isOwnerSession ? 'Owner' : effectiveChatName || 'Admin',
+          userId: myAuthUid,
+          senderId: clientId,
+          accountId: isAccountLinked ? linkedAccount.usernameLower : isOwnerSession ? '__owner__' : null,
+          roleBadge: isAccountLinked ? linkedAccount.roleBadge || '' : isOwnerSession ? 'Owner' : 'Admin',
+          badgeColor: isAccountLinked ? linkedAccount.badgeColor || 'amber' : 'amber',
+          isRegistered: hasAccountIdentity,
+          isAdmin: true,
+          text: encryptedText,
+          imageUrl: null,
+          replyTo: null,
+          isEncrypted: true,
+          timestamp: ts,
+          channelId: 'general',
+        };
+        const docRef = await addDoc(collection(lobbyDb, 'channels', 'general', 'messages'), msgPayload);
+        if (docRef?.id) {
+          recordMySentMessage(docRef.id);
+        }
+      }
+      setBroadcastText('');
+      setBroadcastModalOpen(false);
+      showToast('Broadcast sent to everyone!');
+    } catch (err) {
+      showToast(err?.message || 'Failed to send global broadcast.');
+    } finally {
+      setBroadcastBusy(false);
+    }
+  };
+
+  const handleClearGlobalBroadcast = async () => {
+    if (!isChatAdmin) return;
+    setBroadcastBusy(true);
+    try {
+      await clearAdminBroadcast(lobbyDb, lobbyAuth);
+      showToast('Global broadcast cleared.');
+    } catch (err) {
+      showToast(err?.message || 'Could not clear broadcast.');
+    } finally {
+      setBroadcastBusy(false);
+    }
+  };
+
   const handleCreateChannel = async (e) => {
     e.preventDefault();
     const raw = newChanName.trim();
@@ -1999,6 +2124,31 @@ export default function Chat({
     }
   };
 
+  const handleMutePersonForHours = useCallback(
+    (target, hours) => {
+      const next = muteUserForHours(target, hours);
+      setMutedUsers(next);
+      setMutePickerKey(null);
+      const label = target?.label || target?.name || target?.senderName || target?.accountId || 'User';
+      showToast(`🔇 Muted ${label} for ${hours}h`);
+    },
+    [showToast],
+  );
+
+  const handleUnmutePerson = useCallback(
+    (muteEntryOrTarget) => {
+      const entry = muteEntryOrTarget?.key
+        ? muteEntryOrTarget
+        : findMuteForTarget(muteEntryOrTarget, activeMutedUsers);
+      if (!entry) return;
+      const next = unmuteUserByKey(entry.key);
+      setMutedUsers(next);
+      setMutePickerKey(null);
+      showToast(`🔊 Unmuted ${entry.label || 'user'}`);
+    },
+    [activeMutedUsers, showToast],
+  );
+
   const executeAdminDeleteAll = async (passwordValue) => {
     const val = (passwordValue || '').trim();
     const isAuthorizedAdmin =
@@ -2115,32 +2265,89 @@ export default function Chat({
                 onlineOtherUsers.map((acc) => {
                   const targetDmId = myDmIdentity ? getDmId(myDmIdentity, acc.usernameLower) : '';
                   const active = Boolean(targetDmId && currentChannel.id === targetDmId);
+                  const muteTarget = { accountId: acc.usernameLower, name: acc.username, label: `@${acc.username}` };
+                  const activeMute = findMuteForTarget(muteTarget, activeMutedUsers, tickNow);
+                  const pickerId = `sidebar_online_${acc.usernameLower}`;
+                  const pickingHours = mutePickerKey === pickerId;
                   return (
-                    <button
-                      key={acc.usernameLower}
-                      type="button"
-                      onClick={() => openDirectMessage(acc.usernameLower, acc.username)}
-                      className={`w-full flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all cursor-pointer border ${
-                        active
-                          ? 'chat-accent-bg border-transparent shadow-sm'
-                          : 'bg-white/[0.03] hover:bg-emerald-500/15 border-transparent hover:border-emerald-500/30 chat-txt'
-                      }`}
-                      title={`Direct message @${acc.username}`}
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                        <span className="text-[11px] font-mono font-bold truncate">@{acc.username}</span>
+                    <div key={acc.usernameLower} className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => openDirectMessage(acc.usernameLower, acc.username)}
+                          className={`flex-1 min-w-0 flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all cursor-pointer border ${
+                            active
+                              ? 'chat-accent-bg border-transparent shadow-sm'
+                              : 'bg-white/[0.03] hover:bg-emerald-500/15 border-transparent hover:border-emerald-500/30 chat-txt'
+                          }`}
+                          title={`Direct message @${acc.username}`}
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                            <span className="text-[11px] font-mono font-bold truncate">@{acc.username}</span>
+                            {activeMute && (
+                              <VolumeX className="w-2.5 h-2.5 text-amber-400 shrink-0" title={`Muted (${formatMuteRemaining(activeMute.mutedUntil, tickNow)} left)`} />
+                            )}
+                          </div>
+                          <span
+                            className={`text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded shrink-0 ${
+                              active
+                                ? 'bg-black/20'
+                                : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                            }`}
+                          >
+                            DM
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (activeMute) {
+                              handleUnmutePerson(activeMute);
+                            } else {
+                              setMutePickerKey((prev) => (prev === pickerId ? null : pickerId));
+                            }
+                          }}
+                          className={`p-1 rounded-md cursor-pointer shrink-0 transition-colors ${
+                            activeMute
+                              ? 'text-amber-300 bg-amber-500/20 hover:bg-amber-500/30'
+                              : 'chat-txt-mute hover:text-amber-300 hover:bg-amber-500/15'
+                          }`}
+                          title={
+                            activeMute
+                              ? `Unmute @${acc.username} (${formatMuteRemaining(activeMute.mutedUntil, tickNow)} left)`
+                              : `Mute @${acc.username} for a few hours`
+                          }
+                          aria-label={activeMute ? `Unmute ${acc.username}` : `Mute ${acc.username}`}
+                        >
+                          {activeMute ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                        </button>
                       </div>
-                      <span
-                        className={`text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded shrink-0 ${
-                          active
-                            ? 'bg-black/20'
-                            : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                        }`}
-                      >
-                        DM
-                      </span>
-                    </button>
+                      {pickingHours && !activeMute && (
+                        <div className="flex items-center gap-1 flex-wrap px-1.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                          <span className="text-[8.5px] font-bold text-amber-300 uppercase mr-0.5">Mute:</span>
+                          {USER_MUTE_HOURS_OPTIONS.map((hrs) => (
+                            <button
+                              key={hrs}
+                              type="button"
+                              onClick={() => handleMutePersonForHours(muteTarget, hrs)}
+                              className="px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 text-[8.5px] font-mono font-bold cursor-pointer"
+                            >
+                              {hrs}h
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setMutePickerKey(null)}
+                            className="ml-auto p-0.5 rounded hover:bg-white/10 text-neutral-300 cursor-pointer"
+                            title="Cancel"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   );
                 })
               )}
@@ -2154,65 +2361,126 @@ export default function Chat({
                 {dmChannels.map((dm) => {
                   const active = currentChannel.id === dm.id;
                   const confirming = confirmDeleteDmId === dm.id;
+                  const dmMuteTarget = {
+                    accountId: dm.partnerId,
+                    partnerId: dm.partnerId,
+                    name: dm.partnerUsername || dm.name,
+                    label: dm.name,
+                  };
+                  const dmActiveMute = findMuteForTarget(dmMuteTarget, activeMutedUsers, tickNow);
+                  const dmPickerId = `sidebar_dm_${dm.id}`;
+                  const dmPickingHours = mutePickerKey === dmPickerId;
                   return (
-                    <div key={dm.id} className="flex items-center gap-1 min-w-0">
-                      {confirming ? (
-                        <div className="flex-1 flex items-center justify-between gap-1 px-1.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/35 min-w-0">
-                          <span className="text-[9px] font-bold text-rose-300 truncate">Delete traces?</span>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              type="button"
-                              disabled={deletingDmThread}
-                              onClick={() => handleDeleteDmTraces(dm)}
-                              className="px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[8.5px] font-black uppercase cursor-pointer disabled:opacity-60"
-                            >
-                              {deletingDmThread ? '...' : 'Delete'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setConfirmDeleteDmId(null)}
-                              className="p-0.5 rounded hover:bg-white/10 text-neutral-300 cursor-pointer"
-                              title="Cancel"
-                              aria-label="Cancel DM deletion"
-                            >
-                              <X className="w-2.5 h-2.5" />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => switchChannel(dm.id)}
-                            className={`flex-1 min-w-0 flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all cursor-pointer ${
-                              active ? 'chat-accent-bg shadow-sm' : 'hover:bg-white/[0.06] chat-txt-dim hover:chat-txt'
-                            }`}
-                          >
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span
-                                className={`w-2 h-2 rounded-full shrink-0 ${
-                                  dm.partnerOnline ? 'bg-emerald-400' : 'bg-neutral-500/60'
-                                }`}
-                              />
-                              <span className="text-[11px] font-mono font-bold truncate">{dm.name}</span>
+                    <div key={dm.id} className="flex flex-col gap-1 min-w-0">
+                      <div className="flex items-center gap-1 min-w-0">
+                        {confirming ? (
+                          <div className="flex-1 flex items-center justify-between gap-1 px-1.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/35 min-w-0">
+                            <span className="text-[9px] font-bold text-rose-300 truncate">Delete traces?</span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                disabled={deletingDmThread}
+                                onClick={() => handleDeleteDmTraces(dm)}
+                                className="px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[8.5px] font-black uppercase cursor-pointer disabled:opacity-60"
+                              >
+                                {deletingDmThread ? '...' : 'Delete'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDeleteDmId(null)}
+                                className="p-0.5 rounded hover:bg-white/10 text-neutral-300 cursor-pointer"
+                                title="Cancel"
+                                aria-label="Cancel DM deletion"
+                              >
+                                <X className="w-2.5 h-2.5" />
+                              </button>
                             </div>
-                            {unreadChannels[dm.id] && !active && (
-                              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-                            )}
-                          </button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => switchChannel(dm.id)}
+                              className={`flex-1 min-w-0 flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all cursor-pointer ${
+                                active ? 'chat-accent-bg shadow-sm' : 'hover:bg-white/[0.06] chat-txt-dim hover:chat-txt'
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span
+                                  className={`w-2 h-2 rounded-full shrink-0 ${
+                                    dm.partnerOnline ? 'bg-emerald-400' : 'bg-neutral-500/60'
+                                  }`}
+                                />
+                                <span className="text-[11px] font-mono font-bold truncate">{dm.name}</span>
+                                {dmActiveMute && (
+                                  <VolumeX className="w-2.5 h-2.5 text-amber-400 shrink-0" title={`Muted (${formatMuteRemaining(dmActiveMute.mutedUntil, tickNow)} left)`} />
+                                )}
+                              </div>
+                              {unreadChannels[dm.id] && !active && (
+                                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (dmActiveMute) {
+                                  handleUnmutePerson(dmActiveMute);
+                                } else {
+                                  setMutePickerKey((prev) => (prev === dmPickerId ? null : dmPickerId));
+                                }
+                              }}
+                              className={`p-1 rounded-md cursor-pointer shrink-0 transition-colors ${
+                                dmActiveMute
+                                  ? 'text-amber-300 bg-amber-500/20 hover:bg-amber-500/30'
+                                  : 'chat-txt-mute hover:text-amber-300 hover:bg-amber-500/15'
+                              }`}
+                              title={
+                                dmActiveMute
+                                  ? `Unmute ${dm.name} (${formatMuteRemaining(dmActiveMute.mutedUntil, tickNow)} left)`
+                                  : `Mute ${dm.name} for a few hours`
+                              }
+                              aria-label={dmActiveMute ? `Unmute ${dm.name}` : `Mute ${dm.name}`}
+                            >
+                              {dmActiveMute ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirmDeleteDmId(dm.id);
+                              }}
+                              className="p-1 rounded-md text-rose-400/75 hover:text-rose-300 hover:bg-rose-500/15 cursor-pointer shrink-0 transition-colors"
+                              title={`Delete all traces of DM with ${dm.name}`}
+                              aria-label={`Delete DM with ${dm.name}`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      {dmPickingHours && !dmActiveMute && !confirming && (
+                        <div className="flex items-center gap-1 flex-wrap px-1.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                          <span className="text-[8.5px] font-bold text-amber-300 uppercase mr-0.5">Mute:</span>
+                          {USER_MUTE_HOURS_OPTIONS.map((hrs) => (
+                            <button
+                              key={hrs}
+                              type="button"
+                              onClick={() => handleMutePersonForHours(dmMuteTarget, hrs)}
+                              className="px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 text-[8.5px] font-mono font-bold cursor-pointer"
+                            >
+                              {hrs}h
+                            </button>
+                          ))}
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setConfirmDeleteDmId(dm.id);
-                            }}
-                            className="p-1 rounded-md text-rose-400/75 hover:text-rose-300 hover:bg-rose-500/15 cursor-pointer shrink-0 transition-colors"
-                            title={`Delete all traces of DM with ${dm.name}`}
-                            aria-label={`Delete DM with ${dm.name}`}
+                            onClick={() => setMutePickerKey(null)}
+                            className="ml-auto p-0.5 rounded hover:bg-white/10 text-neutral-300 cursor-pointer"
+                            title="Cancel"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <X className="w-2.5 h-2.5" />
                           </button>
-                        </>
+                        </div>
                       )}
                     </div>
                   );
@@ -2507,6 +2775,66 @@ export default function Chat({
                         {currentChannel.partnerOnline ? 'DM · Online' : 'Direct Message'}
                       </span>
                     </span>
+                    {(() => {
+                      const dmHeaderTarget = {
+                        accountId: currentChannel.partnerId,
+                        partnerId: currentChannel.partnerId,
+                        name: currentChannel.partnerUsername || currentChannel.name,
+                        label: currentChannel.name,
+                      };
+                      const dmHeaderMute = findMuteForTarget(dmHeaderTarget, activeMutedUsers, tickNow);
+                      const dmHeaderPickerId = `header_dm_${currentChannel.id}`;
+                      const dmHeaderPicking = mutePickerKey === dmHeaderPickerId;
+                      if (dmHeaderMute) {
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => handleUnmutePerson(dmHeaderMute)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[9px] font-bold uppercase cursor-pointer shrink-0 transition-all"
+                            title={`Muted for ${formatMuteRemaining(dmHeaderMute.mutedUntil, tickNow)} — Click to unmute`}
+                          >
+                            <Volume2 className="w-2.5 h-2.5" />
+                            <span>Unmute ({formatMuteRemaining(dmHeaderMute.mutedUntil, tickNow)})</span>
+                          </button>
+                        );
+                      }
+                      if (dmHeaderPicking) {
+                        return (
+                          <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/35 shrink-0">
+                            <span className="text-[8.5px] font-bold text-amber-300 uppercase">Mute:</span>
+                            {USER_MUTE_HOURS_OPTIONS.map((hrs) => (
+                              <button
+                                key={hrs}
+                                type="button"
+                                onClick={() => handleMutePersonForHours(dmHeaderTarget, hrs)}
+                                className="px-1.5 py-0.5 rounded bg-amber-500/25 hover:bg-amber-500/40 text-amber-200 text-[8.5px] font-mono font-bold cursor-pointer"
+                              >
+                                {hrs}h
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => setMutePickerKey(null)}
+                              className="p-0.5 rounded hover:bg-white/10 text-neutral-300 cursor-pointer"
+                              title="Cancel"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        );
+                      }
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setMutePickerKey(dmHeaderPickerId)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[9px] font-bold uppercase cursor-pointer shrink-0 transition-all"
+                          title={`Mute ${currentChannel.name} for a few hours`}
+                        >
+                          <VolumeX className="w-2.5 h-2.5" />
+                          <span className="hidden lg:inline">Mute</span>
+                        </button>
+                      );
+                    })()}
                     {confirmDeleteDmId === currentChannel.id ? (
                       <div className="inline-flex items-center gap-1 shrink-0">
                         <button
@@ -2702,6 +3030,20 @@ export default function Chat({
           )}
 
           <div className="flex items-center gap-1.5 shrink-0">
+            {isChatAdmin && (
+              <button
+                type="button"
+                onClick={() => setBroadcastModalOpen(true)}
+                className="relative chat-surface-elev border border-amber-500/35 hover:border-amber-500/70 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm shrink-0"
+                title="Admin: Message Everyone (Global Broadcast)"
+              >
+                <Megaphone className="w-3.5 h-3.5 shrink-0" />
+                {Boolean(workspaceConfig?.broadcastMessage) && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                )}
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => {
@@ -2920,6 +3262,64 @@ export default function Chat({
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
+              {currentChannel.isDirectMessage && (() => {
+                const miniDmTarget = {
+                  accountId: currentChannel.partnerId,
+                  partnerId: currentChannel.partnerId,
+                  name: currentChannel.partnerUsername || currentChannel.name,
+                  label: currentChannel.name,
+                };
+                const miniDmMute = findMuteForTarget(miniDmTarget, activeMutedUsers, tickNow);
+                const miniPickerId = `mini_dm_${currentChannel.id}`;
+                if (miniDmMute) {
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => handleUnmutePerson(miniDmMute)}
+                      className="text-[9px] font-mono font-bold text-amber-300 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/35 px-1.5 py-0.5 rounded-md flex items-center gap-1 cursor-pointer transition-all"
+                      title={`Muted (${formatMuteRemaining(miniDmMute.mutedUntil, tickNow)} left) — Click to unmute`}
+                    >
+                      <Volume2 className="w-2.5 h-2.5" />
+                      <span>{formatMuteRemaining(miniDmMute.mutedUntil, tickNow)}</span>
+                    </button>
+                  );
+                }
+                if (mutePickerKey === miniPickerId) {
+                  return (
+                    <div className="inline-flex items-center gap-0.5 bg-amber-500/15 border border-amber-500/35 rounded-md px-1 py-0.5">
+                      {USER_MUTE_HOURS_OPTIONS.map((hrs) => (
+                        <button
+                          key={hrs}
+                          type="button"
+                          onClick={() => handleMutePersonForHours(miniDmTarget, hrs)}
+                          className="px-1 py-0.5 rounded bg-amber-500/25 hover:bg-amber-500/45 text-amber-200 text-[8px] font-mono font-bold cursor-pointer"
+                        >
+                          {hrs}h
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setMutePickerKey(null)}
+                        className="p-0.5 rounded hover:bg-white/10 text-neutral-300 cursor-pointer"
+                        title="Cancel"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  );
+                }
+                return (
+                  <button
+                    type="button"
+                    onClick={() => setMutePickerKey(miniPickerId)}
+                    className="text-[9px] font-mono font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-1.5 py-0.5 rounded-md flex items-center gap-1 cursor-pointer transition-all"
+                    title={`Mute ${currentChannel.name} for a few hours`}
+                  >
+                    <VolumeX className="w-2.5 h-2.5" />
+                    <span>Mute</span>
+                  </button>
+                );
+              })()}
               <button
                 type="button"
                 onClick={() => setMiniLeftDrawerOpen((prev) => !prev)}
@@ -3097,6 +3497,32 @@ export default function Chat({
               ref={messagesPanelRef}
               className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3 chat-scrollbar chat-selectable"
             >
+              {mutedHiddenCount > 0 && (
+                <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-[10px] text-amber-300 select-none">
+                  <span className="flex items-center gap-1.5 min-w-0 truncate">
+                    <VolumeX className="w-3 h-3 shrink-0" />
+                    <span className="truncate">
+                      {mutedHiddenCount} message{mutedHiddenCount === 1 ? '' : 's'} from muted user{mutedHiddenCount === 1 ? '' : 's'} {showMutedMessages ? 'shown' : 'hidden'}
+                    </span>
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowMutedMessages((prev) => !prev)}
+                      className="px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 font-bold cursor-pointer"
+                    >
+                      {showMutedMessages ? 'Hide' : 'Show'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsModalOpen(true)}
+                      className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white font-bold cursor-pointer"
+                    >
+                      Manage
+                    </button>
+                  </div>
+                </div>
+              )}
               {displayedMessages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-6 select-none max-w-sm mx-auto">
                   <div className="w-12 h-12 rounded-2xl chat-surface-elev border chat-bd flex items-center justify-center mb-3 shadow-sm">
@@ -3250,7 +3676,7 @@ export default function Chat({
                           )}
 
                           {/* Hover / Focus Action Bar */}
-                          <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-1.5 mt-1 text-[9px] transition-opacity select-none">
+                          <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex items-center flex-wrap gap-1.5 mt-1 text-[9px] transition-opacity select-none">
                             <button
                               type="button"
                               onClick={(e) => {
@@ -3304,6 +3730,77 @@ export default function Chat({
                                   <span>DM</span>
                                 </button>
                               )}
+
+                            {!isOwner && (() => {
+                              const msgMuteTarget = {
+                                accountId: m.accountId || null,
+                                senderId: m.senderId || null,
+                                name: m.name || 'User',
+                                label: m.accountId && m.accountId !== '__owner__' ? `@${m.name || m.accountId}` : m.name || 'User',
+                              };
+                              const msgMuteEntry = findMuteForTarget(msgMuteTarget, activeMutedUsers, tickNow);
+                              const msgPickerId = `msg_${msgKey}`;
+                              const msgTargetKey = buildMuteTargetKey(msgMuteTarget);
+                              if (!msgTargetKey) return null;
+                              if (msgMuteEntry) {
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleUnmutePerson(msgMuteEntry);
+                                    }}
+                                    className="flex items-center gap-1 text-[9px] font-bold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 px-2 py-0.5 rounded-md transition-all cursor-pointer border border-amber-500/35"
+                                    title={`Unmute ${msgMuteEntry.label} (${formatMuteRemaining(msgMuteEntry.mutedUntil, tickNow)} left)`}
+                                  >
+                                    <Volume2 className="w-2.5 h-2.5" />
+                                    <span>Unmute ({formatMuteRemaining(msgMuteEntry.mutedUntil, tickNow)})</span>
+                                  </button>
+                                );
+                              }
+                              if (mutePickerKey === msgPickerId) {
+                                return (
+                                  <div
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/35"
+                                  >
+                                    <span className="text-[8.5px] font-bold text-amber-300">Mute:</span>
+                                    {USER_MUTE_HOURS_OPTIONS.map((hrs) => (
+                                      <button
+                                        key={hrs}
+                                        type="button"
+                                        onClick={() => handleMutePersonForHours(msgMuteTarget, hrs)}
+                                        className="px-1.5 py-0.5 rounded bg-amber-500/25 hover:bg-amber-500/45 text-amber-200 font-mono font-bold cursor-pointer"
+                                      >
+                                        {hrs}h
+                                      </button>
+                                    ))}
+                                    <button
+                                      type="button"
+                                      onClick={() => setMutePickerKey(null)}
+                                      className="p-0.5 rounded hover:bg-white/10 text-neutral-300 cursor-pointer"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-2.5 h-2.5" />
+                                    </button>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMutePickerKey(msgPickerId);
+                                  }}
+                                  className="flex items-center gap-1 text-[9px] font-bold chat-txt-dim hover:text-amber-300 hover:bg-amber-500/15 px-2 py-0.5 rounded-md transition-all cursor-pointer chat-surface-elev border chat-bd"
+                                  title={`Mute ${m.name || 'user'} for a few hours`}
+                                >
+                                  <VolumeX className="w-2.5 h-2.5 text-amber-400" />
+                                  <span>Mute</span>
+                                </button>
+                              );
+                            })()}
 
                             {(isOwner || isChatAdmin) && (
                               <button
@@ -3836,6 +4333,43 @@ export default function Chat({
                   Open
                 </button>
               </div>
+
+              <div className="p-2.5 rounded-xl chat-surface-elev border chat-bd space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                    <VolumeX className="w-3.5 h-3.5" /> Muted Users ({activeMutedUsers.length})
+                  </span>
+                </div>
+                {activeMutedUsers.length === 0 ? (
+                  <p className="text-[10px] chat-txt-mute leading-snug">
+                    No users muted. Hover any message or open a DM to mute someone for 1–24 hours.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5 max-h-32 overflow-y-auto chat-scrollbar pr-0.5">
+                    {activeMutedUsers.map((entry) => (
+                      <div
+                        key={entry.key}
+                        className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg chat-surface-deep border chat-bd"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-mono font-bold chat-txt truncate">{entry.label}</p>
+                          <p className="text-[9px] font-mono text-amber-300">
+                            {formatMuteRemaining(entry.mutedUntil, tickNow)} left
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleUnmutePerson(entry)}
+                          className="px-2 py-1 rounded-md bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[9px] font-black uppercase cursor-pointer shrink-0 flex items-center gap-1"
+                        >
+                          <Volume2 className="w-3 h-3" />
+                          <span>Unmute</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="pt-3 border-t chat-bd space-y-2.5">
@@ -3855,6 +4389,17 @@ export default function Chat({
 
               {isChatAdmin ? (
                 <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettingsModalOpen(false);
+                      setBroadcastModalOpen(true);
+                    }}
+                    className="w-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/45 text-amber-300 text-[11px] font-black uppercase py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Megaphone className="w-3.5 h-3.5" />
+                    <span>Message Everyone (Global Broadcast)</span>
+                  </button>
                   <button
                     type="button"
                     disabled={clearingChannelAdmin || deletingAllAdmin}
@@ -3927,6 +4472,106 @@ export default function Chat({
           </div>
         </div>
       )}
+
+      {broadcastModalOpen && isChatAdmin && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          onClick={() => setBroadcastModalOpen(false)}
+        >
+          <form
+            onSubmit={handleSendGlobalBroadcast}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md chat-surface border chat-bd2 rounded-2xl p-5 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center justify-between border-b chat-bd pb-3">
+              <div className="flex items-center gap-2">
+                <Megaphone className="w-4 h-4 text-amber-400" />
+                <h2 className="text-sm font-black uppercase tracking-wide chat-txt">
+                  Message Everyone
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBroadcastModalOpen(false)}
+                className="chat-txt-mute hover:chat-txt text-lg leading-none cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="text-[11px] chat-txt-dim leading-snug">
+              Push a live announcement banner across the whole website for every signed-in user.
+            </p>
+
+            {workspaceConfig?.broadcastMessage && (
+              <div className="rounded-xl p-3 bg-amber-500/10 border border-amber-500/35 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-amber-300">
+                    Active Broadcast · {workspaceConfig.broadcastSender || 'Admin'}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={broadcastBusy}
+                    onClick={handleClearGlobalBroadcast}
+                    className="px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-[9px] font-black uppercase cursor-pointer disabled:opacity-50"
+                  >
+                    Clear Active
+                  </button>
+                </div>
+                <p className="text-xs chat-txt break-words leading-snug">
+                  {workspaceConfig.broadcastMessage}
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold uppercase tracking-wider chat-txt-dim">
+                Announcement Message
+              </label>
+              <textarea
+                rows={3}
+                maxLength={500}
+                value={broadcastText}
+                onChange={(e) => setBroadcastText(e.target.value)}
+                placeholder="Write a message to broadcast to everyone online..."
+                className="w-full chat-surface-deep border chat-bd focus:border-amber-400 rounded-xl p-2.5 text-xs chat-txt outline-none chat-placeholder-mute resize-none"
+                autoFocus
+              />
+              <div className="flex items-center justify-between text-[9px] font-mono chat-txt-mute">
+                <label className="inline-flex items-center gap-1.5 cursor-pointer select-none chat-txt-dim">
+                  <input
+                    type="checkbox"
+                    checked={broadcastAlsoPostGeneral}
+                    onChange={(e) => setBroadcastAlsoPostGeneral(e.target.checked)}
+                    className="accent-amber-400 rounded cursor-pointer"
+                  />
+                  <span>Also post in #general chat</span>
+                </label>
+                <span>{broadcastText.length}/500</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setBroadcastModalOpen(false)}
+                className="flex-1 py-2 rounded-xl border chat-bd chat-surface-elev text-xs font-bold chat-txt-dim hover:chat-txt cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={broadcastBusy || !broadcastText.trim()}
+                className="flex-1 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{broadcastBusy ? 'Sending...' : 'Send Broadcast'}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
+a
