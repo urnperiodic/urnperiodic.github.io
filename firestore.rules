@@ -30,6 +30,55 @@ service cloud.firestore {
       return !(field in data) || data[field] == null || data[field] is number;
     }
 
+    function isValidAccountSettings(data) {
+      return !('accountSettings' in data)
+        || data.accountSettings == null
+        || (
+          data.accountSettings is map
+          && data.accountSettings.keys().hasOnly([
+            'animationsEnabled', 'gameLayoutMode', 'gameCatalogMode',
+            'hideUnranked', 'autoHideHeader', 'autoLockOnClose',
+            'autoSignOutOnIdle', 'panicKeysEnabled', 'historyMaskingEnabled',
+            'decoyType', 'autoRandomizeDecoy', 'randomizeInterval',
+            'randomizePool', 'customDecoyTitles', 'chatTheme', 'sidebarOpen'
+          ])
+          && isOptionalBool(data.accountSettings, 'animationsEnabled')
+          && (!('gameLayoutMode' in data.accountSettings) || data.accountSettings.gameLayoutMode == null || data.accountSettings.gameLayoutMode in ['standard', 'compact'])
+          && (!('gameCatalogMode' in data.accountSettings) || data.accountSettings.gameCatalogMode == null || data.accountSettings.gameCatalogMode in ['original', 'all'])
+          && isOptionalBool(data.accountSettings, 'hideUnranked')
+          && isOptionalBool(data.accountSettings, 'autoHideHeader')
+          && isOptionalBool(data.accountSettings, 'autoLockOnClose')
+          && isOptionalBool(data.accountSettings, 'autoSignOutOnIdle')
+          && isOptionalBool(data.accountSettings, 'panicKeysEnabled')
+          && isOptionalBool(data.accountSettings, 'historyMaskingEnabled')
+          && isOptionalString(data.accountSettings, 'decoyType', 32)
+          && isOptionalBool(data.accountSettings, 'autoRandomizeDecoy')
+          && isOptionalNumber(data.accountSettings, 'randomizeInterval')
+          && (!('randomizePool' in data.accountSettings) || data.accountSettings.randomizePool == null || (data.accountSettings.randomizePool is list && data.accountSettings.randomizePool.size() <= 30 && (data.accountSettings.randomizePool.size() == 0 || data.accountSettings.randomizePool[0] is string)))
+          && (!('customDecoyTitles' in data.accountSettings) || data.accountSettings.customDecoyTitles == null || (data.accountSettings.customDecoyTitles is map && data.accountSettings.customDecoyTitles.keys().hasOnly(['drive', 'docs', 'slides']) && isOptionalString(data.accountSettings.customDecoyTitles, 'drive', 64) && isOptionalString(data.accountSettings.customDecoyTitles, 'docs', 64) && isOptionalString(data.accountSettings.customDecoyTitles, 'slides', 64)))
+          && isOptionalString(data.accountSettings, 'chatTheme', 32)
+          && isOptionalBool(data.accountSettings, 'sidebarOpen')
+        );
+    }
+
+    function isValidActivityTimeMs(data) {
+      return !('activityTimeMs' in data)
+        || data.activityTimeMs == null
+        || (
+          data.activityTimeMs is map
+          && data.activityTimeMs.keys().hasOnly([
+            'games', 'movies', 'moremovies', 'youtube', 'lobbychat', 'ai', 'catalog'
+          ])
+          && isOptionalNumber(data.activityTimeMs, 'games')
+          && isOptionalNumber(data.activityTimeMs, 'movies')
+          && isOptionalNumber(data.activityTimeMs, 'moremovies')
+          && isOptionalNumber(data.activityTimeMs, 'youtube')
+          && isOptionalNumber(data.activityTimeMs, 'lobbychat')
+          && isOptionalNumber(data.activityTimeMs, 'ai')
+          && isOptionalNumber(data.activityTimeMs, 'catalog')
+        );
+    }
+
     function isValidAccountCreate(data, accountId) {
       return data.keys().hasAll([
           'username', 'usernameLower', 'passwordSalt', 'passwordHash',
@@ -43,9 +92,10 @@ service cloud.firestore {
           'isActive', 'isAdmin', 'allowGlobalOverride', 'allowAiOverride', 'gamesAccess', 'moviesAccess', 'moreMoviesAccess',
           'youtubeAccess', 'lobbyChatAccess', 'aiAccess', 'decoysAccess',
           'downloadAccess', 'chatMuted', 'chatBanned', 'roleBadge',
-          'badgeColor', 'favorites', 'recentlyPlayed', 'preferredTheme',
-          'preferredMode', 'createdAt', 'updatedAt', 'lastLoginAt',
-          'isOnline', 'lastSeenAt'
+          'badgeColor', 'adminNotes', 'defaultGirlsTheme', 'favorites', 'recentlyPlayed', 'preferredTheme',
+          'preferredMode', 'accountSettings', 'totalTimeMs', 'todayTimeMs', 'todayDateKey',
+          'sessionCount', 'currentActivity', 'lastActivityAt', 'activityTimeMs',
+          'createdAt', 'updatedAt', 'lastLoginAt', 'isOnline', 'lastSeenAt'
         ])
         && data.username is string && data.username.size() >= 2 && data.username.size() <= 20
         && data.username.matches('^[a-zA-Z0-9_\\-]+$')
@@ -69,10 +119,20 @@ service cloud.firestore {
         && data.chatBanned is bool
         && data.roleBadge is string && data.roleBadge.size() <= 20
         && data.badgeColor in ['cyan', 'amber', 'emerald', 'rose', 'violet', 'neutral']
+        && isOptionalString(data, 'adminNotes', 500)
+        && isOptionalBool(data, 'defaultGirlsTheme')
         && (!('favorites' in data) || (data.favorites is list && data.favorites.size() <= 500 && (data.favorites.size() == 0 || data.favorites[0] is string)))
         && (!('recentlyPlayed' in data) || (data.recentlyPlayed is list && data.recentlyPlayed.size() <= 30 && (data.recentlyPlayed.size() == 0 || data.recentlyPlayed[0] is string)))
         && isOptionalString(data, 'preferredTheme', 64)
         && (!('preferredMode' in data) || data.preferredMode == null || data.preferredMode in ['light', 'dark'])
+        && isValidAccountSettings(data)
+        && isOptionalNumber(data, 'totalTimeMs')
+        && isOptionalNumber(data, 'todayTimeMs')
+        && isOptionalString(data, 'todayDateKey', 16)
+        && isOptionalNumber(data, 'sessionCount')
+        && isOptionalString(data, 'currentActivity', 100)
+        && isOptionalNumber(data, 'lastActivityAt')
+        && isValidActivityTimeMs(data)
         && data.createdAt is number
         && data.updatedAt is number
         && isOptionalNumber(data, 'lastLoginAt')
@@ -95,6 +155,7 @@ service cloud.firestore {
         ])
         && data.keys().hasOnly([
           'siteLockdown', 'lockdownMessage', 'allowSharedPasscodes', 'allowAccountOverrides', 'allowAiOverrides',
+          'girlsThemePolicy', 'girlsThemeSyncChat',
           'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'youtubeAccess',
           'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess',
           'broadcastId', 'broadcastMessage', 'broadcastSender', 'broadcastAt', 'updatedAt'
@@ -104,6 +165,8 @@ service cloud.firestore {
         && data.allowSharedPasscodes is bool
         && isOptionalBool(data, 'allowAccountOverrides')
         && isOptionalBool(data, 'allowAiOverrides')
+        && (!('girlsThemePolicy' in data) || data.girlsThemePolicy == null || data.girlsThemePolicy in ['default_if_unset', 'apply_on_signin', 'lock'])
+        && isOptionalBool(data, 'girlsThemeSyncChat')
         && data.gamesAccess is bool
         && data.moviesAccess is bool
         && data.moreMoviesAccess is bool
@@ -192,8 +255,9 @@ service cloud.firestore {
           'username', 'passwordSalt', 'passwordHash', 'isActive', 'isAdmin', 'allowGlobalOverride', 'allowAiOverride',
           'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'youtubeAccess',
           'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess',
-          'chatMuted', 'chatBanned', 'roleBadge', 'badgeColor',
-          'favorites', 'recentlyPlayed', 'preferredTheme', 'preferredMode',
+          'chatMuted', 'chatBanned', 'roleBadge', 'badgeColor', 'adminNotes', 'defaultGirlsTheme',
+          'favorites', 'recentlyPlayed', 'preferredTheme', 'preferredMode', 'accountSettings',
+          'totalTimeMs', 'todayTimeMs', 'todayDateKey', 'sessionCount', 'currentActivity', 'lastActivityAt', 'activityTimeMs',
           'updatedAt', 'lastLoginAt', 'isOnline', 'lastSeenAt'
         ]);
       allow delete: if isValidId(accountId);

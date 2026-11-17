@@ -139,11 +139,15 @@ import {
   getLastSessionActivity,
   getRememberedLocalUsers,
   getSavedAccountSession,
+  getTodayDateKey,
   isAutoSignOutOnIdleEnabled,
   isSessionInactiveExpired,
+  recordAccountUsageHeartbeat,
   removeRememberedLocalUser,
+  sanitizeActivityTimeMs,
   saveAccountSession,
   saveRememberedLocalUser,
+  sanitizeAccountSettings,
   subscribeToAccount,
   subscribeToWorkspaceConfig,
   syncAccountUserData,
@@ -154,6 +158,7 @@ import {
 } from './utils/accountService';
 const MoviesWorkspace = lazy(() => import('./components/MoviesWorkspace'));
 const MoreMoviesWorkspace = lazy(() => import('./components/MoreMoviesWorkspace'));
+const YouTubeWorkspace = lazy(() => import('./components/YouTubeWorkspace'));
 import InformationSection from './components/InformationSection';
 
 function LobbyUnreadIndicator({ visible }) {
@@ -384,10 +389,11 @@ const THEME_OPTIONS = [
   { key: 'violet', name: 'Violet', color: 'bg-purple-500 border-purple-300 shadow-[0_0_8px_rgba(168,85,247,0.6)]', tooltip: 'Violet (Purple)' },
   { key: 'ice', name: 'Glacier', color: 'bg-sky-400 border-sky-200 shadow-[0_0_8px_rgba(56,189,248,0.6)]', tooltip: 'Glacier (Ice Blue)' },
   { key: 'rose-pine', name: 'Rose Pine', color: 'bg-rose-400 border-rose-200 shadow-[0_0_8px_rgba(251,113,133,0.6)]', tooltip: 'Rose Pine (Pastel Pink)' },
+  { key: 'girls', name: 'Girls', color: 'bg-pink-400 border-pink-200 shadow-[0_0_8px_rgba(244,114,182,0.75)]', tooltip: 'Girls (Blush Pink)' },
   { key: 'none', name: 'Monochrome', color: 'bg-neutral-300 border-neutral-400 shadow-[0_0_6px_rgba(212,212,212,0.4)]', tooltip: 'Monochrome (Black & White)' }
 ];
 
-function ThemeDropdown({ theme, setTheme, mode }) {
+function ThemeDropdown({ theme, setTheme, mode, lockedTheme = null, onSelectTheme = null }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -411,6 +417,7 @@ function ThemeDropdown({ theme, setTheme, mode }) {
   }, [isOpen]);
 
   const activeTheme = THEME_OPTIONS.find(t => t.key === theme) || THEME_OPTIONS[0];
+  const isLocked = Boolean(lockedTheme);
 
   return (
     <div className="relative inline-flex items-center shrink-0" ref={dropdownRef}>
@@ -420,14 +427,14 @@ function ThemeDropdown({ theme, setTheme, mode }) {
         className={`p-1.5 rounded-full border border-[var(--card-border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-color)] text-[var(--accent-color)] hover:bg-[var(--accent-color)]/10 transition-all duration-200 cursor-pointer shadow-sm active:scale-95 flex items-center justify-center shrink-0 select-none ${
           isOpen ? 'ring-2 ring-[var(--accent-color)]/30 border-[var(--accent-color)] bg-[var(--accent-color)]/10' : ''
         }`}
-        title={`Change Theme Color (Current: ${activeTheme.name})`}
+        title={isLocked ? `Theme locked to ${activeTheme.name} by admin` : `Change Theme Color (Current: ${activeTheme.name})`}
         aria-label="Change Theme Color"
       >
         <Palette className="w-3.5 h-3.5 text-[var(--accent-color)] transition-transform duration-200 group-hover:rotate-12" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--card-border)] shadow-2xl p-1.5 z-[99999] animate-fade-in backdrop-blur-xl">
+        <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--card-border)] shadow-2xl p-1.5 z-[99999] animate-fade-in backdrop-blur-xl">
           <div className="px-3 py-2 border-b border-[var(--card-border)]/70 flex items-center justify-between mb-1">
             <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
               <Palette className="w-3.5 h-3.5 text-[var(--accent-color)]" />
@@ -438,21 +445,37 @@ function ThemeDropdown({ theme, setTheme, mode }) {
             </span>
           </div>
 
+          {isLocked && (
+            <div className="mx-1.5 mb-1.5 px-2.5 py-1.5 rounded-lg border border-pink-400/35 bg-pink-500/10 text-[10px] text-pink-300 flex items-center gap-1.5">
+              <Lock className="w-3 h-3 shrink-0" />
+              <span>Locked to Girls by admin</span>
+            </div>
+          )}
+
           <div className="flex flex-col gap-1 max-h-64 overflow-y-auto scrollbar-thin py-0.5">
             {THEME_OPTIONS.map((themeOpt) => {
               const isSelected = theme === themeOpt.key;
+              const optionDisabled = isLocked && themeOpt.key !== lockedTheme;
               return (
                 <button
                   key={themeOpt.key}
                   type="button"
+                  disabled={optionDisabled}
                   onClick={() => {
-                    setTheme(themeOpt.key);
+                    if (optionDisabled) return;
+                    if (onSelectTheme) {
+                      onSelectTheme(themeOpt.key);
+                    } else {
+                      setTheme(themeOpt.key);
+                    }
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition-all duration-150 cursor-pointer group ${
-                    isSelected
-                      ? 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] font-bold shadow-xs'
-                      : 'hover:bg-white/5 text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition-all duration-150 group ${
+                    optionDisabled
+                      ? 'opacity-35 cursor-not-allowed text-[var(--text-muted)]'
+                      : isSelected
+                        ? 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] font-bold shadow-xs cursor-pointer'
+                        : 'hover:bg-white/5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
@@ -737,6 +760,115 @@ function CursorSpotlight({ active }) {
         background: 'radial-gradient(circle 350px at var(--x, -1000px) var(--y, -1000px), color-mix(in srgb, var(--accent-color) 12%, transparent), transparent 80%)',
       }}
     />
+  );
+}
+
+function GirlsThemeDecorations({ active, mode }) {
+  if (!active) return null;
+  const isLight = mode === 'light';
+  const primaryFill = isLight ? 'rgba(236, 72, 153, 0.24)' : 'rgba(244, 114, 182, 0.26)';
+  const secondaryFill = isLight ? 'rgba(244, 114, 182, 0.20)' : 'rgba(251, 182, 206, 0.22)';
+  const sparkleFill = isLight ? 'rgba(219, 39, 119, 0.34)' : 'rgba(253, 224, 239, 0.42)';
+  const ribbonStroke = isLight ? 'rgba(219, 39, 119, 0.28)' : 'rgba(249, 168, 212, 0.32)';
+
+  return (
+    <div
+      className="pointer-events-none fixed inset-0 z-0 overflow-hidden select-none"
+      aria-hidden="true"
+    >
+      {/* Soft Pastel Halo Clouds */}
+      <div
+        className="absolute -top-24 -left-24 w-96 h-96 rounded-full blur-3xl opacity-70"
+        style={{ background: isLight ? 'radial-gradient(circle, rgba(244,114,182,0.22), transparent 70%)' : 'radial-gradient(circle, rgba(244,114,182,0.18), transparent 70%)' }}
+      />
+      <div
+        className="absolute -bottom-28 -right-24 w-[28rem] h-[28rem] rounded-full blur-3xl opacity-70"
+        style={{ background: isLight ? 'radial-gradient(circle, rgba(251,113,133,0.18), transparent 70%)' : 'radial-gradient(circle, rgba(217,70,239,0.15), transparent 70%)' }}
+      />
+
+      {/* Top-left Cherry Blossom Cluster */}
+      <svg className="absolute top-20 left-5 w-16 h-16 girls-float-slow" viewBox="0 0 64 64" fill="none">
+        <g transform="translate(32 32)">
+          {[0, 72, 144, 216, 288].map((deg) => (
+            <path
+              key={deg}
+              d="M0,-4 C7,-14 14,-22 0,-26 C-14,-22 -7,-14 0,-4 Z"
+              fill={primaryFill}
+              transform={`rotate(${deg})`}
+            />
+          ))}
+          <circle cx="0" cy="0" r="4" fill={sparkleFill} />
+        </g>
+      </svg>
+
+      {/* Top-right Dainty Ribbon Bow */}
+      <svg className="absolute top-24 right-8 w-16 h-12 girls-drift" viewBox="0 0 80 56" fill="none">
+        <path
+          d="M40 26 C28 10, 8 10, 12 26 C16 38, 30 34, 40 26 Z M40 26 C52 10, 72 10, 68 26 C64 38, 50 34, 40 26 Z"
+          fill={secondaryFill}
+          stroke={ribbonStroke}
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M38 28 C33 38, 25 45, 20 49 M42 28 C47 38, 55 45, 60 49"
+          stroke={ribbonStroke}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        />
+        <circle cx="40" cy="26" r="4.2" fill={sparkleFill} />
+      </svg>
+
+      {/* Mid-left Four-Point Sparkles */}
+      <svg className="absolute top-[42%] left-7 w-9 h-9 girls-twinkle" viewBox="0 0 36 36" fill="none">
+        <path d="M18 2 L21 15 L34 18 L21 21 L18 34 L15 21 L2 18 L15 15 Z" fill={sparkleFill} />
+      </svg>
+      <svg className="absolute top-[52%] left-16 w-5 h-5 girls-twinkle" style={{ animationDelay: '1.4s' }} viewBox="0 0 24 24" fill="none">
+        <path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill={primaryFill} />
+      </svg>
+
+      {/* Mid-right Heart & Sparkle Duo */}
+      <svg className="absolute top-[46%] right-9 w-11 h-11 girls-float-slow" style={{ animationDelay: '1.8s' }} viewBox="0 0 40 40" fill="none">
+        <path
+          d="M20 33 C11 26.5 5 21 5 14.5 C5 10.2 8.4 7 12.6 7 C15.4 7 18.1 8.5 20 11 C21.9 8.5 24.6 7 27.4 7 C31.6 7 35 10.2 35 14.5 C35 21 29 26.5 20 33 Z"
+          fill={primaryFill}
+          stroke={ribbonStroke}
+          strokeWidth="1.5"
+        />
+      </svg>
+      <svg className="absolute top-[34%] right-20 w-6 h-6 girls-twinkle" style={{ animationDelay: '0.9s' }} viewBox="0 0 24 24" fill="none">
+        <path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill={sparkleFill} />
+      </svg>
+
+      {/* Bottom-left Crescent Moon & Star */}
+      <svg className="absolute bottom-14 left-10 w-14 h-14 girls-drift" style={{ animationDelay: '2.2s' }} viewBox="0 0 56 56" fill="none">
+        <path
+          d="M34 12 C23 14 17 24 20 34 C23 44 34 48 43 43 C32 43 26 35 27 25 C28 19 30 15 34 12 Z"
+          fill={secondaryFill}
+          stroke={ribbonStroke}
+          strokeWidth="1.5"
+        />
+        <path d="M40 16 L41.8 20.2 L46 22 L41.8 23.8 L40 28 L38.2 23.8 L34 22 L38.2 20.2 Z" fill={sparkleFill} />
+      </svg>
+
+      {/* Bottom-right Blossom & Floating Heart */}
+      <svg className="absolute bottom-12 right-8 w-16 h-16 girls-float-slow" style={{ animationDelay: '0.6s' }} viewBox="0 0 64 64" fill="none">
+        <g transform="translate(32 32)">
+          {[0, 72, 144, 216, 288].map((deg) => (
+            <path
+              key={deg}
+              d="M0,-4 C7,-14 14,-22 0,-26 C-14,-22 -7,-14 0,-4 Z"
+              fill={secondaryFill}
+              transform={`rotate(${deg})`}
+            />
+          ))}
+          <circle cx="0" cy="0" r="3.8" fill={sparkleFill} />
+        </g>
+      </svg>
+      <svg className="absolute bottom-28 right-24 w-6 h-6 girls-twinkle" style={{ animationDelay: '2.5s' }} viewBox="0 0 24 24" fill="none">
+        <path d="M12 21 C7 17 3 13.8 3 9.8 C3 7.1 5.1 5 7.8 5 C9.6 5 11.1 5.9 12 7.4 C12.9 5.9 14.4 5 16.2 5 C18.9 5 21 7.1 21 9.8 C21 13.8 17 17 12 21 Z" fill={sparkleFill} />
+      </svg>
+    </div>
   );
 }
 
@@ -1332,13 +1464,49 @@ export default function App() {
 
   const [theme, setTheme] = useState(() => {
     const saved = safeStorage.getItem('unblocked-theme');
-    return saved && ['cyborg', 'violet', 'ice', 'rose-pine', 'none'].includes(saved) ? saved : 'none';
+    return saved && ['cyborg', 'sunset', 'midnight', 'forest', 'violet', 'ice', 'rose-pine', 'girls', 'none'].includes(saved) ? saved : 'none';
   });
   const [mode, setMode] = useState(() => {
-    const savedMode = safeStorage.getItem('unblocked-mode');
-    if (savedMode) return savedMode;
-    const initialViewMode = safeStorage.getItem('classroom-view-mode') || 'articles';
-    return initialViewMode === 'games' ? 'dark' : 'light';
+    const initialViewMode =
+      safeSessionStorage.getItem('classroom-view-mode') ||
+      safeStorage.getItem('classroom-view-mode') ||
+      'articles';
+    if (initialViewMode === 'games') {
+      const accMode = safeStorage.getItem('unblocked-account-mode');
+      if (accMode === 'light' || accMode === 'dark') return accMode;
+      const savedMode = safeStorage.getItem('unblocked-mode');
+      if (savedMode === 'light' || savedMode === 'dark') return savedMode;
+      return 'dark';
+    }
+    return 'light';
+  });
+  const autoAppliedGirlsThemeRef = useRef(false);
+  const autoAppliedGirlsChatThemeRef = useRef(false);
+  const signInGirlsAppliedRef = useRef('');
+
+  const [chatTheme, setChatTheme] = useState(() => {
+    const saved = safeStorage.getItem('chat_theme');
+    return saved || 'mono';
+  });
+  useEffect(() => {
+    const onChatThemeChange = (e) => {
+      const next = e?.detail;
+      if (typeof next === 'string' && next.trim()) {
+        autoAppliedGirlsChatThemeRef.current = false;
+        setChatTheme(next.trim().slice(0, 32));
+      }
+    };
+    window.addEventListener('urnperiodic-chat-theme-change', onChatThemeChange);
+    return () => window.removeEventListener('urnperiodic-chat-theme-change', onChatThemeChange);
+  }, []);
+
+  // Animations state: disabled by default at start for Chromebook performance
+  const [animationsEnabled, setAnimationsEnabled] = useState(() => {
+    try {
+      return safeStorage.getItem('unblocked-animations-enabled') === 'true';
+    } catch {
+      return false;
+    }
   });
 
   const [viewMode, setViewMode] = useState(() => {
@@ -1398,12 +1566,12 @@ export default function App() {
     }
   }, [viewMode]);
 
-  // Automatically switch to white mode on classroom, google docs, drive, slides, and clever decoys
+  // Keep Classroom/education view light when locked on white decoy, without overwriting dark mode inside portals
   useEffect(() => {
-    if (['classroom', 'docs', 'drive', 'slides', 'clever', 'deltamath', 'studysync', 'commonlit'].includes(decoyType)) {
+    if (viewMode !== 'games' && ['classroom', 'docs', 'drive', 'slides', 'clever', 'deltamath', 'studysync', 'commonlit'].includes(decoyType)) {
       setMode('light');
     }
-  }, [decoyType]);
+  }, [decoyType, viewMode]);
 
   // Persist decoy state to localStorage
   useEffect(() => {
@@ -1825,7 +1993,10 @@ export default function App() {
     }
   });
   const [games, setGames] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => safeStorage.getItem('unblocked-sidebar-open') !== 'false');
+  useEffect(() => {
+    safeStorage.setItem('unblocked-sidebar-open', String(sidebarOpen));
+  }, [sidebarOpen]);
   const [selectedGame, setSelectedGame] = useState(null);
   const [gameFrame, setGameFrame] = useState(null);
   const pendingGameCardScroll = useRef(false);
@@ -2153,7 +2324,7 @@ export default function App() {
     } else if (currentFilter === 'moremovies') {
       url = window.location.origin + '?filter=moremovies&view=games';
     } else if (currentFilter === 'youtube') {
-      url = 'https://urnperiodic.github.io/youtube1/';
+      url = window.location.origin + '?filter=youtube&view=games';
     } else if (currentFilter === 'lobbychat') {
       url = window.location.origin + '?filter=lobbychat&view=games';
     } else if (currentFilter === 'download') {
@@ -2680,14 +2851,12 @@ export default function App() {
     }
     if (mode === 'games') {
       setHeaderOpen(false);
-      setSidebarOpen(true);
     }
   };
 
   useEffect(() => {
     if (viewMode === 'games') {
       setHeaderOpen(false);
-      setSidebarOpen(true);
     }
   }, [viewMode]);
 
@@ -2812,7 +2981,10 @@ export default function App() {
   const [lockAccountBusy, setLockAccountBusy] = useState(false);
   const [lockOpenInSeparateTab, setLockOpenInSeparateTab] = useState(true);
   const suppressAccountSyncRef = useRef(false);
+  const suppressAccountSyncTimerRef = useRef(null);
   const activeAccountSyncTimerRef = useRef(null);
+  const lastAppliedProfileSigRef = useRef('');
+  const lastWrittenProfileSigRef = useRef('');
 
   const hasAdminAccess = Boolean(isOwnerAdmin || (activeAccount?.isActive && activeAccount?.isAdmin));
 
@@ -2821,7 +2993,8 @@ export default function App() {
       if (hasAdminAccess) return true;
       if (workspaceConfig?.siteLockdown) return false;
       const canOverrideGlobalOff = Boolean(
-        workspaceConfig?.allowAccountOverrides !== false &&
+        key !== 'aiAccess' &&
+          workspaceConfig?.allowAccountOverrides !== false &&
           activeAccount?.isActive &&
           activeAccount?.allowGlobalOverride,
       );
@@ -3084,9 +3257,83 @@ export default function App() {
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [adminError, setAdminError] = useState('');
 
+  const currentAccountSettings = useMemo(
+    () =>
+      sanitizeAccountSettings({
+        animationsEnabled,
+        gameLayoutMode,
+        gameCatalogMode,
+        hideUnranked,
+        autoHideHeader,
+        autoLockOnClose,
+        autoSignOutOnIdle,
+        panicKeysEnabled,
+        historyMaskingEnabled,
+        decoyType,
+        autoRandomizeDecoy,
+        randomizeInterval,
+        randomizePool,
+        customDecoyTitles,
+        chatTheme,
+        sidebarOpen,
+      }),
+    [
+      animationsEnabled,
+      gameLayoutMode,
+      gameCatalogMode,
+      hideUnranked,
+      autoHideHeader,
+      autoLockOnClose,
+      autoSignOutOnIdle,
+      panicKeysEnabled,
+      historyMaskingEnabled,
+      decoyType,
+      autoRandomizeDecoy,
+      randomizeInterval,
+      randomizePool,
+      customDecoyTitles,
+      chatTheme,
+      sidebarOpen,
+    ],
+  );
+
+  const buildAccountProfileSig = useCallback((acc) => {
+    if (!acc) return '';
+    return JSON.stringify({
+      favorites: Array.isArray(acc.favorites) ? acc.favorites : [],
+      recentlyPlayed: Array.isArray(acc.recentlyPlayed) ? acc.recentlyPlayed : [],
+      preferredTheme: acc.preferredTheme || null,
+      preferredMode: acc.preferredMode === 'light' || acc.preferredMode === 'dark' ? acc.preferredMode : null,
+      accountSettings: sanitizeAccountSettings(acc.accountSettings || {}),
+    });
+  }, []);
+
+  const workspaceConfigRef = useRef(workspaceConfig);
+  workspaceConfigRef.current = workspaceConfig;
+
+  const isThemeLockedToGirls = Boolean(
+    activeAccount?.isActive &&
+      activeAccount?.defaultGirlsTheme &&
+      (workspaceConfig?.girlsThemePolicy || 'default_if_unset') === 'lock',
+  );
+
+  const handleUserThemeChange = useCallback(
+    (nextTheme) => {
+      if (isThemeLockedToGirls && nextTheme !== 'girls') return;
+      autoAppliedGirlsThemeRef.current = false;
+      setTheme(nextTheme);
+    },
+    [isThemeLockedToGirls],
+  );
+
   const applyAccountProfileToApp = useCallback((account) => {
     if (!account) return;
+    if (suppressAccountSyncTimerRef.current) {
+      clearTimeout(suppressAccountSyncTimerRef.current);
+    }
     suppressAccountSyncRef.current = true;
+    lastAppliedProfileSigRef.current = buildAccountProfileSig(account);
+
     if (Array.isArray(account.favorites)) {
       setFavorites(account.favorites);
     }
@@ -3096,16 +3343,155 @@ export default function App() {
         safeStorage.setItem('unblocked-recently-played', JSON.stringify(account.recentlyPlayed));
       } catch {}
     }
-    if (account.preferredTheme) {
-      setTheme(account.preferredTheme);
+
+    const cfg = workspaceConfigRef.current || {};
+    const girlsPolicy = cfg.girlsThemePolicy || 'default_if_unset';
+    const girlsSyncChat = cfg.girlsThemeSyncChat !== false;
+    const hasGirlsDefault = Boolean(account.defaultGirlsTheme);
+    const signInSessionTag = `${account.usernameLower}:${account.lastLoginAt || 0}`;
+    const shouldApplyGirlsOnSignIn =
+      hasGirlsDefault &&
+      girlsPolicy === 'apply_on_signin' &&
+      signInGirlsAppliedRef.current !== signInSessionTag;
+    if (shouldApplyGirlsOnSignIn) {
+      signInGirlsAppliedRef.current = signInSessionTag;
     }
+
+    const hasValidSavedTheme =
+      account.preferredTheme &&
+      ['cyborg', 'sunset', 'midnight', 'forest', 'violet', 'ice', 'rose-pine', 'girls', 'none'].includes(account.preferredTheme);
+    const hasCustomSavedTheme = hasValidSavedTheme && account.preferredTheme !== 'none';
+
+    if (hasGirlsDefault && (girlsPolicy === 'lock' || shouldApplyGirlsOnSignIn)) {
+      autoAppliedGirlsThemeRef.current = true;
+      setTheme('girls');
+      safeStorage.setItem('unblocked-theme', 'girls');
+    } else if (hasCustomSavedTheme) {
+      autoAppliedGirlsThemeRef.current = false;
+      setTheme(account.preferredTheme);
+      safeStorage.setItem('unblocked-theme', account.preferredTheme);
+    } else if (hasGirlsDefault && girlsPolicy === 'default_if_unset') {
+      autoAppliedGirlsThemeRef.current = true;
+      setTheme('girls');
+      safeStorage.setItem('unblocked-theme', 'girls');
+    } else if (hasValidSavedTheme) {
+      autoAppliedGirlsThemeRef.current = false;
+      setTheme(account.preferredTheme);
+      safeStorage.setItem('unblocked-theme', account.preferredTheme);
+    }
+
     if (account.preferredMode === 'light' || account.preferredMode === 'dark') {
+      safeStorage.setItem('unblocked-account-mode', account.preferredMode);
+      safeStorage.setItem('unblocked-mode', account.preferredMode);
       setMode(account.preferredMode);
     }
-    setTimeout(() => {
+
+    const s = sanitizeAccountSettings(account.accountSettings || {});
+    if (typeof s.animationsEnabled === 'boolean') {
+      setAnimationsEnabled(s.animationsEnabled);
+      safeStorage.setItem('unblocked-animations-enabled', String(s.animationsEnabled));
+    }
+    if (s.gameLayoutMode === 'standard' || s.gameLayoutMode === 'compact') {
+      setGameLayoutMode(s.gameLayoutMode);
+      safeStorage.setItem('unblocked-game-layout-mode', s.gameLayoutMode);
+    }
+    if (s.gameCatalogMode === 'original' || s.gameCatalogMode === 'all') {
+      setGameCatalogMode(s.gameCatalogMode);
+      safeStorage.setItem('unblocked-game-catalog-mode', s.gameCatalogMode);
+    }
+    if (typeof s.hideUnranked === 'boolean') {
+      setHideUnranked(s.hideUnranked);
+      safeStorage.setItem('unblocked-hide-unranked', String(s.hideUnranked));
+    }
+    if (typeof s.autoHideHeader === 'boolean') {
+      setAutoHideHeader(s.autoHideHeader);
+      safeStorage.setItem('unblocked-auto-hide-header', String(s.autoHideHeader));
+    }
+    if (typeof s.autoLockOnClose === 'boolean') {
+      setAutoLockOnClose(s.autoLockOnClose);
+      safeStorage.setItem('unblocked-auto-lock-on-close', String(s.autoLockOnClose));
+    }
+    if (typeof s.autoSignOutOnIdle === 'boolean') {
+      if (s.autoSignOutOnIdle) touchSessionActivity(true);
+      setAutoSignOutOnIdle(s.autoSignOutOnIdle);
+      safeStorage.setItem(AUTO_SIGNOUT_IDLE_KEY, String(s.autoSignOutOnIdle));
+    }
+    if (typeof s.panicKeysEnabled === 'boolean') {
+      setPanicKeysEnabled(s.panicKeysEnabled);
+      safeStorage.setItem('unblocked-panic-keys-enabled', String(s.panicKeysEnabled));
+    }
+    if (typeof s.historyMaskingEnabled === 'boolean') {
+      setHistoryMaskingEnabled(s.historyMaskingEnabled);
+      safeStorage.setItem('unblocked-history-masking', String(s.historyMaskingEnabled));
+    }
+    const accountCanDecoys = Boolean(account.isAdmin || account.decoysAccess);
+    if (accountCanDecoys && s.decoyType && decoyOptions.some((d) => d.value === s.decoyType)) {
+      setDecoyType(s.decoyType);
+      try {
+        localStorage.setItem('study-tools-decoy-type', s.decoyType);
+      } catch {}
+    }
+    if (accountCanDecoys && typeof s.autoRandomizeDecoy === 'boolean') {
+      setAutoRandomizeDecoy(s.autoRandomizeDecoy);
+      safeStorage.setItem('study-tools-auto-randomize', String(s.autoRandomizeDecoy));
+    }
+    if (typeof s.randomizeInterval === 'number') {
+      setRandomizeInterval(s.randomizeInterval);
+      setRandomizeCountdown(s.randomizeInterval);
+      safeStorage.setItem('study-tools-randomize-interval', String(s.randomizeInterval));
+    }
+    if (Array.isArray(s.randomizePool)) {
+      const validPool = s.randomizePool.filter((p) => decoyOptions.some((d) => d.value === p));
+      if (validPool.length > 0) {
+        setRandomizePool(validPool);
+        safeStorage.setItem('study-tools-randomize-pool', JSON.stringify(validPool));
+      }
+    }
+    if (s.customDecoyTitles) {
+      setCustomDecoyTitles(s.customDecoyTitles);
+      try {
+        safeStorage.setItem('study-tools-custom-decoy-titles', JSON.stringify(s.customDecoyTitles));
+      } catch {}
+    }
+    const hasCustomSavedChatTheme = typeof s.chatTheme === 'string' && s.chatTheme.trim() && s.chatTheme.trim() !== 'mono';
+    if (hasGirlsDefault && girlsSyncChat && (girlsPolicy === 'lock' || shouldApplyGirlsOnSignIn)) {
+      autoAppliedGirlsChatThemeRef.current = true;
+      setChatTheme('girls');
+      safeStorage.setItem('chat_theme', 'girls');
+      try {
+        window.dispatchEvent(new CustomEvent('urnperiodic-chat-theme-sync', { detail: 'girls' }));
+      } catch {}
+    } else if (hasCustomSavedChatTheme) {
+      autoAppliedGirlsChatThemeRef.current = false;
+      setChatTheme(s.chatTheme);
+      safeStorage.setItem('chat_theme', s.chatTheme);
+      try {
+        window.dispatchEvent(new CustomEvent('urnperiodic-chat-theme-sync', { detail: s.chatTheme }));
+      } catch {}
+    } else if (hasGirlsDefault && girlsSyncChat && girlsPolicy === 'default_if_unset') {
+      autoAppliedGirlsChatThemeRef.current = true;
+      setChatTheme('girls');
+      safeStorage.setItem('chat_theme', 'girls');
+      try {
+        window.dispatchEvent(new CustomEvent('urnperiodic-chat-theme-sync', { detail: 'girls' }));
+      } catch {}
+    } else if (typeof s.chatTheme === 'string' && s.chatTheme.trim()) {
+      autoAppliedGirlsChatThemeRef.current = false;
+      setChatTheme(s.chatTheme);
+      safeStorage.setItem('chat_theme', s.chatTheme);
+      try {
+        window.dispatchEvent(new CustomEvent('urnperiodic-chat-theme-sync', { detail: s.chatTheme }));
+      } catch {}
+    }
+    if (typeof s.sidebarOpen === 'boolean') {
+      setSidebarOpen(s.sidebarOpen);
+      safeStorage.setItem('unblocked-sidebar-open', String(s.sidebarOpen));
+    }
+
+    suppressAccountSyncTimerRef.current = setTimeout(() => {
       suppressAccountSyncRef.current = false;
-    }, 300);
-  }, []);
+    }, 450);
+  }, [buildAccountProfileSig]);
 
   const populateSeparateWorkspaceTab = useCallback(
     (targetWin) => {
@@ -3193,6 +3579,7 @@ export default function App() {
         throw new Error(workspaceConfig?.lockdownMessage || 'Workspace access is currently locked by admin.');
       }
       saveAccountSession(account);
+      signInGirlsAppliedRef.current = '';
       setSignOutNotice('');
       setRememberedUsers(getRememberedLocalUsers());
       setActiveAccount(account);
@@ -3376,10 +3763,12 @@ export default function App() {
     };
   }, [applyAccountProfileToApp]);
 
-  // Live Firestore subscription for signed-in account (permissions, mute/ban, active status, password reset)
+  // Live Firestore subscription for signed-in account (permissions, mute/ban, active status, password reset, settings sync)
   useEffect(() => {
     const uname = activeAccount?.usernameLower;
     if (!uname) {
+      lastAppliedProfileSigRef.current = '';
+      lastWrittenProfileSigRef.current = '';
       if (accountSessionChecked) {
         syncChatLinkedAccountStorage(null);
       }
@@ -3396,24 +3785,210 @@ export default function App() {
           syncChatLinkedAccountStorage(null);
           return;
         }
+        const remoteSig = buildAccountProfileSig(latest);
+        if (
+          remoteSig &&
+          remoteSig !== lastAppliedProfileSigRef.current &&
+          remoteSig !== lastWrittenProfileSigRef.current
+        ) {
+          applyAccountProfileToApp(latest);
+        }
         setActiveAccount(latest);
         syncChatLinkedAccountStorage(latest);
       },
       () => {},
     );
     return () => unsub();
-  }, [activeAccount?.usernameLower, accountSessionChecked]);
+  }, [activeAccount?.usernameLower, accountSessionChecked, applyAccountProfileToApp, buildAccountProfileSig]);
 
-  // Track real-time Online / Offline presence in Firestore for signed-in accounts
+  // Live enforcement when admin toggles per-user Girls theme or changes Girls policy
+  useEffect(() => {
+    if (!activeAccount?.isActive || !activeAccount?.defaultGirlsTheme) return;
+    const policy = workspaceConfig?.girlsThemePolicy || 'default_if_unset';
+    const syncChat = workspaceConfig?.girlsThemeSyncChat !== false;
+    if (policy === 'lock') {
+      if (theme !== 'girls') {
+        autoAppliedGirlsThemeRef.current = true;
+        setTheme('girls');
+        safeStorage.setItem('unblocked-theme', 'girls');
+      }
+      if (syncChat && chatTheme !== 'girls') {
+        autoAppliedGirlsChatThemeRef.current = true;
+        setChatTheme('girls');
+        safeStorage.setItem('chat_theme', 'girls');
+        try {
+          window.dispatchEvent(new CustomEvent('urnperiodic-chat-theme-sync', { detail: 'girls' }));
+        } catch {}
+      }
+    } else if (policy === 'default_if_unset') {
+      const hasCustom = activeAccount.preferredTheme && activeAccount.preferredTheme !== 'none';
+      if (!hasCustom && theme !== 'girls') {
+        autoAppliedGirlsThemeRef.current = true;
+        setTheme('girls');
+        safeStorage.setItem('unblocked-theme', 'girls');
+      }
+      const savedChat = activeAccount.accountSettings?.chatTheme;
+      const hasCustomChat = savedChat && savedChat !== 'mono';
+      if (syncChat && !hasCustomChat && chatTheme !== 'girls') {
+        autoAppliedGirlsChatThemeRef.current = true;
+        setChatTheme('girls');
+        safeStorage.setItem('chat_theme', 'girls');
+        try {
+          window.dispatchEvent(new CustomEvent('urnperiodic-chat-theme-sync', { detail: 'girls' }));
+        } catch {}
+      }
+    }
+  }, [
+    activeAccount?.isActive,
+    activeAccount?.defaultGirlsTheme,
+    activeAccount?.preferredTheme,
+    activeAccount?.accountSettings?.chatTheme,
+    workspaceConfig?.girlsThemePolicy,
+    workspaceConfig?.girlsThemeSyncChat,
+    theme,
+    chatTheme,
+  ]);
+
+  // Real-time Online/Offline presence, active time spent & current activity tracking in Firestore
+  const currentActivityInfo = useMemo(() => {
+    if (viewMode !== 'games' || !activeAccount?.usernameLower) {
+      return { key: 'catalog', label: '' };
+    }
+    if (selectedGame) {
+      return {
+        key: 'games',
+        label: `Playing: ${selectedGame.title || 'Game'}`.slice(0, 100),
+      };
+    }
+    if (filter === 'movies') return { key: 'movies', label: 'Watching Movies' };
+    if (filter === 'moremovies') return { key: 'moremovies', label: 'Browsing More Movies' };
+    if (filter === 'youtube') return { key: 'youtube', label: 'Watching Clarity Video' };
+    if (filter === 'lobbychat') return { key: 'lobbychat', label: 'In Lobby Chat' };
+    if (filter === 'chat') return { key: 'ai', label: 'Using AI Chat' };
+    return { key: 'catalog', label: 'Browsing Catalog' };
+  }, [viewMode, activeAccount?.usernameLower, selectedGame, filter]);
+
+  const usageStatsRef = useRef({
+    totalTimeMs: 0,
+    todayTimeMs: 0,
+    todayDateKey: getTodayDateKey(),
+    activityTimeMs: {},
+    sessionCount: 0,
+  });
+  const activitySegmentStartRef = useRef(Date.now());
+  const currentActivityRef = useRef(currentActivityInfo);
+  const viewModeUsageRef = useRef(viewMode);
+  viewModeUsageRef.current = viewMode;
+
+  useEffect(() => {
+    if (!activeAccount?.usernameLower) {
+      usageStatsRef.current = {
+        totalTimeMs: 0,
+        todayTimeMs: 0,
+        todayDateKey: getTodayDateKey(),
+        activityTimeMs: {},
+        sessionCount: 0,
+      };
+      return;
+    }
+    const todayKey = getTodayDateKey();
+    const cur = usageStatsRef.current;
+    const remoteActivity = sanitizeActivityTimeMs(activeAccount.activityTimeMs);
+    const mergedActivity = { ...cur.activityTimeMs };
+    Object.entries(remoteActivity).forEach(([k, v]) => {
+      mergedActivity[k] = Math.max(Number(mergedActivity[k] || 0), Number(v || 0));
+    });
+    const remoteToday =
+      activeAccount.todayDateKey === todayKey ? Math.max(0, Number(activeAccount.todayTimeMs || 0)) : 0;
+    const localToday = cur.todayDateKey === todayKey ? Number(cur.todayTimeMs || 0) : 0;
+    usageStatsRef.current = {
+      totalTimeMs: Math.max(Number(cur.totalTimeMs || 0), Number(activeAccount.totalTimeMs || 0)),
+      todayTimeMs: Math.max(localToday, remoteToday),
+      todayDateKey: todayKey,
+      activityTimeMs: mergedActivity,
+      sessionCount: Math.max(Number(cur.sessionCount || 0), Number(activeAccount.sessionCount || 0)),
+    };
+  }, [
+    activeAccount?.usernameLower,
+    activeAccount?.totalTimeMs,
+    activeAccount?.todayTimeMs,
+    activeAccount?.todayDateKey,
+    activeAccount?.activityTimeMs,
+    activeAccount?.sessionCount,
+  ]);
+
+  const flushAccountUsage = useCallback((uname, options = {}) => {
+    if (!uname) return;
+    const { isOnline = true, forceWrite = false, nextActivity = null } = options;
+    const now = Date.now();
+    const todayKey = getTodayDateKey(now);
+    const stats = usageStatsRef.current;
+    if (stats.todayDateKey !== todayKey) {
+      stats.todayDateKey = todayKey;
+      stats.todayTimeMs = 0;
+    }
+    const prevActivity = currentActivityRef.current || { key: 'catalog', label: '' };
+    const isVisibleUnlocked =
+      (typeof document === 'undefined' || document.visibilityState === 'visible') &&
+      viewModeUsageRef.current === 'games';
+    let delta = 0;
+    if (isVisibleUnlocked && activitySegmentStartRef.current > 0) {
+      delta = Math.min(120000, Math.max(0, now - activitySegmentStartRef.current));
+    }
+    activitySegmentStartRef.current = now;
+    if (delta > 0) {
+      stats.totalTimeMs = Math.max(0, Number(stats.totalTimeMs || 0) + delta);
+      stats.todayTimeMs = Math.max(0, Number(stats.todayTimeMs || 0) + delta);
+      const bucket = prevActivity.key || 'catalog';
+      stats.activityTimeMs = {
+        ...stats.activityTimeMs,
+        [bucket]: Math.max(0, Number(stats.activityTimeMs?.[bucket] || 0) + delta),
+      };
+    }
+    if (nextActivity) {
+      currentActivityRef.current = nextActivity;
+    }
+    const activityToSave = isOnline ? (nextActivity || prevActivity).label || 'Browsing Catalog' : '';
+    if (forceWrite || delta >= 2000 || !isOnline || nextActivity) {
+      recordAccountUsageHeartbeat(lobbyDb, lobbyAuth, uname, {
+        isOnline,
+        totalTimeMs: stats.totalTimeMs,
+        todayTimeMs: stats.todayTimeMs,
+        todayDateKey: stats.todayDateKey,
+        currentActivity: activityToSave,
+        activityTimeMs: stats.activityTimeMs,
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    const uname = activeAccount?.usernameLower;
+    if (!uname) {
+      currentActivityRef.current = currentActivityInfo;
+      return;
+    }
+    const prev = currentActivityRef.current;
+    if (prev.key !== currentActivityInfo.key || prev.label !== currentActivityInfo.label) {
+      flushAccountUsage(uname, {
+        isOnline: viewMode === 'games',
+        forceWrite: true,
+        nextActivity: currentActivityInfo,
+      });
+    }
+  }, [activeAccount?.usernameLower, currentActivityInfo, viewMode, flushAccountUsage]);
+
   useEffect(() => {
     const uname = activeAccount?.usernameLower;
     if (!uname) return;
 
     let active = true;
+    activitySegmentStartRef.current = Date.now();
+    currentActivityRef.current = currentActivityInfo;
+
     const markOnline = () => {
       if (!active) return;
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
-      updateAccountPresence(lobbyDb, lobbyAuth, uname, true);
+      flushAccountUsage(uname, { isOnline: true, forceWrite: true });
     };
 
     markOnline();
@@ -3421,7 +3996,10 @@ export default function App() {
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
+        activitySegmentStartRef.current = Date.now();
         markOnline();
+      } else {
+        flushAccountUsage(uname, { isOnline: true, forceWrite: true });
       }
     };
 
@@ -3434,7 +4012,7 @@ export default function App() {
           return;
         }
       } catch {}
-      updateAccountPresence(lobbyDb, lobbyAuth, uname, false);
+      flushAccountUsage(uname, { isOnline: false, forceWrite: true });
     };
 
     document.addEventListener('visibilitychange', handleVisibility);
@@ -3448,28 +4026,58 @@ export default function App() {
       window.removeEventListener('beforeunload', handlePresenceUnload);
       window.removeEventListener('pagehide', handlePresenceUnload);
     };
-  }, [activeAccount?.usernameLower]);
+  }, [activeAccount?.usernameLower, flushAccountUsage]);
 
-  // Sync user data (bookmarks, recent history, theme/mode) back to Firestore while signed in
+  // Sync user data (bookmarks, recent history, theme/mode, and all workspace settings) back to Firestore while signed in
   useEffect(() => {
-    if (!activeAccount?.usernameLower || suppressAccountSyncRef.current) return;
+    if (!activeAccount?.usernameLower || suppressAccountSyncRef.current || viewMode !== 'games') return;
+    const syncedTheme = autoAppliedGirlsThemeRef.current ? activeAccount?.preferredTheme || null : theme;
+    const syncedSettings = autoAppliedGirlsChatThemeRef.current
+      ? {
+          ...currentAccountSettings,
+          chatTheme: activeAccount?.accountSettings?.chatTheme || 'mono',
+        }
+      : currentAccountSettings;
+    const payload = {
+      favorites,
+      recentlyPlayed,
+      ...(typeof syncedTheme === 'string' ? { preferredTheme: syncedTheme } : {}),
+      preferredMode: mode,
+      accountSettings: syncedSettings,
+    };
+    const nextSig = buildAccountProfileSig({
+      ...payload,
+      preferredTheme: syncedTheme,
+    });
+    if (nextSig === lastAppliedProfileSigRef.current || nextSig === lastWrittenProfileSigRef.current) {
+      return;
+    }
     if (activeAccountSyncTimerRef.current) {
       clearTimeout(activeAccountSyncTimerRef.current);
     }
     activeAccountSyncTimerRef.current = setTimeout(() => {
-      syncAccountUserData(lobbyDb, lobbyAuth, activeAccount.usernameLower, {
-        favorites,
-        recentlyPlayed,
-        preferredTheme: theme,
-        preferredMode: mode,
-      });
+      if (suppressAccountSyncRef.current) return;
+      lastWrittenProfileSigRef.current = nextSig;
+      lastAppliedProfileSigRef.current = nextSig;
+      syncAccountUserData(lobbyDb, lobbyAuth, activeAccount.usernameLower, payload);
     }, 600);
     return () => {
       if (activeAccountSyncTimerRef.current) {
         clearTimeout(activeAccountSyncTimerRef.current);
       }
     };
-  }, [activeAccount?.usernameLower, favorites, recentlyPlayed, theme, mode]);
+  }, [
+    activeAccount?.usernameLower,
+    activeAccount?.preferredTheme,
+    activeAccount?.accountSettings?.chatTheme,
+    viewMode,
+    favorites,
+    recentlyPlayed,
+    theme,
+    mode,
+    currentAccountSettings,
+    buildAccountProfileSig,
+  ]);
 
   // Subscribe to global workspace access configuration from Firestore
   useEffect(() => {
@@ -3587,8 +4195,8 @@ export default function App() {
       const canBypassAiGlobalOff = Boolean(
         hasAdminAccess ||
           (activeAccount?.isActive &&
-            ((workspaceConfig?.allowAccountOverrides !== false && activeAccount?.allowGlobalOverride) ||
-              (workspaceConfig?.allowAiOverrides !== false && activeAccount?.allowAiOverride))),
+            workspaceConfig?.allowAiOverrides !== false &&
+            activeAccount?.allowAiOverride),
       );
       if (workspaceConfig?.aiAccess === false && !canBypassAiGlobalOff) {
         setAdminError('AI Chat disabled by admin');
@@ -3658,15 +4266,6 @@ export default function App() {
     }
   };
 
-
-  // Animations state: disabled by default at start for Chromebook performance
-  const [animationsEnabled, setAnimationsEnabled] = useState(() => {
-    try {
-      return safeStorage.getItem('unblocked-animations-enabled') === 'true';
-    } catch {
-      return false;
-    }
-  });
 
   const toggleAnimations = () => {
     setAnimationsEnabled(prev => {
@@ -3758,18 +4357,18 @@ export default function App() {
   const [articleSearch, setArticleSearch] = useState('');
   const [selectedArticleCategory, setSelectedArticleCategory] = useState('All');
 
-  // Set white as the main starting color for articles (light mode), and for classroom/docs decoys
+  // Keep articles light while preserving the user's preferred light/dark mode inside portals
   useEffect(() => {
     if (viewMode === 'articles') {
       setMode('light');
     } else if (viewMode === 'games') {
-      if (decoyType === 'classroom' || decoyType === 'docs' || decoyType === 'drive' || decoyType === 'slides' || decoyType === 'clever') {
-        setMode('light');
-      } else {
-        setMode('dark');
-      }
+      const savedAccMode =
+        activeAccount?.preferredMode === 'light' || activeAccount?.preferredMode === 'dark'
+          ? activeAccount.preferredMode
+          : safeStorage.getItem('unblocked-account-mode');
+      setMode(savedAccMode === 'light' ? 'light' : 'dark');
     }
-  }, [viewMode, decoyType]);
+  }, [viewMode, activeAccount?.usernameLower]);
 
   const handlePasswordSubmit = (customPass) => {
     const rawInput = (customPass !== undefined ? customPass : passcode).trim();
@@ -4052,7 +4651,10 @@ export default function App() {
     document.documentElement.setAttribute('data-mode', mode);
     safeStorage.setItem('unblocked-theme', theme);
     safeStorage.setItem('unblocked-mode', mode);
-  }, [theme, mode]);
+    if (viewMode === 'games' && !suppressAccountSyncRef.current) {
+      safeStorage.setItem('unblocked-account-mode', mode);
+    }
+  }, [theme, mode, viewMode]);
 
   // Set LocalStorage favorites on change
   useEffect(() => {
@@ -5535,6 +6137,7 @@ export default function App() {
               mode={mode}
               activeAccount={activeAccount}
               workspaceConfig={workspaceConfig}
+              games={games}
             />
           )}
         </div>
@@ -5549,7 +6152,13 @@ export default function App() {
         <div className="absolute top-4 right-4 flex items-center gap-3">
           
           {/* Theme Dropdown */}
-          <ThemeDropdown theme={theme} setTheme={setTheme} mode={mode} />
+          <ThemeDropdown
+            theme={theme}
+            setTheme={setTheme}
+            mode={mode}
+            lockedTheme={isThemeLockedToGirls ? 'girls' : null}
+            onSelectTheme={handleUserThemeChange}
+          />
 
           {/* Light/Dark Slider */}
           <div className="relative flex items-center gap-1.5 border border-[var(--card-border)] bg-[var(--bg-secondary)] py-1.5 px-2.5 rounded-full shadow-sm">
@@ -6537,6 +7146,15 @@ export default function App() {
             : 'min-h-screen'
         }`}>
       <CursorSpotlight active={viewMode === 'games' && animationsEnabled} />
+      <GirlsThemeDecorations
+        active={
+          theme === 'girls' &&
+          viewMode === 'games' &&
+          !selectedGame &&
+          !['chat', 'lobbychat', 'movies', 'moremovies', 'youtube', 'download'].includes(filter)
+        }
+        mode={mode}
+      />
       {/* HEADER */}
       <AnimatePresence initial={false}>
         {((!gameHeaderHidden || !selectedGame) || ['chat', 'lobbychat', 'movies', 'moremovies', 'youtube', 'info', 'download'].includes(filter)) && (
@@ -6721,7 +7339,7 @@ export default function App() {
 
               {/* Open Link Button */}
               {(() => {
-                const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
+                const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? `${window.location.origin}?filter=youtube&view=games` : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
                 const hasUrl = !!url;
                 return (
                   <motion.button
@@ -6972,7 +7590,7 @@ export default function App() {
                   </button>
 
                   {(() => {
-                    const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
+                    const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? `${window.location.origin}?filter=youtube&view=games` : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
                     const hasUrl = !!url;
                     return (
                       <button
@@ -7293,7 +7911,7 @@ export default function App() {
 
                 {/* Open Link Button */}
                 {(() => {
-                  const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
+                  const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? `${window.location.origin}?filter=youtube&view=games` : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
                   const hasUrl = !!url;
                   return (
                     <button
@@ -7528,7 +8146,13 @@ export default function App() {
               <div className="w-[1px] h-3 bg-[var(--card-border)]/80" />
 
               {/* Theme Color Change Icon Dropdown */}
-              <ThemeDropdown theme={theme} setTheme={setTheme} mode={mode} />
+              <ThemeDropdown
+                theme={theme}
+                setTheme={setTheme}
+                mode={mode}
+                lockedTheme={isThemeLockedToGirls ? 'girls' : null}
+                onSelectTheme={handleUserThemeChange}
+              />
 
               {/* Subtle divider */}
               <div className="w-[1px] h-3 bg-[var(--card-border)]/80" />
@@ -7821,7 +8445,13 @@ export default function App() {
               <div className="w-[1px] h-3.5 bg-[var(--card-border)]/80" />
 
               {/* Theme Color Change Icon Dropdown */}
-              <ThemeDropdown theme={theme} setTheme={setTheme} mode={mode} />
+              <ThemeDropdown
+                theme={theme}
+                setTheme={setTheme}
+                mode={mode}
+                lockedTheme={isThemeLockedToGirls ? 'girls' : null}
+                onSelectTheme={handleUserThemeChange}
+              />
             </div>
           
 
@@ -8683,14 +9313,15 @@ export default function App() {
                   animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
                   exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
                   transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
-                  className="flex-1 flex flex-col w-full h-full min-h-0 bg-[#0c0a09] border border-[var(--card-border)]/60 rounded-2xl overflow-hidden"
+                  className="flex-1 flex flex-col w-full h-full min-h-0 bg-[#0b0d14] border border-[var(--card-border)]/60 rounded-2xl overflow-hidden"
                 >
-                  <iframe 
-                    src="https://urnperiodic.github.io/youtube1/" 
-                    className="w-full h-full border-none flex-1 shadow-inner bg-[#0c0a09]"
-                    allow="fullscreen"
-                    referrerPolicy="no-referrer"
-                  />
+                  <Suspense fallback={<div className="flex-1 flex items-center justify-center text-xs font-mono text-[var(--text-muted)]">Loading Clarity Video...</div>}>
+                    <YouTubeWorkspace
+                      decoyTitle={getDecoyTitle(decoyType, customDecoyTitles)}
+                      decoyFavicon={getDecoyFavicon(decoyType)}
+                      onClose={() => setFilter('all')}
+                    />
+                  </Suspense>
                 </motion.div>
               ) : filter === 'download' && canDownloadAccess ? (
                 <motion.div 
@@ -9888,6 +10519,7 @@ export default function App() {
             mode={mode}
             activeAccount={activeAccount}
             workspaceConfig={workspaceConfig}
+            games={games}
           />
         )}
       </Suspense>

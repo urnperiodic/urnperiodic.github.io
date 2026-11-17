@@ -25,6 +25,163 @@ async function startServer() {
     res.json({ status: "healthy", timestamp: new Date().toISOString() });
   });
 
+  // Clarity Video YouTube Search Route (YouTube Data API v3 + Invidious Fallback)
+  const INVIDIOUS_INSTANCES = [
+    "https://inv.nadeko.net",
+    "https://invidious.nerdvpn.de",
+    "https://yewtu.be",
+    "https://invidious.f5.si",
+    "https://iv.melmac.space",
+  ];
+
+  const decodeHtmlEntities = (html?: string): string => {
+    if (!html) return "";
+    return html
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+  };
+
+  const parseIsoDurationSec = (duration?: string): number => {
+    if (!duration) return 0;
+    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return 0;
+    const h = parseInt(match[1] || "0", 10);
+    const m = parseInt(match[2] || "0", 10);
+    const s = parseInt(match[3] || "0", 10);
+    return h * 3600 + m * 60 + s;
+  };
+
+  const fetchInvidiousFallback = async (q: string): Promise<any[]> => {
+    const tryInstance = async (base: string): Promise<any[]> => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 7000);
+      try {
+        const response = await fetch(
+          `${base}/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
+          { signal: controller.signal }
+        );
+        if (!response.ok) throw new Error(`invidious ${response.status}`);
+        const list = await response.json();
+        if (!Array.isArray(list) || !list.length) {
+          throw new Error("empty");
+        }
+        return list
+          .filter((x: any) => x.type === "video" && x.videoId)
+          .map((x: any) => ({
+            kind: "video",
+            videoId: x.videoId,
+            title: decodeHtmlEntities(x.title),
+            author: decodeHtmlEntities(x.author),
+            description: decodeHtmlEntities(x.description || ""),
+            viewCount: x.viewCount || 0,
+            lengthSeconds: x.lengthSeconds || 0,
+            publishedAt: x.publishedText || "",
+            thumb: `https://i.ytimg.com/vi/${x.videoId}/hqdefault.jpg`,
+          }));
+      } finally {
+        clearTimeout(timeout);
+      }
+    };
+    const results = await Promise.any(INVIDIOUS_INSTANCES.map(tryInstance));
+    return Array.isArray(results) ? results : [];
+  };
+
+  app.get("/api/search", async (req, res) => {
+    const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    if (!q) {
+      return res.status(400).json({ error: "Missing query parameter q" });
+    }
+
+    const apiKey = process.env.YOUTUBE_API_KEY;
+    if (!apiKey) {
+      try {
+        const fallback = await fetchInvidiousFallback(q);
+        return res.status(200).json(fallback);
+      } catch {
+        return res.status(200).json([]);
+      }
+    }
+
+    try {
+      const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=25&q=${encodeURIComponent(
+        q
+      )}&key=${apiKey}`;
+      const searchRes = await fetch(searchUrl);
+      if (!searchRes.ok) {
+        const fallback = await fetchInvidiousFallback(q);
+        return res.status(200).json(fallback);
+      }
+      const data = await searchRes.json();
+      if (!data.items || !Array.isArray(data.items) || !data.items.length) {
+        return res.status(200).json([]);
+      }
+
+      const videoIds = data.items
+        .map((it: any) => it.id?.videoId)
+        .filter(Boolean)
+        .join(",");
+
+      const detailsMap: Record<string, { duration: number; viewCount: number }> = {};
+      if (videoIds) {
+        try {
+          const detailsRes = await fetch(
+            `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${videoIds}&key=${apiKey}`
+          );
+          if (detailsRes.ok) {
+            const detailsData = await detailsRes.json();
+            if (detailsData.items && Array.isArray(detailsData.items)) {
+              for (const v of detailsData.items) {
+                detailsMap[v.id] = {
+                  duration: parseIsoDurationSec(v.contentDetails?.duration),
+                  viewCount: v.statistics?.viewCount ? parseInt(v.statistics.viewCount, 10) : 0,
+                };
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("Failed to fetch video statistics:", err);
+        }
+      }
+
+      const results = data.items
+        .filter((it: any) => it.id?.videoId)
+        .map((it: any) => {
+          const vid = it.id.videoId;
+          const snip = it.snippet || {};
+          const details = detailsMap[vid];
+          const thumbUrl =
+            snip.thumbnails?.high?.url ||
+            snip.thumbnails?.medium?.url ||
+            snip.thumbnails?.default?.url ||
+            `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`;
+
+          return {
+            kind: "video",
+            videoId: vid,
+            title: decodeHtmlEntities(snip.title),
+            author: decodeHtmlEntities(snip.channelTitle),
+            description: decodeHtmlEntities(snip.description),
+            viewCount: details?.viewCount || 0,
+            lengthSeconds: details?.duration || 0,
+            publishedAt: snip.publishedAt || "",
+            thumb: thumbUrl,
+          };
+        });
+
+      return res.status(200).json(results);
+    } catch {
+      try {
+        const fallback = await fetchInvidiousFallback(q);
+        return res.status(200).json(fallback);
+      } catch {
+        return res.status(200).json([]);
+      }
+    }
+  });
+
   // Basic IP-based Rate Limiter state
   interface RateLimitState {
     count: number;

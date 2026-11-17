@@ -115,6 +115,49 @@
           "enum": ["light", "dark"],
           "description": "Preferred light or dark UI mode or null."
         },
+        "adminNotes": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Optional administrator notes attached to this user account."
+        },
+        "defaultGirlsTheme": {
+          "type": "boolean",
+          "description": "Whether the administrator assigned the Girls theme by default to this account."
+        },
+        "totalTimeMs": {
+          "type": "number",
+          "description": "Cumulative active milliseconds spent by this account across sessions."
+        },
+        "todayTimeMs": {
+          "type": "number",
+          "description": "Active milliseconds spent today by this account."
+        },
+        "todayDateKey": {
+          "type": "string",
+          "maxLength": 16,
+          "description": "YYYY-MM-DD local date key corresponding to todayTimeMs."
+        },
+        "sessionCount": {
+          "type": "number",
+          "description": "Total number of authenticated sessions recorded for this account."
+        },
+        "currentActivity": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Current live activity label for online presence (or empty string when offline)."
+        },
+        "lastActivityAt": {
+          "type": "number",
+          "description": "Epoch millisecond timestamp of last tracked activity or null."
+        },
+        "activityTimeMs": {
+          "type": "object",
+          "description": "Map of cumulative active milliseconds spent per activity category (games, movies, moremovies, youtube, lobbychat, ai, catalog)."
+        },
+        "accountSettings": {
+          "type": "object",
+          "description": "Cross-device synchronized UI, layout, chat theme, decoy, and privacy preferences."
+        },
         "createdAt": {
           "type": "number",
           "description": "Epoch millisecond creation timestamp."
@@ -183,6 +226,15 @@
         "allowAiOverrides": {
           "type": "boolean",
           "description": "Whether specific accounts with allowAiOverride can access AI Chat even when AI Chat is turned off globally."
+        },
+        "girlsThemePolicy": {
+          "type": "string",
+          "enum": ["default_if_unset", "apply_on_signin", "lock"],
+          "description": "Admin-chosen enforcement policy for accounts with defaultGirlsTheme enabled."
+        },
+        "girlsThemeSyncChat": {
+          "type": "boolean",
+          "description": "Whether assigned Girls theme policy also applies to Lobby Chat theme."
         },
         "gamesAccess": {
           "type": "boolean",

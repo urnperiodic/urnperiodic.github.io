@@ -47,6 +47,81 @@ export function formatLastSeen(lastSeenAt, now = Date.now()) {
   return new Date(ts).toLocaleDateString();
 }
 
+export const ACTIVITY_BUCKET_KEYS = [
+  'games',
+  'movies',
+  'moremovies',
+  'youtube',
+  'lobbychat',
+  'ai',
+  'catalog',
+];
+
+export const ACTIVITY_LABELS = {
+  games: 'Games',
+  movies: 'Movies',
+  moremovies: 'More Movies',
+  youtube: 'Clarity Video',
+  lobbychat: 'Lobby Chat',
+  ai: 'AI Chat',
+  catalog: 'Catalog',
+};
+
+export const GIRLS_THEME_POLICIES = ['default_if_unset', 'apply_on_signin', 'lock'];
+
+export const GIRLS_THEME_POLICY_META = {
+  default_if_unset: {
+    label: 'Default if Unset',
+    description: 'Applies Girls theme when user has no saved custom theme; they can still change it afterward.',
+  },
+  apply_on_signin: {
+    label: 'Apply on Sign-In',
+    description: 'Switches assigned users to Girls theme each time they sign in; they can switch mid-session.',
+  },
+  lock: {
+    label: 'Lock to Girls',
+    description: 'Forces assigned users onto Girls theme and locks the theme switcher.',
+  },
+};
+
+export function getTodayDateKey(now = Date.now()) {
+  const d = new Date(now);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`.slice(0, 16);
+}
+
+export function formatDurationMs(ms) {
+  const val = Math.max(0, Math.round(Number(ms || 0)));
+  if (!val) return '0m';
+  if (val < 60 * 1000) return `${Math.max(1, Math.round(val / 1000))}s`;
+  const totalMins = Math.floor(val / 60000);
+  if (totalMins < 60) return `${totalMins}m`;
+  const hrs = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+  return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+}
+
+export function getAccountTodayTimeMs(account, now = Date.now()) {
+  if (!account) return 0;
+  const todayKey = getTodayDateKey(now);
+  if (account.todayDateKey !== todayKey) return 0;
+  return Math.max(0, Math.round(Number(account.todayTimeMs || 0)));
+}
+
+export function sanitizeActivityTimeMs(raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object') return out;
+  ACTIVITY_BUCKET_KEYS.forEach((key) => {
+    const num = Number(raw[key]);
+    if (Number.isFinite(num) && num > 0) {
+      out[key] = Math.round(num);
+    }
+  });
+  return out;
+}
+
 export const WORKSPACE_ACCESS_KEYS = [
   { key: 'gamesAccess', label: 'Games', description: 'Games & Portals catalog', defaultForAccount: true, defaultGlobal: true },
   { key: 'moviesAccess', label: 'Movies', description: 'Movies workspace', defaultForAccount: true, defaultGlobal: true },
@@ -64,6 +139,8 @@ export const DEFAULT_WORKSPACE_CONFIG = {
   allowSharedPasscodes: false,
   allowAccountOverrides: true,
   allowAiOverrides: true,
+  girlsThemePolicy: 'default_if_unset',
+  girlsThemeSyncChat: true,
   gamesAccess: true,
   moviesAccess: true,
   moreMoviesAccess: true,
@@ -85,6 +162,7 @@ export function sanitizeWorkspaceConfig(data) {
   const rawBroadcastId = typeof data.broadcastId === 'string' ? data.broadcastId.trim().slice(0, 64) : '';
   const rawBroadcastSender = typeof data.broadcastSender === 'string' ? data.broadcastSender.trim().slice(0, 40) : '';
   const rawBroadcastAt = Number(data.broadcastAt || 0);
+  const rawGirlsPolicy = typeof data.girlsThemePolicy === 'string' ? data.girlsThemePolicy : 'default_if_unset';
   return {
     siteLockdown: Boolean(data.siteLockdown),
     lockdownMessage:
@@ -94,6 +172,8 @@ export function sanitizeWorkspaceConfig(data) {
     allowSharedPasscodes: false,
     allowAccountOverrides: data.allowAccountOverrides !== false,
     allowAiOverrides: data.allowAiOverrides !== false,
+    girlsThemePolicy: GIRLS_THEME_POLICIES.includes(rawGirlsPolicy) ? rawGirlsPolicy : 'default_if_unset',
+    girlsThemeSyncChat: data.girlsThemeSyncChat !== false,
     gamesAccess: data.gamesAccess !== false,
     moviesAccess: data.moviesAccess !== false,
     moreMoviesAccess: data.moreMoviesAccess !== false,
@@ -292,6 +372,49 @@ export async function ensureFirebaseAnonAuth(auth) {
   }
 }
 
+export function sanitizeAccountSettings(raw) {
+  if (!raw || typeof raw !== 'object') return {};
+  const out = {};
+  if (typeof raw.animationsEnabled === 'boolean') out.animationsEnabled = raw.animationsEnabled;
+  if (raw.gameLayoutMode === 'standard' || raw.gameLayoutMode === 'compact') {
+    out.gameLayoutMode = raw.gameLayoutMode;
+  }
+  if (raw.gameCatalogMode === 'original' || raw.gameCatalogMode === 'all') {
+    out.gameCatalogMode = raw.gameCatalogMode;
+  }
+  if (typeof raw.hideUnranked === 'boolean') out.hideUnranked = raw.hideUnranked;
+  if (typeof raw.autoHideHeader === 'boolean') out.autoHideHeader = raw.autoHideHeader;
+  if (typeof raw.autoLockOnClose === 'boolean') out.autoLockOnClose = raw.autoLockOnClose;
+  if (typeof raw.autoSignOutOnIdle === 'boolean') out.autoSignOutOnIdle = raw.autoSignOutOnIdle;
+  if (typeof raw.panicKeysEnabled === 'boolean') out.panicKeysEnabled = raw.panicKeysEnabled;
+  if (typeof raw.historyMaskingEnabled === 'boolean') out.historyMaskingEnabled = raw.historyMaskingEnabled;
+  if (typeof raw.decoyType === 'string' && raw.decoyType.trim()) {
+    out.decoyType = raw.decoyType.trim().slice(0, 32);
+  }
+  if (typeof raw.autoRandomizeDecoy === 'boolean') out.autoRandomizeDecoy = raw.autoRandomizeDecoy;
+  if (typeof raw.randomizeInterval === 'number' && Number.isFinite(raw.randomizeInterval)) {
+    out.randomizeInterval = Math.max(3, Math.min(300, Math.round(raw.randomizeInterval)));
+  }
+  if (Array.isArray(raw.randomizePool)) {
+    out.randomizePool = raw.randomizePool
+      .filter((x) => typeof x === 'string' && x.trim())
+      .map((x) => x.trim().slice(0, 32))
+      .slice(0, 30);
+  }
+  if (raw.customDecoyTitles && typeof raw.customDecoyTitles === 'object') {
+    out.customDecoyTitles = {
+      drive: typeof raw.customDecoyTitles.drive === 'string' ? raw.customDecoyTitles.drive.slice(0, 64) : '',
+      docs: typeof raw.customDecoyTitles.docs === 'string' ? raw.customDecoyTitles.docs.slice(0, 64) : '',
+      slides: typeof raw.customDecoyTitles.slides === 'string' ? raw.customDecoyTitles.slides.slice(0, 64) : '',
+    };
+  }
+  if (typeof raw.chatTheme === 'string' && raw.chatTheme.trim()) {
+    out.chatTheme = raw.chatTheme.trim().slice(0, 32);
+  }
+  if (typeof raw.sidebarOpen === 'boolean') out.sidebarOpen = raw.sidebarOpen;
+  return out;
+}
+
 export function sanitizeAccountDoc(docId, data) {
   if (!data) return null;
   const badgeColor = BADGE_COLORS[data.badgeColor] ? data.badgeColor : 'cyan';
@@ -316,10 +439,20 @@ export function sanitizeAccountDoc(docId, data) {
     chatBanned: Boolean(data.chatBanned),
     roleBadge: String(data.roleBadge || '').trim().slice(0, 20),
     badgeColor,
+    adminNotes: typeof data.adminNotes === 'string' ? data.adminNotes.slice(0, 500) : '',
+    defaultGirlsTheme: Boolean(data.defaultGirlsTheme),
     favorites: Array.isArray(data.favorites) ? data.favorites.filter((x) => typeof x === 'string') : [],
     recentlyPlayed: Array.isArray(data.recentlyPlayed) ? data.recentlyPlayed.filter((x) => typeof x === 'string').slice(0, 30) : [],
     preferredTheme: typeof data.preferredTheme === 'string' ? data.preferredTheme : null,
     preferredMode: data.preferredMode === 'light' || data.preferredMode === 'dark' ? data.preferredMode : null,
+    accountSettings: sanitizeAccountSettings(data.accountSettings),
+    totalTimeMs: Math.max(0, Math.round(Number(data.totalTimeMs || 0))),
+    todayTimeMs: Math.max(0, Math.round(Number(data.todayTimeMs || 0))),
+    todayDateKey: typeof data.todayDateKey === 'string' ? data.todayDateKey.slice(0, 16) : '',
+    sessionCount: Math.max(0, Math.round(Number(data.sessionCount || 0))),
+    currentActivity: typeof data.currentActivity === 'string' ? data.currentActivity.trim().slice(0, 100) : '',
+    lastActivityAt: data.lastActivityAt ? Number(data.lastActivityAt) : null,
+    activityTimeMs: sanitizeActivityTimeMs(data.activityTimeMs),
     createdAt: Number(data.createdAt || 0),
     updatedAt: Number(data.updatedAt || 0),
     lastLoginAt: data.lastLoginAt ? Number(data.lastLoginAt) : null,
@@ -336,6 +469,7 @@ export function toPublicChatAccount(account) {
     isActive: account.isActive !== false,
     isAdmin: Boolean(account.isAdmin),
     lobbyChatAccess: account.lobbyChatAccess !== false,
+    defaultGirlsTheme: Boolean(account.defaultGirlsTheme),
     roleBadge: account.roleBadge || '',
     badgeColor: account.badgeColor || 'cyan',
     chatMuted: Boolean(account.chatMuted),
@@ -536,10 +670,17 @@ export async function authenticateAccount(db, auth, rawUsername, rawPassword) {
   }
 
   const now = Date.now();
+  const todayKey = getTodayDateKey(now);
+  const nextSessionCount = Math.max(0, Math.round(Number(data.sessionCount || 0))) + 1;
+  const nextTodayTimeMs = data.todayDateKey === todayKey ? Math.max(0, Math.round(Number(data.todayTimeMs || 0))) : 0;
   try {
     await updateDoc(ref, {
       lastLoginAt: now,
       lastSeenAt: now,
+      lastActivityAt: now,
+      sessionCount: nextSessionCount,
+      todayDateKey: todayKey,
+      todayTimeMs: nextTodayTimeMs,
       isOnline: true,
       updatedAt: now,
     });
@@ -551,6 +692,10 @@ export async function authenticateAccount(db, auth, rawUsername, rawPassword) {
     ...data,
     lastLoginAt: now,
     lastSeenAt: now,
+    lastActivityAt: now,
+    sessionCount: nextSessionCount,
+    todayDateKey: todayKey,
+    todayTimeMs: nextTodayTimeMs,
     isOnline: true,
     updatedAt: now,
   });
@@ -695,10 +840,20 @@ export async function createManagedAccount(db, auth, payload) {
     chatBanned: Boolean(payload.chatBanned),
     roleBadge: String(payload.roleBadge || '').trim().slice(0, 20),
     badgeColor: BADGE_COLORS[payload.badgeColor] ? payload.badgeColor : 'cyan',
+    adminNotes: typeof payload.adminNotes === 'string' ? payload.adminNotes.trim().slice(0, 500) : '',
+    defaultGirlsTheme: Boolean(payload.defaultGirlsTheme),
     favorites: [],
     recentlyPlayed: [],
     preferredTheme: null,
     preferredMode: null,
+    accountSettings: sanitizeAccountSettings(payload.accountSettings),
+    totalTimeMs: 0,
+    todayTimeMs: 0,
+    todayDateKey: getTodayDateKey(now),
+    sessionCount: 0,
+    currentActivity: '',
+    lastActivityAt: null,
+    activityTimeMs: {},
     createdAt: now,
     updatedAt: now,
     lastLoginAt: null,
@@ -737,9 +892,13 @@ export async function updateManagedAccount(db, auth, currentUsernameLower, updat
   if (typeof updates.downloadAccess === 'boolean') patch.downloadAccess = updates.downloadAccess;
   if (typeof updates.chatMuted === 'boolean') patch.chatMuted = updates.chatMuted;
   if (typeof updates.chatBanned === 'boolean') patch.chatBanned = updates.chatBanned;
+  if (typeof updates.defaultGirlsTheme === 'boolean') patch.defaultGirlsTheme = updates.defaultGirlsTheme;
   if (typeof updates.roleBadge === 'string') patch.roleBadge = updates.roleBadge.trim().slice(0, 20);
   if (typeof updates.badgeColor === 'string' && BADGE_COLORS[updates.badgeColor]) {
     patch.badgeColor = updates.badgeColor;
+  }
+  if (typeof updates.adminNotes === 'string') {
+    patch.adminNotes = updates.adminNotes.trim().slice(0, 500);
   }
 
   if (typeof updates.newPassword === 'string' && updates.newPassword.length > 0) {
@@ -838,6 +997,9 @@ export async function syncAccountUserData(db, auth, usernameLower, data) {
     if (data.preferredMode === 'light' || data.preferredMode === 'dark') {
       patch.preferredMode = data.preferredMode;
     }
+    if (data.accountSettings && typeof data.accountSettings === 'object') {
+      patch.accountSettings = sanitizeAccountSettings(data.accountSettings);
+    }
     await updateDoc(doc(db, ACCOUNTS_COLLECTION, usernameLower), patch);
   } catch (err) {
     if (isFirestorePermissionError(err)) {
@@ -847,17 +1009,51 @@ export async function syncAccountUserData(db, auth, usernameLower, data) {
   }
 }
 
-export async function updateAccountPresence(db, auth, usernameLower, isOnline = true) {
+export async function updateAccountPresence(db, auth, usernameLower, isOnline = true, extra = {}) {
   if (!db || !usernameLower) return;
   const path = `${ACCOUNTS_COLLECTION}/${usernameLower}`;
   try {
     await ensureFirebaseAnonAuth(auth);
     const now = Date.now();
-    await updateDoc(doc(db, ACCOUNTS_COLLECTION, usernameLower), {
+    const patch = {
       isOnline: Boolean(isOnline),
       lastSeenAt: now,
       updatedAt: now,
-    });
+    };
+    if (!isOnline) {
+      patch.currentActivity = '';
+    } else if (typeof extra.currentActivity === 'string') {
+      patch.currentActivity = extra.currentActivity.trim().slice(0, 100);
+    }
+    await updateDoc(doc(db, ACCOUNTS_COLLECTION, usernameLower), patch);
+  } catch (err) {
+    if (isFirestorePermissionError(err)) {
+      handleFirestoreError(err, OperationType.UPDATE, path);
+    }
+  }
+}
+
+export async function recordAccountUsageHeartbeat(db, auth, usernameLower, stats) {
+  if (!db || !usernameLower || !stats) return;
+  const path = `${ACCOUNTS_COLLECTION}/${usernameLower}`;
+  try {
+    await ensureFirebaseAnonAuth(auth);
+    const now = Date.now();
+    const patch = {
+      isOnline: stats.isOnline !== false,
+      lastSeenAt: now,
+      lastActivityAt: now,
+      updatedAt: now,
+      totalTimeMs: Math.max(0, Math.round(Number(stats.totalTimeMs || 0))),
+      todayTimeMs: Math.max(0, Math.round(Number(stats.todayTimeMs || 0))),
+      todayDateKey: typeof stats.todayDateKey === 'string' ? stats.todayDateKey.slice(0, 16) : getTodayDateKey(now),
+      currentActivity: stats.isOnline === false ? '' : String(stats.currentActivity || '').trim().slice(0, 100),
+      activityTimeMs: sanitizeActivityTimeMs(stats.activityTimeMs),
+    };
+    if (typeof stats.sessionCount === 'number' && Number.isFinite(stats.sessionCount) && stats.sessionCount >= 0) {
+      patch.sessionCount = Math.round(stats.sessionCount);
+    }
+    await updateDoc(doc(db, ACCOUNTS_COLLECTION, usernameLower), patch);
   } catch (err) {
     if (isFirestorePermissionError(err)) {
       handleFirestoreError(err, OperationType.UPDATE, path);

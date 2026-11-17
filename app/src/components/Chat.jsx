@@ -107,10 +107,11 @@ const THEMES = {
   emerald: { label: 'Emerald', swatch: ['#0C2B1B', '#154C2D'], accent: '#3ddc84' },
   sunset: { label: 'Sunset', swatch: ['#331F16', '#6E351C'], accent: '#ff8a4c' },
   lavender: { label: 'Lavender', swatch: ['#241C3B', '#493975'], accent: '#a78bfa' },
+  girls: { label: 'Girls', swatch: ['#2c1227', '#f472b6'], accent: '#f472b6' },
   light: { label: 'Light', swatch: ['#eaf0f6', '#ffffff'], accent: '#2563eb' },
   amoled: { label: 'AMOLED', swatch: ['#080808', '#000000'], accent: '#00e5b0' },
 };
-const THEME_ORDER = ['mono', 'midnight', 'slate', 'ocean', 'emerald', 'sunset', 'lavender', 'light', 'amoled'];
+const THEME_ORDER = ['mono', 'midnight', 'slate', 'ocean', 'emerald', 'sunset', 'lavender', 'girls', 'light', 'amoled'];
 
 const BADGE_STYLE_MAP = {
   cyan: { bg: 'rgba(6,182,212,0.16)', border: 'rgba(6,182,212,0.45)', text: '#67e8f9' },
@@ -158,6 +159,7 @@ function normalizeLinkedAccount(account) {
     isActive: account.isActive !== false,
     isAdmin: Boolean(account.isAdmin),
     lobbyChatAccess: account.lobbyChatAccess !== false,
+    defaultGirlsTheme: Boolean(account.defaultGirlsTheme),
     roleBadge: String(account.roleBadge || '').trim(),
     badgeColor: String(account.badgeColor || 'cyan'),
     chatMuted: Boolean(account.chatMuted),
@@ -591,6 +593,37 @@ export default function Chat({
     }
   }, [activeAccount, isOwnerAdmin]);
 
+  const chatThemeLockedToGirls = Boolean(
+    linkedAccount?.defaultGirlsTheme &&
+      workspaceConfig?.girlsThemeSyncChat !== false &&
+      workspaceConfig?.girlsThemePolicy === 'lock',
+  );
+
+  useEffect(() => {
+    if (!linkedAccount?.defaultGirlsTheme || workspaceConfig?.girlsThemeSyncChat === false) return;
+    const policy = workspaceConfig?.girlsThemePolicy || 'default_if_unset';
+    if (policy === 'lock') {
+      if (theme !== 'girls') {
+        setTheme('girls');
+        try {
+          localStorage.setItem('chat_theme', 'girls');
+        } catch {}
+      }
+    } else if (policy === 'default_if_unset') {
+      if (!theme || theme === 'mono') {
+        setTheme('girls');
+        try {
+          localStorage.setItem('chat_theme', 'girls');
+        } catch {}
+      }
+    }
+  }, [
+    linkedAccount?.defaultGirlsTheme,
+    workspaceConfig?.girlsThemePolicy,
+    workspaceConfig?.girlsThemeSyncChat,
+    theme,
+  ]);
+
   useEffect(() => {
     const applyAccountSync = (acc) => {
       const normalized = normalizeLinkedAccount(acc);
@@ -599,9 +632,20 @@ export default function Chat({
     };
 
     const handleCustomSync = (event) => applyAccountSync(event.detail || null);
+    const handleChatThemeSync = (event) => {
+      const next = event?.detail;
+      if (typeof next === 'string' && THEMES[next]) {
+        setTheme(next);
+        try {
+          localStorage.setItem('chat_theme', next);
+        } catch {}
+      }
+    };
     const handleStorage = (event) => {
       if (event.key === LINKED_ACCOUNT_STORAGE_KEY) {
         applyAccountSync(safeParse(LINKED_ACCOUNT_STORAGE_KEY, null));
+      } else if (event.key === 'chat_theme' && event.newValue && THEMES[event.newValue]) {
+        setTheme(event.newValue);
       }
     };
     const handleWindowMsg = (event) => {
@@ -660,6 +704,7 @@ export default function Chat({
     };
 
     window.addEventListener('urnperiodic-account-sync', handleCustomSync);
+    window.addEventListener('urnperiodic-chat-theme-sync', handleChatThemeSync);
     window.addEventListener('storage', handleStorage);
     window.addEventListener('message', handleWindowMsg);
 
@@ -671,6 +716,7 @@ export default function Chat({
 
     return () => {
       window.removeEventListener('urnperiodic-account-sync', handleCustomSync);
+      window.removeEventListener('urnperiodic-chat-theme-sync', handleChatThemeSync);
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('message', handleWindowMsg);
       if (bus) {
@@ -1377,9 +1423,16 @@ export default function Chat({
   );
 
   const handleApplyTheme = (key) => {
+    if (chatThemeLockedToGirls && key !== 'girls') {
+      showToast('🔒 Lobby Chat theme is locked to Girls by an admin.');
+      return;
+    }
     setTheme(key);
     try {
       localStorage.setItem('chat_theme', key);
+    } catch {}
+    try {
+      window.dispatchEvent(new CustomEvent('urnperiodic-chat-theme-change', { detail: key }));
     } catch {}
   };
 
@@ -2500,6 +2553,34 @@ export default function Chat({
       data-scheme={theme === 'light' ? 'light' : 'dark'}
       className="w-full h-full flex chat-surface chat-txt overflow-hidden select-none relative"
     >
+      {theme === 'girls' && (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden="true">
+          <div
+            className="absolute -top-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-30"
+            style={{ background: 'radial-gradient(circle, rgba(244,114,182,0.35), transparent 70%)' }}
+          />
+          <div
+            className="absolute -bottom-24 left-12 w-72 h-72 rounded-full blur-3xl opacity-25"
+            style={{ background: 'radial-gradient(circle, rgba(251,113,133,0.3), transparent 70%)' }}
+          />
+          <svg className="absolute top-12 right-8 w-10 h-10 opacity-35" viewBox="0 0 64 64" fill="none">
+            <g transform="translate(32 32)">
+              {[0, 72, 144, 216, 288].map((deg) => (
+                <path
+                  key={deg}
+                  d="M0,-4 C7,-14 14,-22 0,-26 C-14,-22 -7,-14 0,-4 Z"
+                  fill="rgba(244,114,182,0.55)"
+                  transform={`rotate(${deg})`}
+                />
+              ))}
+              <circle cx="0" cy="0" r="3.5" fill="rgba(253,224,239,0.8)" />
+            </g>
+          </svg>
+          <svg className="absolute bottom-20 right-12 w-6 h-6 opacity-40" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill="rgba(249,168,212,0.75)" />
+          </svg>
+        </div>
+      )}
       {/* ============ LEFT SIDEBAR 1: CHANNEL RAIL ============ */}
       {!isMini && (
         <aside className="hidden md:flex flex-col w-14 border-r chat-bd chat-surface-deep shrink-0 items-center py-3 gap-2">
@@ -4061,18 +4142,31 @@ export default function Chat({
               </button>
             </div>
 
+            {chatThemeLockedToGirls && (
+              <div className="px-3 py-2 rounded-xl border border-pink-400/35 bg-pink-500/10 text-pink-200 text-[11px] flex items-center gap-2">
+                <Lock className="w-3.5 h-3.5 text-pink-300 shrink-0" />
+                <span>Girls theme is locked for your account by an administrator.</span>
+              </div>
+            )}
+
             <div className="flex items-center gap-2 chat-surface-deep border chat-bd rounded-full px-3 py-2 self-start flex-wrap">
               {THEME_ORDER.map((key) => {
                 const t = THEMES[key];
                 const active = theme === key;
+                const disabled = chatThemeLockedToGirls && key !== 'girls';
                 return (
                   <button
                     key={key}
                     type="button"
+                    disabled={disabled}
                     onClick={() => handleApplyTheme(key)}
-                    title={`${t.label} Theme`}
-                    className={`w-6 h-6 rounded-full shrink-0 transition-all cursor-pointer ${
-                      active ? 'ring-2 ring-white scale-110' : 'hover:scale-110 opacity-80 hover:opacity-100'
+                    title={disabled ? `${t.label} (Locked to Girls by admin)` : `${t.label} Theme`}
+                    className={`w-6 h-6 rounded-full shrink-0 transition-all ${
+                      disabled
+                        ? 'opacity-30 cursor-not-allowed'
+                        : active
+                          ? 'ring-2 ring-white scale-110 cursor-pointer'
+                          : 'hover:scale-110 opacity-80 hover:opacity-100 cursor-pointer'
                     }`}
                     style={{
                       background: `linear-gradient(135deg, ${t.swatch[0]}, ${t.swatch[1]})`,
@@ -4087,13 +4181,19 @@ export default function Chat({
               {THEME_ORDER.map((key) => {
                 const t = THEMES[key];
                 const active = theme === key;
+                const disabled = chatThemeLockedToGirls && key !== 'girls';
                 return (
                   <button
                     key={key}
                     type="button"
+                    disabled={disabled}
                     onClick={() => handleApplyTheme(key)}
-                    className={`group relative rounded-xl p-3 h-20 flex flex-col justify-end text-left border transition-all cursor-pointer ${
-                      active ? 'ring-2 ring-offset-1' : ''
+                    className={`group relative rounded-xl p-3 h-20 flex flex-col justify-end text-left border transition-all ${
+                      disabled
+                        ? 'opacity-35 cursor-not-allowed'
+                        : active
+                          ? 'ring-2 ring-offset-1 cursor-pointer'
+                          : 'cursor-pointer'
                     }`}
                     style={{
                       background: `linear-gradient(135deg, ${t.swatch[0]}, ${t.swatch[1]})`,
