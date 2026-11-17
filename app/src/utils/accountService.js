@@ -18,6 +18,7 @@ import {
 export const ACCOUNTS_COLLECTION = 'siteAccounts';
 export const WORKSPACE_CONFIG_COLLECTION = 'siteConfig';
 export const WORKSPACE_CONFIG_DOC_ID = 'workspaceAccess';
+export const WORKSPACE_CONFIG_CACHE_KEY = 'urnperiodic-workspace-config-cache';
 export const ACCOUNT_SESSION_KEY = 'urnperiodic-account-session';
 export const CHAT_LINKED_ACCOUNT_KEY = 'urnperiodic_chat_account';
 export const LAST_ACTIVITY_KEY = 'urnperiodic-last-activity';
@@ -71,11 +72,19 @@ export const DEFAULT_WORKSPACE_CONFIG = {
   aiAccess: true,
   decoysAccess: true,
   downloadAccess: true,
+  broadcastId: '',
+  broadcastMessage: '',
+  broadcastSender: '',
+  broadcastAt: null,
   updatedAt: 0,
 };
 
 export function sanitizeWorkspaceConfig(data) {
   if (!data) return { ...DEFAULT_WORKSPACE_CONFIG };
+  const rawBroadcastMsg = typeof data.broadcastMessage === 'string' ? data.broadcastMessage.trim().slice(0, 500) : '';
+  const rawBroadcastId = typeof data.broadcastId === 'string' ? data.broadcastId.trim().slice(0, 64) : '';
+  const rawBroadcastSender = typeof data.broadcastSender === 'string' ? data.broadcastSender.trim().slice(0, 40) : '';
+  const rawBroadcastAt = Number(data.broadcastAt || 0);
   return {
     siteLockdown: Boolean(data.siteLockdown),
     lockdownMessage:
@@ -93,8 +102,34 @@ export function sanitizeWorkspaceConfig(data) {
     aiAccess: data.aiAccess !== false,
     decoysAccess: data.decoysAccess !== false,
     downloadAccess: data.downloadAccess !== false,
+    broadcastId: rawBroadcastMsg ? rawBroadcastId : '',
+    broadcastMessage: rawBroadcastMsg,
+    broadcastSender: rawBroadcastMsg ? rawBroadcastSender : '',
+    broadcastAt: rawBroadcastMsg && rawBroadcastAt > 0 ? rawBroadcastAt : null,
     updatedAt: Number(data.updatedAt || 0),
   };
+}
+
+export function getCachedWorkspaceConfig() {
+  try {
+    const raw = localStorage.getItem(WORKSPACE_CONFIG_CACHE_KEY);
+    if (!raw) return { ...DEFAULT_WORKSPACE_CONFIG };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_WORKSPACE_CONFIG };
+    return sanitizeWorkspaceConfig(parsed);
+  } catch {
+    return { ...DEFAULT_WORKSPACE_CONFIG };
+  }
+}
+
+export function cacheWorkspaceConfig(config) {
+  try {
+    const sanitized = sanitizeWorkspaceConfig(config);
+    localStorage.setItem(WORKSPACE_CONFIG_CACHE_KEY, JSON.stringify(sanitized));
+    return sanitized;
+  } catch {
+    return sanitizeWorkspaceConfig(config);
+  }
 }
 
 export const BADGE_COLORS = {
@@ -844,10 +879,12 @@ export function subscribeToWorkspaceConfig(db, auth, onUpdate, onError) {
         ref,
         (snap) => {
           if (!snap.exists()) {
-            onUpdate({ ...DEFAULT_WORKSPACE_CONFIG });
+            const def = cacheWorkspaceConfig({ ...DEFAULT_WORKSPACE_CONFIG });
+            onUpdate(def);
             return;
           }
-          onUpdate(sanitizeWorkspaceConfig(snap.data()));
+          const next = cacheWorkspaceConfig(snap.data());
+          onUpdate(next);
         },
         (err) => {
           if (isFirestorePermissionError(err)) {
@@ -888,9 +925,35 @@ export async function updateWorkspaceConfig(db, auth, updates) {
       updatedAt: Date.now(),
     });
     await setDoc(ref, next);
+    cacheWorkspaceConfig(next);
     return next;
   } catch (err) {
     if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.WRITE, path);
     throw err;
   }
+}
+
+export async function sendAdminBroadcast(db, auth, message, senderName = 'Admin') {
+  const cleanMessage = String(message || '').trim().slice(0, 500);
+  if (!cleanMessage) {
+    throw new Error('Please enter a message to send to everyone.');
+  }
+  const cleanSender = String(senderName || 'Admin').trim().slice(0, 40) || 'Admin';
+  const now = Date.now();
+  const broadcastId = `bc_${now}_${Math.random().toString(36).slice(2, 6)}`.slice(0, 64);
+  return updateWorkspaceConfig(db, auth, {
+    broadcastId,
+    broadcastMessage: cleanMessage,
+    broadcastSender: cleanSender,
+    broadcastAt: now,
+  });
+}
+
+export async function clearAdminBroadcast(db, auth) {
+  return updateWorkspaceConfig(db, auth, {
+    broadcastId: '',
+    broadcastMessage: '',
+    broadcastSender: '',
+    broadcastAt: null,
+  });
 }
