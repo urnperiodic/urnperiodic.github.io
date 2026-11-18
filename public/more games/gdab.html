@@ -1,0 +1,56 @@
+<script>
+      // ts true 💔😭✌
+      window.gnMathIsTheBestGameSiteEver = {
+        "ancestorOrigins": {},
+        "href": "https://html5.gamedistribution.com/rvvASMiM/02ff01e6e9f7451ba28d889a2a55eec9/index.html?gd_sdk_referrer_url=https%3A%2F%2Fgamedistribution.com%2Fgames%2Fgolf-orbit%2F&gd_zone_config=eyJwYXJlbnRVUkwiOiJodHRwczovL2h0bWw1LmdhbWVkaXN0cmlidXRpb24uY29tLzAyZmYwMWU2ZTlmNzQ1MWJhMjhkODg5YTJhNTVlZWM5Lz9nZF9zZGtfcmVmZXJyZXJfdXJsPWh0dHBzOi8vZ2FtZWRpc3RyaWJ1dGlvbi5jb20vZ2FtZXMvZ29sZi1vcmJpdC8iLCJwYXJlbnREb21haW4iOiJnYW1lZGlzdHJpYnV0aW9uLmNvbSIsInRvcERvbWFpbiI6ImdhbWVkaXN0cmlidXRpb24uY29tIiwiaGFzSW1wcmVzc2lvbiI6ZmFsc2UsImxvYWRlckVuYWJsZWQiOnRydWUsImhvc3QiOiJodG1sNS5nYW1lZGlzdHJpYnV0aW9uLmNvbSIsInZlcnNpb24iOiIxLjUuMTcifQ%253D%253D",
+        "origin": "https://html5.gamedistribution.com",
+        "protocol": "https:",
+        "host": "html5.gamedistribution.com",
+        "hostname": "html5.gamedistribution.com",
+        "port": "",
+        "pathname": "/rvvASMiM/02ff01e6e9f7451ba28d889a2a55eec9/index.html",
+        "search": "?gd_sdk_referrer_url=https%3A%2F%2Fgamedistribution.com%2Fgames%2Fitalian-brainrot-obby-parkour%2F&gd_zone_config=eyJwYXJlbnRVUkwiOiJodHRwczovL2dhbWVkaXN0cmlidXRpb24uY29tL2dhbWVzL2l0YWxpYW4tYnJhaW5yb3Qtb2JieS1wYXJrb3VyLyIsInBhcmVudERvbWFpbiI6ImdhbWVkaXN0cmlidXRpb24uY29tIiwidG9wRG9tYWluIjoiZ2FtZWRpc3RyaWJ1dGlvbi5jb20iLCJoYXNJbXByZXNzaW9uIjpmYWxzZSwibG9hZGVyRW5hYmxlZCI6dHJ1ZSwiaG9zdCI6Imh0bWw1LmdhbWVkaXN0cmlidXRpb24uY29tIiwidmVyc2lvbiI6IjEuNS4xNyJ9",
+        "hash": ""
+      }
+
+      const originalFetch = window.fetch;
+      window.fetch = function (...args) {
+        if (args[0].includes("html5.api.gamedistribution.com/main.min.js")) {
+          args[0] = "main.min.js";
+        }
+        return originalFetch.apply(this, args);
+      };
+
+      const originalOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+        if (url.includes("html5.api.gamedistribution.com/main.min.js")) {
+          url = "main.min.js";
+        }
+        return originalOpen.call(this, method, url, ...rest);
+      };
+
+      const originalCreateElement = document.createElement.bind(document);
+
+      document.createElement = function(tagName) {
+        const element = originalCreateElement(tagName);
+        if (tagName.toLowerCase() === "script") {
+          let srcValue = "";
+          Object.defineProperty(element, "src", {
+            get() {
+              return srcValue;
+            },
+            set(newSrc) {
+              let newUrl = newSrc;
+              if (newSrc.includes("html5.api.gamedistribution.com/main.min.js")) {
+                newUrl = "main.min.js";
+              }
+              srcValue = newUrl;
+              element.setAttribute("src", newUrl);
+            },
+            configurable: true,
+            enumerable: true,
+          });
+        }
+        return element;
+      };
+  </script>
