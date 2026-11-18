@@ -2558,6 +2558,7 @@ body.animations-disabled .shimmer-bg,
   font-size: 12.5px;
   font-weight: 500;
   color: var(--text-2);
+  text-decoration: none;
   border: 1px solid var(--border);
   border-radius: 99px;
   padding: 8px 14px;

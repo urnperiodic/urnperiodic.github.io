@@ -177,6 +177,7 @@ export function openClarityVideoInAboutBlank(item, decoyMeta = {}) {
   const safeTitle = String(decoyMeta.title || 'Google Classroom').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const safeFavicon = String(decoyMeta.favicon || 'https://ssl.gstatic.com/classroom/favicon.png').replace(/"/g, '&quot;');
   const safeSrc = targetUrl.replace(/"/g, '&quot;');
+  const safeJsUrl = JSON.stringify(targetUrl).replace(/</g, '\\u003c');
 
   try {
     win.document.open();
@@ -185,27 +186,48 @@ export function openClarityVideoInAboutBlank(item, decoyMeta = {}) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="refresh" content="0;url=${safeSrc}">
   <title>${safeTitle}</title>
   <link rel="icon" href="${safeFavicon}">
   <link rel="shortcut icon" href="${safeFavicon}">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100vw; height: 100vh; overflow: hidden; background: #0b0d14; }
-    iframe { width: 100vw; height: 100vh; border: none; display: block; background: #0b0d14; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #0b0d14; color: #e5e7eb;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex; align-items: center; justify-content: center;
+    }
+    a {
+      color: #93c5fd; text-decoration: none; font-size: 14px;
+      padding: 10px 16px; border: 1px solid rgba(147, 197, 253, 0.35);
+      border-radius: 8px;
+    }
+    a:hover { background: rgba(147, 197, 253, 0.1); }
   </style>
 </head>
 <body>
-  <iframe
-    src="${safeSrc}"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-    allowfullscreen
-    referrerpolicy="no-referrer"
-  ></iframe>
+  <a href="${safeSrc}" rel="noopener noreferrer">Opening Google Classroom…</a>
+  <script>
+    try { window.opener = null; } catch (e) {}
+    window.location.replace(${safeJsUrl});
+  </script>
 </body>
 </html>`);
     win.document.close();
+    try {
+      win.opener = null;
+    } catch {
+      // Ignore cross-origin opener errors
+    }
   } catch {
-    return { opened: false, url: targetUrl };
+    try {
+      win.opener = null;
+      win.location.replace(targetUrl);
+    } catch {
+      return { opened: false, url: targetUrl };
+    }
   }
 
   return { opened: true, url: targetUrl };

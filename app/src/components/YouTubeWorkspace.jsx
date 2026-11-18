@@ -948,6 +948,21 @@ export default function YouTubeWorkspace({
 
                 <div className="clarity-player-actions">
                   {classroomUrl && (
+                    <a
+                      href={classroomUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="clarity-chip-btn"
+                      title="Open directly in a regular browser tab"
+                    >
+                      <svg viewBox="0 0 24 24">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+                      </svg>
+                      Open Tab
+                    </a>
+                  )}
+
+                  {classroomUrl && (
                     <button
                       type="button"
                       className="clarity-chip-btn"
