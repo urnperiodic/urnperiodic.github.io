@@ -341,8 +341,8 @@ const gameData: Game[] = [
   {
     title: 'Slope',
     description: 'This is just for the girls ig',
-    url: 'clslopeplus.html',
-    thumbnail: 'https://i.ytimg.com/vi/jvjZ4rnERmM/maxresdefault.jpg',
+    url: 'slope.html',
+    thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQx297eMTVtsXI_06aeirEVF0faUqhwEwvx_rzSMF-yHw&s=10',
     category: 'Solo',
     featured: false,
     isOg: true,
@@ -351,7 +351,7 @@ const gameData: Game[] = [
   {
     title: 'Epilepsy game',
     description: 'This is just for the girls ig',
-    url: 'https://ubg365.github.io/death-run-3d/',
+    url: 'cldeathrun.html',
     thumbnail: 'https://play-lh.googleusercontent.com/IeGUGo20PsUgjtAajcZWsz09ypyAIITXS8jDzzLAFdoR65Zy_3PVOP-ckq5b_A_vPzuV=w526-h296-rw',
     category: 'Solo',
     featured: false,
