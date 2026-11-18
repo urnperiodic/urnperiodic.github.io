@@ -345,7 +345,7 @@ const gameData: Game[] = [
     thumbnail: 'https://i.ytimg.com/vi/jvjZ4rnERmM/maxresdefault.jpg',
     category: 'Solo',
     featured: false,
-    isOg: true
+    isOg: true,
     girlsFeatured: true
   },
   {
@@ -355,7 +355,7 @@ const gameData: Game[] = [
     thumbnail: 'https://play-lh.googleusercontent.com/IeGUGo20PsUgjtAajcZWsz09ypyAIITXS8jDzzLAFdoR65Zy_3PVOP-ckq5b_A_vPzuV=w526-h296-rw',
     category: 'Solo',
     featured: false,
-    isOg: true
+    isOg: true,
     girlsFeatured: true
   },
   {
@@ -374,7 +374,7 @@ const gameData: Game[] = [
     thumbnail: 'https://i.ytimg.com/vi/WUTrv--kZtI/maxresdefault.jpg',
     category: 'Solo',
     featured: true,
-    isOg: true
+    isOg: true,
     girlsFeatured: true
   },
   {
@@ -783,7 +783,7 @@ const gameData: Game[] = [
     url: 'cl2048cupcakes.html',
     thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdVN_qRCADXsdeNU_BQwsmMU2s6KahLAnEvNKA2SAYaQ&s=10',
     category: 'Solo',
-    featured: false
+    featured: false,
     girlsFeatured: true
   },
   {
