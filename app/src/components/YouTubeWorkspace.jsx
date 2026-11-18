@@ -211,16 +211,13 @@ export default function YouTubeWorkspace({
         thumb: getItemThumb(item),
       };
 
-      // Open immediately inside synchronous click/submit handler so popup blockers allow about:blank
+      // Open immediately inside synchronous click/submit handler so popup blockers allow the new tab
       if (launchAboutBlank) {
-        const result = openClarityVideoInAboutBlank(normalized, {
-          title: decoyTitle,
-          favicon: decoyFavicon,
-        });
+        const result = openClarityVideoInAboutBlank(normalized);
         if (result.opened) {
-          showToast('Opened in about:blank');
+          showToast('Opened Classroom video');
         } else if (result.url) {
-          showToast('Popup blocked — click "Open in about:blank" below');
+          showToast('Popup blocked — click "Open Video" below');
         }
       }
 
@@ -685,7 +682,7 @@ export default function YouTubeWorkspace({
               <button
                 type="submit"
                 className="clarity-nav-search-btn"
-                title="Search or open in about:blank"
+                title="Search or open video"
                 aria-label="Submit search"
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -700,7 +697,7 @@ export default function YouTubeWorkspace({
               <button
                 type="button"
                 className="clarity-resume-nav-btn"
-                title="Resume last video in about:blank"
+                title="Resume last video"
                 onClick={() => playVideo(lastHistoryItem, { launchAboutBlank: true })}
               >
                 ▶ Resume
@@ -880,8 +877,8 @@ export default function YouTubeWorkspace({
                     </div>
                     <h3>Search YouTube or paste any link above</h3>
                     <p>
-                      Click any result or press Go on a YouTube URL to open it in{' '}
-                      <strong>about:blank</strong> via Classroom.
+                      Click any result or press Go on a YouTube URL to open it directly via{' '}
+                      <strong>Classroom</strong>.
                     </p>
                   </div>
                 )}
@@ -922,7 +919,7 @@ export default function YouTubeWorkspace({
                     <svg viewBox="0 0 24 24">
                       <path d="M7 4.6v14.8c0 .9 1 1.5 1.8 1L20.6 13c.8-.5.8-1.6 0-2L8.8 3.6c-.8-.5-1.8.1-1.8 1z" />
                     </svg>
-                    Open in about:blank
+                    Open Video
                   </span>
                   {classroomUrl && (
                     <span className="clarity-launch-badge" title={classroomUrl}>
@@ -953,36 +950,13 @@ export default function YouTubeWorkspace({
                       target="_blank"
                       rel="noopener noreferrer"
                       className="clarity-chip-btn"
-                      title="Open directly in a regular browser tab"
+                      title="Open video in a new tab"
                     >
                       <svg viewBox="0 0 24 24">
                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
                       </svg>
-                      Open Tab
+                      Open Video
                     </a>
-                  )}
-
-                  {classroomUrl && (
-                    <button
-                      type="button"
-                      className="clarity-chip-btn"
-                      onClick={() => {
-                        const result = openClarityVideoInAboutBlank(currentVideo, {
-                          title: decoyTitle,
-                          favicon: decoyFavicon,
-                        });
-                        showToast(
-                          result.opened
-                            ? 'Opened in about:blank'
-                            : 'Popup blocked — allow popups to open about:blank'
-                        );
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
-                      </svg>
-                      about:blank
-                    </button>
                   )}
 
                   {classroomUrl && (
@@ -1050,7 +1024,7 @@ export default function YouTubeWorkspace({
               <h2>Watch distraction-free</h2>
               <p>
                 Click the search bar above or press <kbd>/</kbd> to search YouTube or paste any
-                link. Videos automatically open in <strong>about:blank</strong> via Classroom.
+                link. Videos open directly via <strong>Classroom</strong>.
               </p>
               {lastHistoryItem && (
                 <button
@@ -1488,11 +1462,11 @@ export default function YouTubeWorkspace({
               <span className="keys"><kbd>/</kbd></span>
             </div>
             <div className="clarity-shortcut-item">
-              <span>Paste &amp; open in about:blank</span>
+              <span>Paste &amp; open video</span>
               <span className="keys"><kbd>Ctrl</kbd><kbd>V</kbd></span>
             </div>
             <div className="clarity-shortcut-item">
-              <span>Re-open current video in about:blank</span>
+              <span>Re-open current video</span>
               <span className="keys"><kbd>O</kbd></span>
             </div>
             <div className="clarity-shortcut-item">
