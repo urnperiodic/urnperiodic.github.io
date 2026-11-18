@@ -482,7 +482,7 @@ const gameData: Game[] = [
     url: 'https://urnperiodic.github.io/suika-game/',
     thumbnail: 'https://media.tenor.com/7vR97sAI99IAAAAe/watermelon-game-suika-game.png',
     category: 'solo',
-    featured: false
+    featured: false,
     girlsFeatured: true
   },
   {
