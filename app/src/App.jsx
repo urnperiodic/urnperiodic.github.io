@@ -158,7 +158,6 @@ import {
 } from './utils/accountService';
 const MoviesWorkspace = lazy(() => import('./components/MoviesWorkspace'));
 const MoreMoviesWorkspace = lazy(() => import('./components/MoreMoviesWorkspace'));
-const YouTubeWorkspace = lazy(() => import('./components/YouTubeWorkspace'));
 import InformationSection from './components/InformationSection';
 
 function LobbyUnreadIndicator({ visible }) {
@@ -2324,7 +2323,7 @@ export default function App() {
     } else if (currentFilter === 'moremovies') {
       url = window.location.origin + '?filter=moremovies&view=games';
     } else if (currentFilter === 'youtube') {
-      url = window.location.origin + '?filter=youtube&view=games';
+      url = 'https://urnperiodic.github.io/youtube1/';
     } else if (currentFilter === 'lobbychat') {
       url = window.location.origin + '?filter=lobbychat&view=games';
     } else if (currentFilter === 'download') {
@@ -3862,7 +3861,7 @@ export default function App() {
     }
     if (filter === 'movies') return { key: 'movies', label: 'Watching Movies' };
     if (filter === 'moremovies') return { key: 'moremovies', label: 'Browsing More Movies' };
-    if (filter === 'youtube') return { key: 'youtube', label: 'Watching Clarity Video' };
+    if (filter === 'youtube') return { key: 'youtube', label: 'Watching YouTube' };
     if (filter === 'lobbychat') return { key: 'lobbychat', label: 'In Lobby Chat' };
     if (filter === 'chat') return { key: 'ai', label: 'Using AI Chat' };
     return { key: 'catalog', label: 'Browsing Catalog' };
@@ -7339,7 +7338,7 @@ export default function App() {
 
               {/* Open Link Button */}
               {(() => {
-                const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? `${window.location.origin}?filter=youtube&view=games` : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
+                const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
                 const hasUrl = !!url;
                 return (
                   <motion.button
@@ -7590,7 +7589,7 @@ export default function App() {
                   </button>
 
                   {(() => {
-                    const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? `${window.location.origin}?filter=youtube&view=games` : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
+                    const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
                     const hasUrl = !!url;
                     return (
                       <button
@@ -7911,7 +7910,7 @@ export default function App() {
 
                 {/* Open Link Button */}
                 {(() => {
-                  const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? `${window.location.origin}?filter=youtube&view=games` : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
+                  const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
                   const hasUrl = !!url;
                   return (
                     <button
@@ -9313,15 +9312,25 @@ export default function App() {
                   animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
                   exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
                   transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
-                  className="flex-1 flex flex-col w-full h-full min-h-0 bg-[#0b0d14] border border-[var(--card-border)]/60 rounded-2xl overflow-hidden"
+                  className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[#0c0a09]"
                 >
-                  <Suspense fallback={<div className="flex-1 flex items-center justify-center text-xs font-mono text-[var(--text-muted)]">Loading Clarity Video...</div>}>
-                    <YouTubeWorkspace
-                      decoyTitle={getDecoyTitle(decoyType, customDecoyTitles)}
-                      decoyFavicon={getDecoyFavicon(decoyType)}
-                      onClose={() => setFilter('all')}
-                    />
-                  </Suspense>
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-[#121019] border-b border-white/10 text-xs shrink-0">
+                    <button
+                      onClick={() => setFilter('all')}
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/10 hover:bg-[var(--accent-color)] text-white hover:text-black font-bold font-mono transition-all cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Go back to portals</span>
+                    </button>
+                    <span className="font-mono text-[11px] text-neutral-400">YouTube Workspace</span>
+                  </div>
+                  <iframe 
+                    src="https://urnperiodic.github.io/youtube1/" 
+                    className="w-full h-full border-none flex-1 shadow-inner bg-[#0c0a09]"
+                    allow="fullscreen; autoplay; clipboard-write; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                    referrerPolicy="no-referrer"
+                  />
                 </motion.div>
               ) : filter === 'download' && canDownloadAccess ? (
                 <motion.div 
