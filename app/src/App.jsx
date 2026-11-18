@@ -445,7 +445,11 @@ function ThemeDropdown({ theme, setTheme, mode, lockedTheme = null, onSelectThem
           </div>
 
           {isLocked && (
-            <div className="mx-1.5 mb-1.5 px-2.5 py-1.5 rounded-lg border border-pink-400/35 bg-pink-500/10 text-[10px] text-pink-300 flex items-center gap-1.5">
+            <div className={`mx-1.5 mb-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] flex items-center gap-1.5 ${
+              mode === 'light'
+                ? 'border-pink-300 bg-pink-50 text-pink-700 font-semibold'
+                : 'border-pink-400/35 bg-pink-500/10 text-pink-300'
+            }`}>
               <Lock className="w-3 h-3 shrink-0" />
               <span>Locked to Girls by admin</span>
             </div>
@@ -474,7 +478,7 @@ function ThemeDropdown({ theme, setTheme, mode, lockedTheme = null, onSelectThem
                       ? 'opacity-35 cursor-not-allowed text-[var(--text-muted)]'
                       : isSelected
                         ? 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] font-bold shadow-xs cursor-pointer'
-                        : 'hover:bg-white/5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer'
+                        : 'hover:bg-[var(--accent-color)]/10 text-[var(--text-primary)] cursor-pointer'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
@@ -765,43 +769,74 @@ function CursorSpotlight({ active }) {
 function GirlsThemeDecorations({ active, mode }) {
   if (!active) return null;
   const isLight = mode === 'light';
-  const primaryFill = isLight ? 'rgba(236, 72, 153, 0.24)' : 'rgba(244, 114, 182, 0.26)';
-  const secondaryFill = isLight ? 'rgba(244, 114, 182, 0.20)' : 'rgba(251, 182, 206, 0.22)';
-  const sparkleFill = isLight ? 'rgba(219, 39, 119, 0.34)' : 'rgba(253, 224, 239, 0.42)';
-  const ribbonStroke = isLight ? 'rgba(219, 39, 119, 0.28)' : 'rgba(249, 168, 212, 0.32)';
+  const primaryFill = isLight ? 'url(#girlsLightPetalGrad)' : 'rgba(244, 114, 182, 0.26)';
+  const secondaryFill = isLight ? 'url(#girlsLightRibbonGrad)' : 'rgba(251, 182, 206, 0.22)';
+  const sparkleFill = isLight ? 'url(#girlsLightSparkleGrad)' : 'rgba(253, 224, 239, 0.42)';
+  const ribbonStroke = isLight ? 'rgba(219, 39, 119, 0.34)' : 'rgba(249, 168, 212, 0.32)';
+  const petalStroke = isLight ? 'rgba(219, 39, 119, 0.22)' : 'none';
+  const charmShadow = isLight ? 'drop-shadow(0 6px 14px rgba(219, 39, 119, 0.16))' : undefined;
 
   return (
     <div
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden select-none"
       aria-hidden="true"
     >
+      {/* Shared gradients for crisp porcelain-silk light mode charms */}
+      {isLight && (
+        <svg className="absolute w-0 h-0" aria-hidden="true">
+          <defs>
+            <linearGradient id="girlsLightPetalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#fbcfe8" stopOpacity="0.88" />
+              <stop offset="100%" stopColor="#f472b6" stopOpacity="0.52" />
+            </linearGradient>
+            <linearGradient id="girlsLightRibbonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#fce7f3" stopOpacity="0.92" />
+              <stop offset="55%" stopColor="#fbcfe8" stopOpacity="0.72" />
+              <stop offset="100%" stopColor="#f9a8d4" stopOpacity="0.62" />
+            </linearGradient>
+            <linearGradient id="girlsLightSparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#f472b6" stopOpacity="0.72" />
+              <stop offset="100%" stopColor="#db2777" stopOpacity="0.48" />
+            </linearGradient>
+          </defs>
+        </svg>
+      )}
+
       {/* Soft Pastel Halo Clouds */}
       <div
-        className="absolute -top-24 -left-24 w-96 h-96 rounded-full blur-3xl opacity-70"
-        style={{ background: isLight ? 'radial-gradient(circle, rgba(244,114,182,0.22), transparent 70%)' : 'radial-gradient(circle, rgba(244,114,182,0.18), transparent 70%)' }}
+        className="absolute -top-24 -left-24 w-96 h-96 rounded-full blur-3xl opacity-75"
+        style={{ background: isLight ? 'radial-gradient(circle, rgba(244,114,182,0.20), transparent 70%)' : 'radial-gradient(circle, rgba(244,114,182,0.18), transparent 70%)' }}
       />
+      {isLight && (
+        <div
+          className="absolute -top-20 right-12 w-80 h-80 rounded-full blur-3xl opacity-65"
+          style={{ background: 'radial-gradient(circle, rgba(251,191,36,0.11), rgba(249,168,212,0.14) 48%, transparent 72%)' }}
+        />
+      )}
       <div
-        className="absolute -bottom-28 -right-24 w-[28rem] h-[28rem] rounded-full blur-3xl opacity-70"
-        style={{ background: isLight ? 'radial-gradient(circle, rgba(251,113,133,0.18), transparent 70%)' : 'radial-gradient(circle, rgba(217,70,239,0.15), transparent 70%)' }}
+        className="absolute -bottom-28 -right-24 w-[28rem] h-[28rem] rounded-full blur-3xl opacity-75"
+        style={{ background: isLight ? 'radial-gradient(circle, rgba(216,180,254,0.18), rgba(251,113,133,0.14) 55%, transparent 72%)' : 'radial-gradient(circle, rgba(217,70,239,0.15), transparent 70%)' }}
       />
 
       {/* Top-left Cherry Blossom Cluster */}
-      <svg className="absolute top-20 left-5 w-16 h-16 girls-float-slow" viewBox="0 0 64 64" fill="none">
+      <svg className="absolute top-20 left-5 w-16 h-16 girls-float-slow" style={{ filter: charmShadow }} viewBox="0 0 64 64" fill="none">
         <g transform="translate(32 32)">
           {[0, 72, 144, 216, 288].map((deg) => (
             <path
               key={deg}
               d="M0,-4 C7,-14 14,-22 0,-26 C-14,-22 -7,-14 0,-4 Z"
               fill={primaryFill}
+              stroke={petalStroke}
+              strokeWidth={isLight ? '1' : '0'}
               transform={`rotate(${deg})`}
             />
           ))}
-          <circle cx="0" cy="0" r="4" fill={sparkleFill} />
+          <circle cx="0" cy="0" r="4.2" fill={isLight ? '#fbbf24' : sparkleFill} fillOpacity={isLight ? '0.65' : '1'} stroke={isLight ? '#db2777' : 'none'} strokeOpacity="0.25" strokeWidth="1" />
         </g>
       </svg>
 
       {/* Top-right Dainty Ribbon Bow */}
-      <svg className="absolute top-24 right-8 w-16 h-12 girls-drift" viewBox="0 0 80 56" fill="none">
+      <svg className="absolute top-24 right-8 w-16 h-12 girls-drift" style={{ filter: charmShadow }} viewBox="0 0 80 56" fill="none">
         <path
           d="M40 26 C28 10, 8 10, 12 26 C16 38, 30 34, 40 26 Z M40 26 C52 10, 72 10, 68 26 C64 38, 50 34, 40 26 Z"
           fill={secondaryFill}
@@ -819,15 +854,15 @@ function GirlsThemeDecorations({ active, mode }) {
       </svg>
 
       {/* Mid-left Four-Point Sparkles */}
-      <svg className="absolute top-[42%] left-7 w-9 h-9 girls-twinkle" viewBox="0 0 36 36" fill="none">
+      <svg className="absolute top-[42%] left-7 w-9 h-9 girls-twinkle" style={{ filter: charmShadow }} viewBox="0 0 36 36" fill="none">
         <path d="M18 2 L21 15 L34 18 L21 21 L18 34 L15 21 L2 18 L15 15 Z" fill={sparkleFill} />
       </svg>
-      <svg className="absolute top-[52%] left-16 w-5 h-5 girls-twinkle" style={{ animationDelay: '1.4s' }} viewBox="0 0 24 24" fill="none">
+      <svg className="absolute top-[52%] left-16 w-5 h-5 girls-twinkle" style={{ animationDelay: '1.4s', filter: charmShadow }} viewBox="0 0 24 24" fill="none">
         <path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill={primaryFill} />
       </svg>
 
       {/* Mid-right Heart & Sparkle Duo */}
-      <svg className="absolute top-[46%] right-9 w-11 h-11 girls-float-slow" style={{ animationDelay: '1.8s' }} viewBox="0 0 40 40" fill="none">
+      <svg className="absolute top-[46%] right-9 w-11 h-11 girls-float-slow" style={{ animationDelay: '1.8s', filter: charmShadow }} viewBox="0 0 40 40" fill="none">
         <path
           d="M20 33 C11 26.5 5 21 5 14.5 C5 10.2 8.4 7 12.6 7 C15.4 7 18.1 8.5 20 11 C21.9 8.5 24.6 7 27.4 7 C31.6 7 35 10.2 35 14.5 C35 21 29 26.5 20 33 Z"
           fill={primaryFill}
@@ -835,12 +870,12 @@ function GirlsThemeDecorations({ active, mode }) {
           strokeWidth="1.5"
         />
       </svg>
-      <svg className="absolute top-[34%] right-20 w-6 h-6 girls-twinkle" style={{ animationDelay: '0.9s' }} viewBox="0 0 24 24" fill="none">
+      <svg className="absolute top-[34%] right-20 w-6 h-6 girls-twinkle" style={{ animationDelay: '0.9s', filter: charmShadow }} viewBox="0 0 24 24" fill="none">
         <path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill={sparkleFill} />
       </svg>
 
       {/* Bottom-left Crescent Moon & Star */}
-      <svg className="absolute bottom-14 left-10 w-14 h-14 girls-drift" style={{ animationDelay: '2.2s' }} viewBox="0 0 56 56" fill="none">
+      <svg className="absolute bottom-14 left-10 w-14 h-14 girls-drift" style={{ animationDelay: '2.2s', filter: charmShadow }} viewBox="0 0 56 56" fill="none">
         <path
           d="M34 12 C23 14 17 24 20 34 C23 44 34 48 43 43 C32 43 26 35 27 25 C28 19 30 15 34 12 Z"
           fill={secondaryFill}
@@ -851,20 +886,22 @@ function GirlsThemeDecorations({ active, mode }) {
       </svg>
 
       {/* Bottom-right Blossom & Floating Heart */}
-      <svg className="absolute bottom-12 right-8 w-16 h-16 girls-float-slow" style={{ animationDelay: '0.6s' }} viewBox="0 0 64 64" fill="none">
+      <svg className="absolute bottom-12 right-8 w-16 h-16 girls-float-slow" style={{ animationDelay: '0.6s', filter: charmShadow }} viewBox="0 0 64 64" fill="none">
         <g transform="translate(32 32)">
           {[0, 72, 144, 216, 288].map((deg) => (
             <path
               key={deg}
               d="M0,-4 C7,-14 14,-22 0,-26 C-14,-22 -7,-14 0,-4 Z"
               fill={secondaryFill}
+              stroke={petalStroke}
+              strokeWidth={isLight ? '1' : '0'}
               transform={`rotate(${deg})`}
             />
           ))}
-          <circle cx="0" cy="0" r="3.8" fill={sparkleFill} />
+          <circle cx="0" cy="0" r="3.8" fill={isLight ? '#fbbf24' : sparkleFill} fillOpacity={isLight ? '0.65' : '1'} />
         </g>
       </svg>
-      <svg className="absolute bottom-28 right-24 w-6 h-6 girls-twinkle" style={{ animationDelay: '2.5s' }} viewBox="0 0 24 24" fill="none">
+      <svg className="absolute bottom-28 right-24 w-6 h-6 girls-twinkle" style={{ animationDelay: '2.5s', filter: charmShadow }} viewBox="0 0 24 24" fill="none">
         <path d="M12 21 C7 17 3 13.8 3 9.8 C3 7.1 5.1 5 7.8 5 C9.6 5 11.1 5.9 12 7.4 C12.9 5.9 14.4 5 16.2 5 C18.9 5 21 7.1 21 9.8 C21 13.8 17 17 12 21 Z" fill={sparkleFill} />
       </svg>
     </div>
@@ -5065,6 +5102,16 @@ export default function App() {
     return games.filter(g => g.featured).length;
   }, [games]);
 
+  const girlsFeaturedGamesCount = useMemo(() => {
+    return games.filter(g => Boolean(g.girlsFeatured)).length;
+  }, [games]);
+
+  useEffect(() => {
+    if (theme !== 'girls' && filter === 'girls-featured') {
+      setFilter('all');
+    }
+  }, [theme, filter]);
+
   const isEmulatedActive = filter === 'Emulated' || filter === 'emulated-other' || emulatedTags.includes(filter);
 
   const [emulatedDropdownOpen, setEmulatedDropdownOpen] = useState(false);
@@ -5368,8 +5415,8 @@ export default function App() {
   // Filter games based on category sidebar, matching search query
   const normalizedSearchQuery = deferredSearchQuery.trim().toLowerCase();
   const filteredGames = games.filter(game => {
-    // When hideUnranked is active, anything below D tier (F tier, unranked) should NOT appear
-    if (hideUnranked) {
+    // When hideUnranked is active, anything below D tier (F tier, unranked) should NOT appear (except curated Girls Featured picks)
+    if (hideUnranked && filter !== 'girls-featured') {
       const info = getGameRankInfo(game);
       if (!info) return false;
       const tier = String(info.tier || '').toUpperCase();
@@ -5386,8 +5433,8 @@ export default function App() {
     if (filter === 'og') {
       if (!game.isOg && (game.category || '').toLowerCase().trim() !== 'og') return false;
     } else {
-      // Only restrict to originals when on 'all' filter and catalog mode is set to 'original'
-      if (filter === 'all' && gameCatalogMode === 'original' && !game.isOg && !isEmulatedActive) {
+      // Only restrict to originals when on 'all' filter and catalog mode is set to 'original' (always include Girls Featured items when Girls mode is active)
+      if (filter === 'all' && gameCatalogMode === 'original' && !game.isOg && !isEmulatedActive && !(theme === 'girls' && game.girlsFeatured)) {
         return false;
       }
       if (filter === 'single') {
@@ -5405,6 +5452,8 @@ export default function App() {
         if (!info || info.tier !== targetTier) return false;
       } else if (filter === 'featured') {
         if (!game.featured) return false;
+      } else if (filter === 'girls-featured') {
+        if (theme !== 'girls' || !game.girlsFeatured) return false;
       } else if (filter === 'Emulated') {
         const c = (game.category || '').trim().toLowerCase();
         const matchesEmulated = EMULATED_PLATFORMS.includes(c) || c === 'emulated';
@@ -5433,8 +5482,17 @@ export default function App() {
         return rA - rB;
       });
     }
+    if (theme === 'girls') {
+      return [...filteredGames].sort((a, b) => {
+        const aGirls = Boolean(a.girlsFeatured);
+        const bGirls = Boolean(b.girlsFeatured);
+        if (aGirls && !bGirls) return -1;
+        if (!aGirls && bGirls) return 1;
+        return 0;
+      });
+    }
     return filteredGames;
-  }, [filter, normalizedSearchQuery, filteredGames, getGameRankInfo]);
+  }, [filter, normalizedSearchQuery, filteredGames, getGameRankInfo, theme]);
 
   const isGenizyView = filter === 'genizy-math' || filter === 'Genizy Math' || filter.toLowerCase() === 'genizy math';
   const isCompactLayout = isGenizyView || gameLayoutMode === 'compact';
@@ -7408,14 +7466,14 @@ export default function App() {
                     className="text-[8px] leading-[11px] tracking-tight flex items-center gap-1 transition-colors"
                     style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
                   >
-                    <span className="text-neutral-400 font-bold" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 'bold' }}>Leadcreator:</span>
+                    <span className="text-[var(--text-muted)] font-bold" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 'bold' }}>Leadcreator:</span>
                     <span className="font-bold text-[var(--text-primary)]" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>Urnperiodic</span>
                   </span>
                   <span 
                     className="text-[8px] leading-[11px] tracking-tight flex items-center gap-1 transition-colors"
                     style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
                   >
-                    <span className="text-neutral-400 font-bold" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 'bold' }}>Cocreator:</span>
+                    <span className="text-[var(--text-muted)] font-bold" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 'bold' }}>Cocreator:</span>
                     <span className="font-bold text-[var(--accent-color)]" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>SharpRLBS</span>
                   </span>
                 </span>
@@ -8043,23 +8101,33 @@ export default function App() {
                 aria-label="Toggle Animations"
               >
                 <span 
-                  className={`tracking-tight transition-colors whitespace-nowrap ${mode === 'light' ? 'text-black font-extrabold' : 'text-[var(--text-primary)]'}`}
-                  style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '8px', fontWeight: 'bold', color: mode === 'light' ? '#000000' : undefined }}
+                  className={`tracking-tight transition-colors whitespace-nowrap ${
+                    mode === 'light'
+                      ? theme === 'girls' ? 'text-[#2d1624] font-extrabold' : 'text-black font-extrabold'
+                      : 'text-[var(--text-primary)]'
+                  }`}
+                  style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '8px', fontWeight: 'bold', color: mode === 'light' ? (theme === 'girls' ? '#2d1624' : '#000000') : undefined }}
                 >
                   Anim
                 </span>
                 <div 
                   className={`relative w-7 h-4 rounded-full border transition-all duration-200 flex items-center px-0.5 ${
                     animationsEnabled 
-                      ? mode === 'light' ? 'bg-black border-black' : 'bg-[var(--accent-color)] border-[var(--accent-color)]' 
-                      : mode === 'light' ? 'bg-neutral-200 border-neutral-300' : 'bg-[var(--input-fill)] border-[var(--card-border)]'
+                      ? mode === 'light'
+                        ? theme === 'girls' ? 'bg-[var(--accent-color)] border-[var(--accent-color)]' : 'bg-black border-black'
+                        : 'bg-[var(--accent-color)] border-[var(--accent-color)]' 
+                      : mode === 'light'
+                        ? theme === 'girls' ? 'bg-pink-200/80 border-pink-300/70' : 'bg-neutral-200 border-neutral-300'
+                        : 'bg-[var(--input-fill)] border-[var(--card-border)]'
                   }`}
                 >
                   <div 
                     className={`w-3 h-3 rounded-full transition-all duration-200 ease-out transform ${
                       animationsEnabled 
                         ? mode === 'light' ? 'translate-x-3 bg-white' : 'translate-x-3 bg-[var(--bg-color)]' 
-                        : mode === 'light' ? 'translate-x-0 bg-black' : 'translate-x-0 bg-[var(--text-muted)]'
+                        : mode === 'light'
+                          ? theme === 'girls' ? 'translate-x-0 bg-white shadow-xs' : 'translate-x-0 bg-black'
+                          : 'translate-x-0 bg-[var(--text-muted)]'
                     }`}
                   />
                 </div>
@@ -8079,7 +8147,7 @@ export default function App() {
                   activeAccount
                     ? 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] border border-[var(--accent-color)]/30 hover:bg-[var(--accent-color)]/25'
                     : mode === 'light'
-                      ? 'text-black hover:bg-black/5'
+                      ? theme === 'girls' ? 'text-[#2d1624] hover:text-[var(--accent-color)] hover:bg-pink-500/10' : 'text-black hover:bg-black/5'
                       : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
                 }`}
                 title={activeAccount ? `Signed in as @${activeAccount.username}` : 'Account Sign In'}
@@ -8120,12 +8188,12 @@ export default function App() {
                 }}
                 className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                   mode === 'light' 
-                    ? 'text-black hover:text-black hover:bg-black/5' 
+                    ? theme === 'girls' ? 'text-[#2d1624] hover:text-[var(--accent-color)] hover:bg-pink-500/10' : 'text-black hover:text-black hover:bg-black/5' 
                     : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
                 }`}
                 title="System Settings"
               >
-                <Settings className="w-3 h-3" style={{ color: mode === 'light' ? '#000000' : undefined }} />
+                <Settings className="w-3 h-3" style={{ color: mode === 'light' ? (theme === 'girls' ? '#2d1624' : '#000000') : undefined }} />
               </button>
 
               {renderSystemSettingsPopover(false)}
@@ -8134,12 +8202,12 @@ export default function App() {
                 onClick={handleAccountSignOut}
                 className={`p-0.5 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                   mode === 'light'
-                    ? 'text-black hover:text-black hover:bg-black/5'
+                    ? theme === 'girls' ? 'text-rose-600 hover:bg-rose-500/10' : 'text-black hover:text-black hover:bg-black/5'
                     : 'text-[var(--text-muted)] hover:text-red-500 hover:bg-[var(--card-bg)]'
                 }`}
                 title="Sign Out (Log Out & Lock Workspace)"
               >
-                <LogOut className="w-2.5 h-2.5" style={{ borderColor: '#ff0000', color: '#ff0000' }} />
+                <LogOut className="w-2.5 h-2.5" style={{ borderColor: '#ff0000', color: theme === 'girls' && mode === 'light' ? '#e11d48' : '#ff0000' }} />
               </button>
 
               <div className="w-[1px] h-3 bg-[var(--card-border)]/80" />
@@ -8286,7 +8354,7 @@ export default function App() {
             {/* Decoy Mode Selector */}
             {isDecoysUnlocked && (
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-mono font-bold text-neutral-400 uppercase select-none">Decoy:</span>
+                <span className="text-[10px] font-mono font-bold text-[var(--text-muted)] uppercase select-none">Decoy:</span>
                 <DecoyDropdown 
                   value={decoyType} 
                   onChange={(val) => { if (isDecoysUnlocked || val === 'classroom') setDecoyType(val); }} 
@@ -8347,21 +8415,31 @@ export default function App() {
               aria-checked={animationsEnabled}
               aria-label="Toggle Animations"
             >
-              <span className={`text-[10px] font-mono font-bold tracking-tight transition-colors whitespace-nowrap ${mode === 'light' ? 'text-black font-extrabold' : 'text-[var(--text-primary)]'}`} style={{ color: mode === 'light' ? '#000000' : undefined }}>
+              <span className={`text-[10px] font-mono font-bold tracking-tight transition-colors whitespace-nowrap ${
+                mode === 'light'
+                  ? theme === 'girls' ? 'text-[#2d1624] font-extrabold' : 'text-black font-extrabold'
+                  : 'text-[var(--text-primary)]'
+              }`} style={{ color: mode === 'light' ? (theme === 'girls' ? '#2d1624' : '#000000') : undefined }}>
                 Animations
               </span>
               <div 
                 className={`relative w-7 h-4 rounded-full border transition-all duration-200 flex items-center px-0.5 ${
                   animationsEnabled 
-                    ? mode === 'light' ? 'bg-black border-black' : 'bg-[var(--accent-color)] border-[var(--accent-color)]' 
-                    : mode === 'light' ? 'bg-neutral-200 border-neutral-300' : 'bg-[var(--input-fill)] border-[var(--card-border)]'
+                    ? mode === 'light'
+                      ? theme === 'girls' ? 'bg-[var(--accent-color)] border-[var(--accent-color)]' : 'bg-black border-black'
+                      : 'bg-[var(--accent-color)] border-[var(--accent-color)]' 
+                    : mode === 'light'
+                      ? theme === 'girls' ? 'bg-pink-200/80 border-pink-300/70' : 'bg-neutral-200 border-neutral-300'
+                      : 'bg-[var(--input-fill)] border-[var(--card-border)]'
                 }`}
               >
                 <div 
                   className={`w-3 h-3 rounded-full transition-all duration-200 ease-out transform ${
                     animationsEnabled 
                       ? mode === 'light' ? 'translate-x-3 bg-white' : 'translate-x-3 bg-[var(--bg-color)]' 
-                      : mode === 'light' ? 'translate-x-0 bg-black' : 'translate-x-0 bg-[var(--text-muted)]'
+                      : mode === 'light'
+                        ? theme === 'girls' ? 'translate-x-0 bg-white shadow-xs' : 'translate-x-0 bg-black'
+                        : 'translate-x-0 bg-[var(--text-muted)]'
                   }`}
                 />
               </div>
@@ -8378,7 +8456,7 @@ export default function App() {
                   activeAccount
                     ? 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] border border-[var(--accent-color)]/30 hover:bg-[var(--accent-color)]/25'
                     : mode === 'light'
-                      ? 'text-black hover:bg-black/5'
+                      ? theme === 'girls' ? 'text-[#2d1624] hover:text-[var(--accent-color)] hover:bg-pink-500/10' : 'text-black hover:bg-black/5'
                       : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
                 }`}
                 title={activeAccount ? `Signed in as @${activeAccount.username}` : 'Account Sign In'}
@@ -8419,12 +8497,12 @@ export default function App() {
                 }}
                 className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                   mode === 'light'
-                    ? 'text-black hover:text-black hover:bg-black/5'
+                    ? theme === 'girls' ? 'text-[#2d1624] hover:text-[var(--accent-color)] hover:bg-pink-500/10' : 'text-black hover:text-black hover:bg-black/5'
                     : 'text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:bg-[var(--card-bg)]'
                 }`}
                 title="System Settings"
               >
-                <Settings className="w-3.5 h-3.5" style={{ color: mode === 'light' ? '#000000' : undefined }} />
+                <Settings className="w-3.5 h-3.5" style={{ color: mode === 'light' ? (theme === 'girls' ? '#2d1624' : '#000000') : undefined }} />
               </button>
 
               {renderSystemSettingsPopover(true)}
@@ -8433,12 +8511,12 @@ export default function App() {
                 onClick={handleAccountSignOut}
                 className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                   mode === 'light'
-                    ? 'text-black hover:text-black hover:bg-black/5'
+                    ? theme === 'girls' ? 'text-rose-600 hover:bg-rose-500/10' : 'text-black hover:text-black hover:bg-black/5'
                     : 'text-[var(--text-muted)] hover:text-red-500 hover:bg-[var(--card-bg)]'
                 }`}
                 title="Sign Out (Log Out & Lock Workspace)"
               >
-                <LogOut className="w-3.5 h-3.5" style={{ color: mode === 'light' ? '#000000' : undefined }} />
+                <LogOut className="w-3.5 h-3.5" style={{ color: mode === 'light' ? (theme === 'girls' ? '#e11d48' : '#000000') : undefined }} />
               </button>
 
               <div className="w-[1px] h-3.5 bg-[var(--card-border)]/80" />
@@ -8545,6 +8623,38 @@ export default function App() {
               </button>
             </div>
 
+            {theme === 'girls' && (
+              <motion.button
+                whileHover={animationsEnabled ? { x: 4 } : undefined}
+                whileTap={animationsEnabled ? { scale: 0.97 } : undefined}
+                onClick={() => { setFilter('girls-featured'); setSelectedGame(null); }}
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg flex items-center justify-between text-xs font-medium transition-all duration-200 cursor-pointer ${
+                  filter === 'girls-featured' && !selectedGame
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-bold'
+                    : mode === 'light'
+                      ? 'bg-pink-100/70 hover:bg-pink-200/75 text-[#9d174d] border border-pink-300/60 font-semibold'
+                      : 'bg-pink-500/10 hover:bg-pink-500/20 text-pink-200 border border-pink-400/30 font-semibold'
+                }`}
+                title="Curated Featured Section for Girls Mode"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Heart className="w-3.5 h-3.5 shrink-0 fill-current" />
+                  <span className={`transition-all duration-300 truncate ${sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none md:hidden'}`}>Girls Featured</span>
+                </div>
+                {sidebarOpen && (
+                  <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                    filter === 'girls-featured' && !selectedGame
+                      ? mode === 'light' ? 'bg-white/25 text-[var(--bg-color)]' : 'bg-black/20 text-[var(--bg-color)]'
+                      : mode === 'light'
+                        ? 'bg-white/90 text-[#db2777] border border-pink-200'
+                        : 'bg-[var(--card-bg)] text-pink-300 border border-pink-400/35'
+                  }`}>
+                    {girlsFeaturedGamesCount}
+                  </span>
+                )}
+              </motion.button>
+            )}
+
             <motion.button
               whileHover={animationsEnabled ? { x: 4 } : undefined}
               whileTap={animationsEnabled ? { scale: 0.97 } : undefined}
@@ -8562,7 +8672,7 @@ export default function App() {
               {sidebarOpen && (
                 <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
                   filter === 'all' && !selectedGame
-                    ? 'bg-black/20 text-[var(--bg-color)]'
+                    ? mode === 'light' ? 'bg-white/25 text-[var(--bg-color)]' : 'bg-black/20 text-[var(--bg-color)]'
                     : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
                 }`}>
                   {games.length}
@@ -8587,7 +8697,7 @@ export default function App() {
               {sidebarOpen && (
                 <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
                   filter === 'single' && !selectedGame
-                    ? 'bg-black/20 text-[var(--bg-color)]'
+                    ? mode === 'light' ? 'bg-white/25 text-[var(--bg-color)]' : 'bg-black/20 text-[var(--bg-color)]'
                     : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
                 }`}>
                   {singlePlayerGamesCount}
@@ -8612,7 +8722,7 @@ export default function App() {
               {sidebarOpen && (
                 <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
                   filter === 'minecraft' && !selectedGame
-                    ? 'bg-black/20 text-[var(--bg-color)]'
+                    ? mode === 'light' ? 'bg-white/25 text-[var(--bg-color)]' : 'bg-black/20 text-[var(--bg-color)]'
                     : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
                 }`}>
                   {minecraftGamesCount}
@@ -8698,7 +8808,7 @@ export default function App() {
                         </div>
                         <span className={`text-[9px] font-mono px-1 py-0.5 rounded ${
                           filter === 'Emulated' && !selectedGame
-                            ? 'bg-black/20 text-[var(--bg-color)]'
+                            ? mode === 'light' ? 'bg-white/25 text-[var(--bg-color)]' : 'bg-black/20 text-[var(--bg-color)]'
                             : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
                         }`}>
                           {totalEmulatedGamesCount}
@@ -8737,7 +8847,7 @@ export default function App() {
                               </div>
                               <span className={`text-[8.5px] font-mono px-1 py-0.5 rounded shrink-0 ${
                                 isSelected
-                                  ? 'bg-black/20 text-[var(--bg-color)]'
+                                  ? mode === 'light' ? 'bg-white/25 text-[var(--bg-color)]' : 'bg-black/20 text-[var(--bg-color)]'
                                   : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
                               }`}>
                                 {count}
@@ -8769,7 +8879,7 @@ export default function App() {
                             </div>
                             <span className={`text-[8.5px] font-mono px-1 py-0.5 rounded shrink-0 ${
                               filter === 'emulated-other' && !selectedGame
-                                ? 'bg-black/20 text-[var(--bg-color)]'
+                                ? mode === 'light' ? 'bg-white/25 text-[var(--bg-color)]' : 'bg-black/20 text-[var(--bg-color)]'
                                 : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
                             }`}>
                               {totalOtherEmulatedGamesCount}
@@ -8800,7 +8910,7 @@ export default function App() {
               {sidebarOpen && (
                 <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
                   filter === 'featured' && !selectedGame
-                    ? 'bg-black/20 text-[var(--bg-color)]'
+                    ? mode === 'light' ? 'bg-white/25 text-[var(--bg-color)]' : 'bg-black/20 text-[var(--bg-color)]'
                     : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
                 }`}>
                   {featuredGamesCount}
@@ -8825,7 +8935,7 @@ export default function App() {
               {sidebarOpen && (
                 <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
                   filter === 'og' && !selectedGame
-                    ? 'bg-black/20 text-[var(--bg-color)]'
+                    ? mode === 'light' ? 'bg-white/25 text-[var(--bg-color)]' : 'bg-black/20 text-[var(--bg-color)]'
                     : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
                 }`}>
                   {ogGamesCount}
@@ -8850,7 +8960,7 @@ export default function App() {
               {sidebarOpen && (
                 <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
                   filter === 'multiplayer' && !selectedGame
-                    ? 'bg-black/20 text-[var(--bg-color)]'
+                    ? mode === 'light' ? 'bg-white/25 text-[var(--bg-color)]' : 'bg-black/20 text-[var(--bg-color)]'
                     : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
                 }`}>
                   {multiplayerGamesCount}
@@ -8881,7 +8991,7 @@ export default function App() {
               {sidebarOpen && (
                 <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
                   (filter === 'genizy-math' || filter === 'Genizy Math' || filter.toLowerCase() === 'genizy math') && !selectedGame
-                    ? 'bg-black/20 text-[var(--bg-color)]'
+                    ? mode === 'light' ? 'bg-white/25 text-[var(--bg-color)]' : 'bg-black/20 text-[var(--bg-color)]'
                     : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
                 }`}>
                   {totalGenizyMathGamesCount}
@@ -8912,11 +9022,56 @@ export default function App() {
               )}
 
               {[
-                { tier: 'S', name: 'S Tier', desc: 'Masterpieces', count: rankedGamesByTier.S?.length || 0, badge: 'text-amber-300 border-amber-300/50 bg-amber-400/20' },
-                { tier: 'A', name: 'A Tier', desc: 'Great', count: rankedGamesByTier.A?.length || 0, badge: 'text-emerald-400 border-emerald-400/40 bg-emerald-400/10' },
-                { tier: 'B', name: 'B Tier', desc: 'Good', count: rankedGamesByTier.B?.length || 0, badge: 'text-sky-400 border-sky-400/40 bg-sky-400/10' },
-                { tier: 'C', name: 'C Tier', desc: 'Mid & Niche', count: rankedGamesByTier.C?.length || 0, badge: 'text-purple-400 border-purple-400/40 bg-purple-400/10' },
-                { tier: 'F', name: 'F Tier', desc: 'Lowest Ranked / Broken', count: rankedGamesByTier.F?.length || 0, badge: 'text-rose-400 border-rose-400/40 bg-rose-400/10' },
+                {
+                  tier: 'S',
+                  name: 'S Tier',
+                  desc: 'Masterpieces',
+                  count: rankedGamesByTier.S?.length || 0,
+                  badge:
+                    mode === 'light'
+                      ? 'text-amber-700 border-amber-400/60 bg-amber-100'
+                      : 'text-amber-300 border-amber-300/50 bg-amber-400/20',
+                },
+                {
+                  tier: 'A',
+                  name: 'A Tier',
+                  desc: 'Great',
+                  count: rankedGamesByTier.A?.length || 0,
+                  badge:
+                    mode === 'light'
+                      ? 'text-emerald-700 border-emerald-400/50 bg-emerald-100'
+                      : 'text-emerald-400 border-emerald-400/40 bg-emerald-400/10',
+                },
+                {
+                  tier: 'B',
+                  name: 'B Tier',
+                  desc: 'Good',
+                  count: rankedGamesByTier.B?.length || 0,
+                  badge:
+                    mode === 'light'
+                      ? 'text-sky-700 border-sky-400/50 bg-sky-100'
+                      : 'text-sky-400 border-sky-400/40 bg-sky-400/10',
+                },
+                {
+                  tier: 'C',
+                  name: 'C Tier',
+                  desc: 'Mid & Niche',
+                  count: rankedGamesByTier.C?.length || 0,
+                  badge:
+                    mode === 'light'
+                      ? 'text-purple-700 border-purple-400/50 bg-purple-100'
+                      : 'text-purple-400 border-purple-400/40 bg-purple-400/10',
+                },
+                {
+                  tier: 'F',
+                  name: 'F Tier',
+                  desc: 'Lowest Ranked / Broken',
+                  count: rankedGamesByTier.F?.length || 0,
+                  badge:
+                    mode === 'light'
+                      ? 'text-rose-700 border-rose-400/50 bg-rose-100'
+                      : 'text-rose-400 border-rose-400/40 bg-rose-400/10',
+                },
               ].map(({ tier, name, count, badge }) => {
                 const isSelected = filter === `tier-${tier}` && !selectedGame;
                 return (
@@ -8938,7 +9093,7 @@ export default function App() {
                     <div className="flex items-center gap-2 min-w-0">
                       <span className={`w-4 h-4 rounded text-[9.5px] font-black font-mono flex items-center justify-center shrink-0 border ${
                         isSelected
-                          ? 'bg-black/25 text-[var(--bg-color)] border-white/20'
+                          ? mode === 'light' ? 'bg-white/25 text-[var(--bg-color)] border-white/35' : 'bg-black/25 text-[var(--bg-color)] border-white/20'
                           : badge
                       }`}>
                         {tier}
@@ -8952,7 +9107,7 @@ export default function App() {
                     {sidebarOpen && (
                       <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
                         isSelected
-                          ? 'bg-black/20 text-[var(--bg-color)]'
+                          ? mode === 'light' ? 'bg-white/25 text-[var(--bg-color)]' : 'bg-black/20 text-[var(--bg-color)]'
                           : 'bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--card-border)]'
                       }`}>
                         {count}
@@ -9402,6 +9557,7 @@ export default function App() {
                           {filter === 'tier-C' && 'TIER C: RECOGNIZABLE & NICHE'}
                           {filter === 'tier-F' && 'TIER F: LOWEST RANKED / BROKEN / DUPES'}
                           {filter === 'featured' && 'FEATURED SHOWCASES'}
+                          {filter === 'girls-featured' && 'GIRLS MODE FEATURED'}
                           {filter === 'og' && 'OG CLASSICS & ORIGINALS'}
                           {filter === 'single' && 'SINGLEPLAYER PORTALS'}
                           {filter === 'multiplayer' && 'MULTIPLAYER PORTALS'}
@@ -9416,6 +9572,8 @@ export default function App() {
                     <p className="text-[11px] text-[var(--text-muted)] mt-0.5 font-medium">
                       {normalizedSearchQuery !== ''
                         ? `Found ${filteredGames.length} portals · Page ${safeGamePage} of ${totalGamePages}`
+                        : filter === 'girls-featured'
+                        ? `Exclusive featured picks for Girls Mode · ${filteredGames.length} featured · Page ${safeGamePage} of ${totalGamePages}`
                         : isRankingsActive
                         ? `Curated community rankings · ${filteredGames.length} ranked portals · Page ${safeGamePage} of ${totalGamePages}`
                         : `Showing ${filteredGames.length} unblocked resources · Page ${safeGamePage} of ${totalGamePages}`}
@@ -9470,17 +9628,25 @@ export default function App() {
                       className={`group flex items-center gap-2 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold tracking-wider transition-all duration-200 cursor-pointer select-none border ${
                         hideUnranked
                           ? 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] border-[var(--accent-color)]/30 hover:border-[var(--accent-color)]/60'
-                          : 'bg-black/10 dark:bg-white/5 text-[var(--text-muted)] border-transparent hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
+                          : mode === 'light'
+                            ? 'bg-white/75 text-[var(--text-muted)] border-[var(--card-border)]/70 hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
+                            : 'bg-white/5 text-[var(--text-muted)] border-transparent hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
                       }`}
                       title={hideUnranked ? "Games below D tier and unranked games are hidden. Click to show all games." : "All games are visible. Click to hide entries below D tier."}
                     >
                       <span className="truncate">Hide Unranked</span>
                       <div className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out p-0.5 ${
-                        hideUnranked ? 'bg-[var(--accent-color)]' : 'bg-neutral-600 dark:bg-neutral-700'
+                        hideUnranked
+                          ? 'bg-[var(--accent-color)]'
+                          : mode === 'light'
+                            ? theme === 'girls' ? 'bg-pink-200/90' : 'bg-neutral-300'
+                            : 'bg-neutral-700'
                       }`}>
                         <span
                           className={`pointer-events-none inline-block h-3 w-3 transform rounded-full shadow-sm ring-0 transition duration-200 ease-in-out ${
-                            hideUnranked ? 'translate-x-3 bg-white' : 'translate-x-0 bg-neutral-300'
+                            hideUnranked
+                              ? 'translate-x-3 bg-white'
+                              : mode === 'light' ? 'translate-x-0 bg-white' : 'translate-x-0 bg-neutral-300'
                           }`}
                         />
                       </div>
@@ -9491,7 +9657,9 @@ export default function App() {
 
                     {/* Layout Mode Switcher (Standard / Compact) */}
                     {!isGenizyView && (
-                      <div className="flex items-center gap-0.5 bg-black/10 dark:bg-white/5 p-0.5 rounded-lg border border-[var(--card-border)]/70">
+                      <div className={`flex items-center gap-0.5 p-0.5 rounded-lg border border-[var(--card-border)]/70 ${
+                        mode === 'light' ? 'bg-white/75' : 'bg-white/5'
+                      }`}>
                         <button
                           type="button"
                           onClick={() => {
@@ -9599,13 +9767,21 @@ export default function App() {
                         className={`custom-card flex flex-col rounded-xl overflow-hidden cursor-pointer h-full ${
                           animationsEnabled ? 'transition-all duration-300' : ''
                         } ${
-                          game.featured 
-                            ? 'border-amber-500/20 hover:border-amber-500/50 shadow-md hover:shadow-amber-500/5' 
-                            : ''
+                          theme === 'girls' && game.girlsFeatured
+                            ? 'border-pink-400/45 hover:border-pink-500 shadow-md hover:shadow-pink-500/15'
+                            : game.featured 
+                              ? 'border-amber-500/20 hover:border-amber-500/50 shadow-md hover:shadow-amber-500/5' 
+                              : ''
                         }`}
                       >
                         {/* Artwork container */}
-                        <div className={`relative w-full bg-neutral-950 flex-shrink-0 flex items-center justify-center border-b border-[var(--card-border)] overflow-hidden ${
+                        <div className={`relative w-full flex-shrink-0 flex items-center justify-center border-b border-[var(--card-border)] overflow-hidden ${
+                          theme === 'girls' && mode === 'light'
+                            ? 'bg-[#fdf2f6]'
+                            : mode === 'light'
+                              ? 'bg-neutral-100'
+                              : 'bg-neutral-950'
+                        } ${
                           isCompactLayout ? 'aspect-square' : 'aspect-video'
                         }`}>
                           {game.thumbnail && !failedThumbnails[game.id] ? (
@@ -9623,11 +9799,23 @@ export default function App() {
                             />
                           ) : (
                             <div
-                              className="w-full h-full bg-[#050505] flex items-center justify-center select-none pointer-events-none"
+                              className={`w-full h-full flex items-center justify-center select-none pointer-events-none ${
+                                theme === 'girls' && mode === 'light'
+                                  ? 'bg-gradient-to-br from-[#fff5f8] via-[#fdf2f6] to-[#fce7f3]'
+                                  : mode === 'light'
+                                    ? 'bg-neutral-100'
+                                    : 'bg-[#050505]'
+                              }`}
                               aria-label={game.title}
                             >
                               <Gamepad2
-                                className={`${isCompactLayout ? 'w-9 h-9' : 'w-12 h-12'} text-neutral-400/80`}
+                                className={`${isCompactLayout ? 'w-9 h-9' : 'w-12 h-12'} ${
+                                  theme === 'girls' && mode === 'light'
+                                    ? 'text-pink-400/80'
+                                    : mode === 'light'
+                                      ? 'text-neutral-400'
+                                      : 'text-neutral-400/80'
+                                }`}
                                 strokeWidth={1.75}
                                 aria-hidden="true"
                               />
@@ -9655,6 +9843,20 @@ export default function App() {
                                 </span>
                               );
                             }
+                            if (theme === 'girls' && game.girlsFeatured) {
+                              return (
+                                <span className={`absolute top-2 left-2 font-black rounded-md inline-flex items-center justify-center gap-1 z-10 shadow-sm font-mono border ${
+                                  mode === 'light'
+                                    ? 'bg-[#db2777] text-white border-pink-300/60'
+                                    : 'bg-[#2c1227]/90 text-pink-300 border-pink-400/45 backdrop-blur-sm'
+                                } ${
+                                  isCompactLayout ? 'text-[9px] px-1.5 h-5' : 'text-[9px] px-2 h-6'
+                                }`}>
+                                  <span>♥</span>
+                                  {!isCompactLayout && <span>FEATURED</span>}
+                                </span>
+                              );
+                            }
                             if (game.featured) {
                               return (
                                 <span className={`absolute top-2 left-2 font-black bg-black/85 text-amber-400 border border-amber-500/30 rounded-md inline-flex items-center justify-center z-10 shadow-sm font-mono ${
@@ -9667,8 +9869,14 @@ export default function App() {
                             return null;
                           })()}
 
-                          <span className={`absolute top-2 right-2 font-bold uppercase tracking-widest bg-black/75 backdrop-blur-sm text-white border border-white/10 rounded-full inline-block z-10 ${
+                          <span className={`absolute top-2 right-2 font-bold uppercase tracking-widest backdrop-blur-sm border rounded-full inline-block z-10 ${
                             isCompactLayout ? 'text-[7px] px-1.5 py-0.5' : 'text-[8px] px-2.5 py-0.5'
+                          } ${
+                            theme === 'girls' && mode === 'light' && (!game.thumbnail || failedThumbnails[game.id])
+                              ? 'bg-white/90 text-[#9d174d] border-pink-200/90 shadow-xs'
+                              : theme === 'girls' && mode === 'light'
+                                ? 'bg-[#2d1624]/80 text-white border-pink-200/25'
+                                : 'bg-black/75 text-white border-white/10'
                           }`}>
                             {game.category}
                           </span>
@@ -9693,7 +9901,7 @@ export default function App() {
                               isCompactLayout ? 'text-xs' : 'text-sm'
                             } ${
                               game.featured 
-                                ? 'text-[var(--text-primary)] group-hover:text-amber-400' 
+                                ? mode === 'light' ? 'text-[var(--text-primary)] group-hover:text-amber-600' : 'text-[var(--text-primary)] group-hover:text-amber-400' 
                                 : 'text-[var(--text-primary)] group-hover:text-[var(--accent-color)]'
                             }`}>
                               <span className="min-w-0 flex-1 truncate">{game.title}</span>
@@ -9749,7 +9957,11 @@ export default function App() {
                                 onClick={() => {
                                   launchGame(game);
                                 }}
-                                className={`flex-1 border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500 hover:text-black hover:font-bold hover:shadow-[0_4px_14px_rgba(245,158,11,0.35)] font-semibold tracking-wider text-amber-500 dark:text-amber-400 rounded-lg flex items-center justify-center gap-1 transition-all duration-200 uppercase cursor-pointer ${
+                                className={`flex-1 border font-semibold tracking-wider rounded-lg flex items-center justify-center gap-1 transition-all duration-200 uppercase cursor-pointer ${
+                                  mode === 'light'
+                                    ? 'border-amber-400/50 bg-amber-50 text-amber-700 hover:bg-amber-500 hover:text-white hover:font-bold hover:shadow-[0_4px_14px_rgba(245,158,11,0.3)]'
+                                    : 'border-amber-500/40 bg-amber-500/10 hover:bg-amber-500 hover:text-black hover:font-bold hover:shadow-[0_4px_14px_rgba(245,158,11,0.35)] text-amber-500 dark:text-amber-400'
+                                } ${
                                   isCompactLayout ? 'py-1.5 px-2 text-[10px]' : 'py-2 px-3 text-[11px]'
                                 }`}
                               >
@@ -9761,7 +9973,11 @@ export default function App() {
                                 onClick={() => {
                                   launchGame(game);
                                 }}
-                                className={`flex-1 border border-[var(--card-border)] bg-[var(--accent-color)]/5 hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] hover:font-bold hover:shadow-[0_4px_14px_var(--accent-shadow)] font-semibold tracking-wider text-[var(--text-primary)] rounded-lg flex items-center justify-center gap-1 transition-all duration-200 uppercase cursor-pointer ${
+                                className={`flex-1 border border-[var(--card-border)] hover:bg-[var(--accent-color)] hover:text-[var(--bg-color)] hover:border-[var(--accent-color)] hover:font-bold hover:shadow-[0_4px_14px_var(--accent-shadow)] font-semibold tracking-wider rounded-lg flex items-center justify-center gap-1 transition-all duration-200 uppercase cursor-pointer ${
+                                  theme === 'girls' && mode === 'light'
+                                    ? 'bg-[#fdf2f6] text-[#9d174d]'
+                                    : 'bg-[var(--accent-color)]/5 text-[var(--text-primary)]'
+                                } ${
                                   isCompactLayout ? 'py-1.5 px-2 text-[10px]' : 'py-2 px-3 text-[11px]'
                                 }`}
                               >
@@ -9881,17 +10097,25 @@ export default function App() {
                     className={`group flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold tracking-wider transition-all duration-200 cursor-pointer select-none border ${
                       hideUnranked
                         ? 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] border-[var(--accent-color)]/30 hover:border-[var(--accent-color)]/60'
-                        : 'bg-black/10 dark:bg-white/5 text-[var(--text-muted)] border-transparent hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
+                        : mode === 'light'
+                          ? 'bg-white/75 text-[var(--text-muted)] border-[var(--card-border)]/70 hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
+                          : 'bg-white/5 text-[var(--text-muted)] border-transparent hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]'
                     }`}
                     title={hideUnranked ? "Games below D tier and unranked games are hidden. Click to show all games." : "All games are visible. Click to hide entries below D tier."}
                   >
                     <span className="truncate">Hide Unranked</span>
                     <div className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out p-0.5 ${
-                      hideUnranked ? 'bg-[var(--accent-color)]' : 'bg-neutral-600 dark:bg-neutral-700'
+                      hideUnranked
+                        ? 'bg-[var(--accent-color)]'
+                        : mode === 'light'
+                          ? theme === 'girls' ? 'bg-pink-200/90' : 'bg-neutral-300'
+                          : 'bg-neutral-700'
                     }`}>
                       <span
                         className={`pointer-events-none inline-block h-3 w-3 transform rounded-full shadow-sm ring-0 transition duration-200 ease-in-out ${
-                          hideUnranked ? 'translate-x-3 bg-white' : 'translate-x-0 bg-neutral-300'
+                          hideUnranked
+                            ? 'translate-x-3 bg-white'
+                            : mode === 'light' ? 'translate-x-0 bg-white' : 'translate-x-0 bg-neutral-300'
                         }`}
                       />
                     </div>

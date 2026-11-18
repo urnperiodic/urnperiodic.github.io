@@ -6,6 +6,7 @@ export interface Game {
   thumbnail: string;
   category: string;
   featured?: boolean;
+  girlsFeatured?: boolean;
   pointerLock?: boolean;
   isAiGenerated?: boolean;
   isOg?: boolean;

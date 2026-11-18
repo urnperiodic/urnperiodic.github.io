@@ -341,11 +341,12 @@ const gameData: Game[] = [
   {
     title: 'Slope',
     description: 'This is just for the girls ig',
-    url: 'https://ubg365.github.io/slope/play.html',
+    url: 'clslopeplus.html',
     thumbnail: 'https://i.ytimg.com/vi/jvjZ4rnERmM/maxresdefault.jpg',
     category: 'Solo',
     featured: false,
     isOg: true
+    girlsFeatured: true
   },
   {
     title: 'Epilepsy game',
@@ -355,6 +356,7 @@ const gameData: Game[] = [
     category: 'Solo',
     featured: false,
     isOg: true
+    girlsFeatured: true
   },
   {
     title: '2048',
@@ -373,6 +375,7 @@ const gameData: Game[] = [
     category: 'Solo',
     featured: true,
     isOg: true
+    girlsFeatured: true
   },
   {
     title: 'OvO',
@@ -480,6 +483,7 @@ const gameData: Game[] = [
     thumbnail: 'https://media.tenor.com/7vR97sAI99IAAAAe/watermelon-game-suika-game.png',
     category: 'solo',
     featured: false
+    girlsFeatured: true
   },
   {
     title: 'Crazy Cattle 3D',
@@ -549,7 +553,7 @@ const gameData: Game[] = [
     title: 'Adventure Capitalist',
     description: 'Grow your business empire in this classic capitalist clicker!',
     url: 'clAdventureCapatalist.html',
-    thumbnail: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=300&q=80',
+    thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTPYgHeeaerNJsgWwXN8vDjwHyeLTN9gzF0Za_GUJnKNQ&s=10',
     category: 'Solo',
     featured: false
   },
@@ -775,11 +779,12 @@ const gameData: Game[] = [
   },
   {
     title: '2048 Cupcakes',
-    description: '',
+    description: 'Girlies',
     url: 'cl2048cupcakes.html',
-    thumbnail: '',
+    thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdVN_qRCADXsdeNU_BQwsmMU2s6KahLAnEvNKA2SAYaQ&s=10',
     category: 'Solo',
     featured: false
+    girlsFeatured: true
   },
   {
     title: '2-3-4 Player Games',
