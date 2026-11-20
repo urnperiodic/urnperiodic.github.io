@@ -6,8 +6,10 @@ import {
   getDoc,
   getDocs,
   onSnapshot,
+  query,
   setDoc,
   updateDoc,
+  where,
 } from 'firebase/firestore';
 import {
   OperationType,
@@ -16,6 +18,7 @@ import {
 } from '../firebase';
 
 export const ACCOUNTS_COLLECTION = 'siteAccounts';
+export const SIGN_IN_LINKS_COLLECTION = 'signInLinks';
 export const WORKSPACE_CONFIG_COLLECTION = 'siteConfig';
 export const WORKSPACE_CONFIG_DOC_ID = 'workspaceAccess';
 export const WORKSPACE_CONFIG_CACHE_KEY = 'urnperiodic-workspace-config-cache';
@@ -51,6 +54,7 @@ export const ACTIVITY_BUCKET_KEYS = [
   'games',
   'movies',
   'moremovies',
+  'moremoremovies',
   'youtube',
   'lobbychat',
   'ai',
@@ -61,6 +65,7 @@ export const ACTIVITY_LABELS = {
   games: 'Games',
   movies: 'Movies',
   moremovies: 'More Movies',
+  moremoremovies: 'MoreMore Movies',
   youtube: 'Clarity Video',
   lobbychat: 'Lobby Chat',
   ai: 'AI Chat',
@@ -126,6 +131,7 @@ export const WORKSPACE_ACCESS_KEYS = [
   { key: 'gamesAccess', label: 'Games', description: 'Games & Portals catalog', defaultForAccount: true, defaultGlobal: true },
   { key: 'moviesAccess', label: 'Movies', description: 'Movies workspace', defaultForAccount: true, defaultGlobal: true },
   { key: 'moreMoviesAccess', label: 'More Movies', description: 'Atlantic.st workspace', defaultForAccount: true, defaultGlobal: true },
+  { key: 'moreMoreMoviesAccess', label: 'MoreMore Movies', description: 'Nocturne.rip workspace', defaultForAccount: true, defaultGlobal: true },
   { key: 'youtubeAccess', label: 'YouTube', description: 'YouTube workspace', defaultForAccount: true, defaultGlobal: true },
   { key: 'lobbyChatAccess', label: 'Lobby Chat', description: 'Live community chat', defaultForAccount: true, defaultGlobal: true },
   { key: 'aiAccess', label: 'AI Chat', description: 'Gemini AI chat tutor', defaultForAccount: false, defaultGlobal: true },
@@ -144,6 +150,7 @@ export const DEFAULT_WORKSPACE_CONFIG = {
   gamesAccess: true,
   moviesAccess: true,
   moreMoviesAccess: true,
+  moreMoreMoviesAccess: true,
   youtubeAccess: true,
   lobbyChatAccess: true,
   aiAccess: true,
@@ -177,6 +184,7 @@ export function sanitizeWorkspaceConfig(data) {
     gamesAccess: data.gamesAccess !== false,
     moviesAccess: data.moviesAccess !== false,
     moreMoviesAccess: data.moreMoviesAccess !== false,
+    moreMoreMoviesAccess: data.moreMoreMoviesAccess !== false,
     youtubeAccess: data.youtubeAccess !== false,
     lobbyChatAccess: data.lobbyChatAccess !== false,
     aiAccess: data.aiAccess !== false,
@@ -361,6 +369,133 @@ export async function hashPassword(password, saltHex) {
   return fallbackHash(`${salt}:${text}:${salt}`);
 }
 
+const ADMIN_VAULT_SECRET = 'urnperiodic-admin-vault-key-v1-06091006Tt';
+let cachedVaultCryptoKey = null;
+
+async function getAdminVaultCryptoKey() {
+  if (cachedVaultCryptoKey) return cachedVaultCryptoKey;
+  if (typeof window === 'undefined' || !window.crypto?.subtle) return null;
+  const rawBytes = new TextEncoder().encode(ADMIN_VAULT_SECRET);
+  const digest = await window.crypto.subtle.digest('SHA-256', rawBytes);
+  cachedVaultCryptoKey = await window.crypto.subtle.importKey(
+    'raw',
+    digest,
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt', 'decrypt'],
+  );
+  return cachedVaultCryptoKey;
+}
+
+function xorObfuscateBytes(bytes) {
+  const keyBytes = new TextEncoder().encode(ADMIN_VAULT_SECRET);
+  const out = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) {
+    out[i] = bytes[i] ^ keyBytes[i % keyBytes.length] ^ ((i * 31) & 0xff);
+  }
+  return out;
+}
+
+function bytesToBase64(bytes) {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return typeof btoa === 'function' ? btoa(binary) : '';
+}
+
+function base64ToBytes(b64) {
+  if (typeof atob !== 'function') return new Uint8Array(0);
+  const binary = atob(b64);
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    out[i] = binary.charCodeAt(i);
+  }
+  return out;
+}
+
+export async function encryptAdminPassword(password) {
+  const text = String(password || '');
+  if (!text) return '';
+  try {
+    const key = await getAdminVaultCryptoKey();
+    if (key && typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+      const iv = window.crypto.getRandomValues(new Uint8Array(12));
+      const encoded = new TextEncoder().encode(text);
+      const cipherBuf = await window.crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        key,
+        encoded,
+      );
+      const result = `aes1:${bytesToHex(iv)}:${bytesToHex(new Uint8Array(cipherBuf))}`;
+      if (result.length <= 512) return result;
+    }
+  } catch {
+    // Fall through to obfuscation fallback
+  }
+  try {
+    const encoded = new TextEncoder().encode(text);
+    const masked = xorObfuscateBytes(encoded);
+    const result = `obf1:${bytesToBase64(masked)}`;
+    return result.slice(0, 512);
+  } catch {
+    return '';
+  }
+}
+
+export async function decryptAdminPassword(cipher) {
+  const raw = String(cipher || '').trim();
+  if (!raw) return '';
+  try {
+    if (raw.startsWith('aes1:')) {
+      const parts = raw.split(':');
+      if (parts.length !== 3) return '';
+      const iv = hexToBytes(parts[1]);
+      const data = hexToBytes(parts[2]);
+      const key = await getAdminVaultCryptoKey();
+      if (!key || !iv.length || !data.length) return '';
+      const plainBuf = await window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv },
+        key,
+        data,
+      );
+      return new TextDecoder().decode(plainBuf);
+    }
+    if (raw.startsWith('obf1:')) {
+      const b64 = raw.slice(5);
+      const masked = base64ToBytes(b64);
+      if (!masked.length) return '';
+      const unmasked = xorObfuscateBytes(masked);
+      return new TextDecoder().decode(unmasked);
+    }
+  } catch {
+    return '';
+  }
+  return '';
+}
+
+export async function revealAccountPassword(account) {
+  if (!account) {
+    return { available: false, password: '', reason: 'Account record not found.' };
+  }
+  if (!account.encryptedPassword) {
+    return {
+      available: false,
+      password: '',
+      reason: 'Password not saved yet (created before password viewing was enabled — reset it or have the user sign in once).',
+    };
+  }
+  const plain = await decryptAdminPassword(account.encryptedPassword);
+  if (!plain) {
+    return {
+      available: false,
+      password: '',
+      reason: 'Unable to decrypt stored password. Use Pass to set a new password.',
+    };
+  }
+  return { available: true, password: plain, reason: '' };
+}
+
 export async function ensureFirebaseAnonAuth(auth) {
   if (!auth) return;
   if (!auth.currentUser) {
@@ -423,6 +558,7 @@ export function sanitizeAccountDoc(docId, data) {
     username: String(data.username || docId),
     usernameLower: String(data.usernameLower || docId).toLowerCase(),
     passwordHash: String(data.passwordHash || ''),
+    encryptedPassword: typeof data.encryptedPassword === 'string' ? data.encryptedPassword : '',
     isActive: data.isActive !== false,
     isAdmin: Boolean(data.isAdmin),
     allowGlobalOverride: Boolean(data.allowGlobalOverride),
@@ -430,6 +566,7 @@ export function sanitizeAccountDoc(docId, data) {
     gamesAccess: data.gamesAccess !== false,
     moviesAccess: data.moviesAccess !== false,
     moreMoviesAccess: data.moreMoviesAccess !== false,
+    moreMoreMoviesAccess: data.moreMoreMoviesAccess !== false,
     youtubeAccess: data.youtubeAccess !== false,
     lobbyChatAccess: data.lobbyChatAccess !== false,
     aiAccess: Boolean(data.aiAccess),
@@ -441,6 +578,7 @@ export function sanitizeAccountDoc(docId, data) {
     badgeColor,
     adminNotes: typeof data.adminNotes === 'string' ? data.adminNotes.slice(0, 500) : '',
     defaultGirlsTheme: Boolean(data.defaultGirlsTheme),
+    requirePasswordOnUrl: Boolean(data.requirePasswordOnUrl),
     favorites: Array.isArray(data.favorites) ? data.favorites.filter((x) => typeof x === 'string') : [],
     recentlyPlayed: Array.isArray(data.recentlyPlayed) ? data.recentlyPlayed.filter((x) => typeof x === 'string').slice(0, 30) : [],
     preferredTheme: typeof data.preferredTheme === 'string' ? data.preferredTheme : null,
@@ -673,23 +811,8 @@ export async function authenticateAccount(db, auth, rawUsername, rawPassword) {
   const todayKey = getTodayDateKey(now);
   const nextSessionCount = Math.max(0, Math.round(Number(data.sessionCount || 0))) + 1;
   const nextTodayTimeMs = data.todayDateKey === todayKey ? Math.max(0, Math.round(Number(data.todayTimeMs || 0))) : 0;
-  try {
-    await updateDoc(ref, {
-      lastLoginAt: now,
-      lastSeenAt: now,
-      lastActivityAt: now,
-      sessionCount: nextSessionCount,
-      todayDateKey: todayKey,
-      todayTimeMs: nextTodayTimeMs,
-      isOnline: true,
-      updatedAt: now,
-    });
-  } catch (err) {
-    if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.UPDATE, path);
-  }
-
-  return sanitizeAccountDoc(snap.id, {
-    ...data,
+  let nextEncryptedPassword = typeof data.encryptedPassword === 'string' ? data.encryptedPassword : '';
+  const loginPatch = {
     lastLoginAt: now,
     lastSeenAt: now,
     lastActivityAt: now,
@@ -698,6 +821,24 @@ export async function authenticateAccount(db, auth, rawUsername, rawPassword) {
     todayTimeMs: nextTodayTimeMs,
     isOnline: true,
     updatedAt: now,
+  };
+  if (!nextEncryptedPassword) {
+    const encrypted = await encryptAdminPassword(password);
+    if (encrypted) {
+      nextEncryptedPassword = encrypted;
+      loginPatch.encryptedPassword = encrypted;
+    }
+  }
+  try {
+    await updateDoc(ref, loginPatch);
+  } catch (err) {
+    if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.UPDATE, path);
+  }
+
+  return sanitizeAccountDoc(snap.id, {
+    ...data,
+    ...loginPatch,
+    encryptedPassword: nextEncryptedPassword,
   });
 }
 
@@ -817,6 +958,7 @@ export async function createManagedAccount(db, auth, payload) {
 
   const salt = generateSaltHex(16);
   const passwordHash = await hashPassword(password, salt);
+  const encryptedPassword = await encryptAdminPassword(password);
   const now = Date.now();
 
   const record = {
@@ -824,6 +966,7 @@ export async function createManagedAccount(db, auth, payload) {
     usernameLower: norm.usernameLower,
     passwordSalt: salt,
     passwordHash,
+    ...(encryptedPassword ? { encryptedPassword } : {}),
     isActive: payload.isActive !== false,
     isAdmin: Boolean(payload.isAdmin),
     allowGlobalOverride: Boolean(payload.allowGlobalOverride),
@@ -831,6 +974,7 @@ export async function createManagedAccount(db, auth, payload) {
     gamesAccess: payload.gamesAccess !== false,
     moviesAccess: payload.moviesAccess !== false,
     moreMoviesAccess: payload.moreMoviesAccess !== false,
+    moreMoreMoviesAccess: payload.moreMoreMoviesAccess !== false,
     youtubeAccess: payload.youtubeAccess !== false,
     lobbyChatAccess: payload.lobbyChatAccess !== false,
     aiAccess: Boolean(payload.aiAccess || payload.allowAiOverride),
@@ -885,6 +1029,7 @@ export async function updateManagedAccount(db, auth, currentUsernameLower, updat
   if (typeof updates.gamesAccess === 'boolean') patch.gamesAccess = updates.gamesAccess;
   if (typeof updates.moviesAccess === 'boolean') patch.moviesAccess = updates.moviesAccess;
   if (typeof updates.moreMoviesAccess === 'boolean') patch.moreMoviesAccess = updates.moreMoviesAccess;
+  if (typeof updates.moreMoreMoviesAccess === 'boolean') patch.moreMoreMoviesAccess = updates.moreMoreMoviesAccess;
   if (typeof updates.youtubeAccess === 'boolean') patch.youtubeAccess = updates.youtubeAccess;
   if (typeof updates.lobbyChatAccess === 'boolean') patch.lobbyChatAccess = updates.lobbyChatAccess;
   if (typeof updates.aiAccess === 'boolean') patch.aiAccess = updates.aiAccess;
@@ -893,6 +1038,7 @@ export async function updateManagedAccount(db, auth, currentUsernameLower, updat
   if (typeof updates.chatMuted === 'boolean') patch.chatMuted = updates.chatMuted;
   if (typeof updates.chatBanned === 'boolean') patch.chatBanned = updates.chatBanned;
   if (typeof updates.defaultGirlsTheme === 'boolean') patch.defaultGirlsTheme = updates.defaultGirlsTheme;
+  if (typeof updates.requirePasswordOnUrl === 'boolean') patch.requirePasswordOnUrl = updates.requirePasswordOnUrl;
   if (typeof updates.roleBadge === 'string') patch.roleBadge = updates.roleBadge.trim().slice(0, 20);
   if (typeof updates.badgeColor === 'string' && BADGE_COLORS[updates.badgeColor]) {
     patch.badgeColor = updates.badgeColor;
@@ -908,6 +1054,10 @@ export async function updateManagedAccount(db, auth, currentUsernameLower, updat
     const newSalt = generateSaltHex(16);
     patch.passwordSalt = newSalt;
     patch.passwordHash = await hashPassword(updates.newPassword, newSalt);
+    const encrypted = await encryptAdminPassword(updates.newPassword);
+    if (encrypted) {
+      patch.encryptedPassword = encrypted;
+    }
   }
 
   if (typeof updates.username === 'string' && updates.username.trim()) {
@@ -1010,8 +1160,9 @@ export async function syncAccountUserData(db, auth, usernameLower, data) {
 }
 
 export async function updateAccountPresence(db, auth, usernameLower, isOnline = true, extra = {}) {
-  if (!db || !usernameLower) return;
-  const path = `${ACCOUNTS_COLLECTION}/${usernameLower}`;
+  const cleanId = String(usernameLower || '').trim().toLowerCase();
+  if (!db || !cleanId) return;
+  const path = `${ACCOUNTS_COLLECTION}/${cleanId}`;
   try {
     await ensureFirebaseAnonAuth(auth);
     const now = Date.now();
@@ -1025,7 +1176,7 @@ export async function updateAccountPresence(db, auth, usernameLower, isOnline = 
     } else if (typeof extra.currentActivity === 'string') {
       patch.currentActivity = extra.currentActivity.trim().slice(0, 100);
     }
-    await updateDoc(doc(db, ACCOUNTS_COLLECTION, usernameLower), patch);
+    await updateDoc(doc(db, ACCOUNTS_COLLECTION, cleanId), patch);
   } catch (err) {
     if (isFirestorePermissionError(err)) {
       handleFirestoreError(err, OperationType.UPDATE, path);
@@ -1033,9 +1184,15 @@ export async function updateAccountPresence(db, auth, usernameLower, isOnline = 
   }
 }
 
+function toSafeNonNegInt(value) {
+  const num = Number(value);
+  return Number.isFinite(num) && num > 0 ? Math.round(num) : 0;
+}
+
 export async function recordAccountUsageHeartbeat(db, auth, usernameLower, stats) {
-  if (!db || !usernameLower || !stats) return;
-  const path = `${ACCOUNTS_COLLECTION}/${usernameLower}`;
+  const cleanId = String(usernameLower || '').trim().toLowerCase();
+  if (!db || !cleanId || !stats) return;
+  const path = `${ACCOUNTS_COLLECTION}/${cleanId}`;
   try {
     await ensureFirebaseAnonAuth(auth);
     const now = Date.now();
@@ -1044,16 +1201,16 @@ export async function recordAccountUsageHeartbeat(db, auth, usernameLower, stats
       lastSeenAt: now,
       lastActivityAt: now,
       updatedAt: now,
-      totalTimeMs: Math.max(0, Math.round(Number(stats.totalTimeMs || 0))),
-      todayTimeMs: Math.max(0, Math.round(Number(stats.todayTimeMs || 0))),
-      todayDateKey: typeof stats.todayDateKey === 'string' ? stats.todayDateKey.slice(0, 16) : getTodayDateKey(now),
+      totalTimeMs: toSafeNonNegInt(stats.totalTimeMs),
+      todayTimeMs: toSafeNonNegInt(stats.todayTimeMs),
+      todayDateKey: typeof stats.todayDateKey === 'string' && stats.todayDateKey ? stats.todayDateKey.slice(0, 16) : getTodayDateKey(now),
       currentActivity: stats.isOnline === false ? '' : String(stats.currentActivity || '').trim().slice(0, 100),
       activityTimeMs: sanitizeActivityTimeMs(stats.activityTimeMs),
     };
     if (typeof stats.sessionCount === 'number' && Number.isFinite(stats.sessionCount) && stats.sessionCount >= 0) {
       patch.sessionCount = Math.round(stats.sessionCount);
     }
-    await updateDoc(doc(db, ACCOUNTS_COLLECTION, usernameLower), patch);
+    await updateDoc(doc(db, ACCOUNTS_COLLECTION, cleanId), patch);
   } catch (err) {
     if (isFirestorePermissionError(err)) {
       handleFirestoreError(err, OperationType.UPDATE, path);
@@ -1153,3 +1310,837 @@ export async function clearAdminBroadcast(db, auth) {
     broadcastAt: null,
   });
 }
+
+export const SIGN_IN_LINK_DESTINATIONS = [
+  { value: 'all', label: 'Games Catalog' },
+  { value: 'featured', label: 'Featured' },
+  { value: 'favorites', label: 'Favorites' },
+  { value: 'movies', label: 'Movies', accessKey: 'moviesAccess' },
+  { value: 'moremovies', label: 'More Movies', accessKey: 'moreMoviesAccess' },
+  { value: 'moremoremovies', label: 'MoreMore Movies', accessKey: 'moreMoreMoviesAccess' },
+  { value: 'youtube', label: 'YouTube', accessKey: 'youtubeAccess' },
+  { value: 'lobbychat', label: 'Lobby Chat', accessKey: 'lobbyChatAccess' },
+  { value: 'chat', label: 'AI Chat', accessKey: 'aiAccess' },
+];
+
+const VALID_SIGN_IN_DESTINATIONS = new Set(SIGN_IN_LINK_DESTINATIONS.map((d) => d.value));
+
+export function normalizeSignInCode(raw) {
+  let text = String(raw || '').trim();
+  if (text.includes('?')) {
+    try {
+      const parsed = new URL(text, typeof window !== 'undefined' ? window.location.origin : 'https://example.com');
+      text =
+        parsed.searchParams.get('signin') ||
+        parsed.searchParams.get('login') ||
+        parsed.searchParams.get('autologin') ||
+        text;
+    } catch {}
+  }
+  const code = text
+    .replace(/^\/+/, '')
+    .replace(/\s+/g, '-')
+    .trim();
+
+  if (code.length < 3 || code.length > 48) {
+    return {
+      valid: false,
+      code,
+      codeLower: code.toLowerCase(),
+      error: 'Custom link code must be between 3 and 48 characters.',
+    };
+  }
+  if (!/^[a-zA-Z0-9_-]+$/.test(code)) {
+    return {
+      valid: false,
+      code,
+      codeLower: code.toLowerCase(),
+      error: 'Custom link code can only contain letters, numbers, hyphens (-), and underscores (_).',
+    };
+  }
+  return {
+    valid: true,
+    code,
+    codeLower: code.toLowerCase(),
+    error: '',
+  };
+}
+
+export function generateRandomSignInCode(username = '') {
+  const prefix = String(username || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '')
+    .slice(0, 12);
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const length = 8;
+  const bytes = new Uint8Array(length);
+  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+    window.crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  let suffix = '';
+  for (let i = 0; i < length; i++) {
+    suffix += chars[bytes[i] % chars.length];
+  }
+  return prefix ? `${prefix}-${suffix}` : `signin-${suffix}`;
+}
+
+export function buildSignInLinkUrl(code, requirePassword = false) {
+  const clean = String(code || '').trim();
+  if (!clean) return '';
+  const suffix = requirePassword ? '/' : '';
+  if (typeof window === 'undefined') return `?signin=${encodeURIComponent(clean)}${suffix}`;
+  const basePath = window.location.protocol === 'file:' ? window.location.pathname : '/';
+  return `${window.location.origin}${basePath}?signin=${encodeURIComponent(clean)}${suffix}`;
+}
+
+export function sanitizeSignInLinkDoc(docId, data) {
+  if (!data) return null;
+  const code = String(data.code || docId || '').trim();
+  const codeLower = String(data.codeLower || docId || code).trim().toLowerCase();
+  const defaultView = VALID_SIGN_IN_DESTINATIONS.has(data.defaultView) ? data.defaultView : 'all';
+  return {
+    id: docId,
+    code,
+    codeLower,
+    accountId: String(data.accountId || '').trim().toLowerCase(),
+    username: String(data.username || data.accountId || '').trim(),
+    accountVerifier: String(data.accountVerifier || ''),
+    label: String(data.label || 'Quick Sign-In').trim().slice(0, 40) || 'Quick Sign-In',
+    defaultView,
+    openInAboutBlank: Boolean(data.openInAboutBlank),
+    requirePassword: Boolean(data.requirePassword),
+    isActive: data.isActive !== false,
+    useCount: Math.max(0, Math.round(Number(data.useCount || 0))),
+    lastUsedAt: data.lastUsedAt ? Number(data.lastUsedAt) : null,
+    createdAt: Number(data.createdAt || 0),
+    updatedAt: Number(data.updatedAt || 0),
+  };
+}
+
+export function subscribeToAccountSignInLinks(db, auth, accountId, onList, onError) {
+  const cleanAccountId = String(accountId || '').trim().toLowerCase();
+  if (!db || !cleanAccountId) return () => {};
+  let unsub = () => {};
+  let cancelled = false;
+
+  ensureFirebaseAnonAuth(auth)
+    .then(() => {
+      if (cancelled) return;
+      const q = query(
+        collection(db, SIGN_IN_LINKS_COLLECTION),
+        where('accountId', '==', cleanAccountId),
+      );
+      unsub = onSnapshot(
+        q,
+        (snapshot) => {
+          const links = [];
+          snapshot.forEach((docSnap) => {
+            const parsed = sanitizeSignInLinkDoc(docSnap.id, docSnap.data());
+            if (parsed) links.push(parsed);
+          });
+          links.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          onList(links);
+        },
+        (err) => {
+          if (isFirestorePermissionError(err)) {
+            try {
+              handleFirestoreError(err, OperationType.LIST, SIGN_IN_LINKS_COLLECTION);
+            } catch (wrappedErr) {
+              if (onError) onError(wrappedErr);
+              return;
+            }
+          }
+          if (onError) onError(err);
+        },
+      );
+    })
+    .catch((err) => {
+      if (onError) onError(err);
+    });
+
+  return () => {
+    cancelled = true;
+    try {
+      unsub();
+    } catch {}
+  };
+}
+
+export async function createAccountSignInLink(db, auth, account, payload = {}) {
+  if (!db) throw new Error('Database not connected.');
+  const accountId = String(account?.usernameLower || '').trim().toLowerCase();
+  const username = String(account?.username || accountId).trim();
+  let accountVerifier = String(account?.passwordHash || '').trim();
+  if (!accountId) {
+    throw new Error('Sign in with a managed account to create instant sign-in links.');
+  }
+
+  const rawCode = payload.code ? String(payload.code) : generateRandomSignInCode(username);
+  const norm = normalizeSignInCode(rawCode);
+  if (!norm.valid) {
+    throw new Error(norm.error);
+  }
+
+  const label = String(payload.label || 'Quick Sign-In').trim().slice(0, 40) || 'Quick Sign-In';
+  const defaultView = VALID_SIGN_IN_DESTINATIONS.has(payload.defaultView) ? payload.defaultView : 'all';
+  const openInAboutBlank = Boolean(payload.openInAboutBlank);
+  const requirePassword = Boolean(payload.requirePassword);
+
+  await ensureFirebaseAnonAuth(auth);
+
+  if (!accountVerifier) {
+    const accSnap = await getDoc(doc(db, ACCOUNTS_COLLECTION, accountId));
+    if (!accSnap.exists()) throw new Error('Account record no longer exists.');
+    accountVerifier = String(accSnap.data()?.passwordHash || '');
+  }
+  if (!accountVerifier) {
+    throw new Error('Unable to verify account credentials for this link.');
+  }
+
+  const path = `${SIGN_IN_LINKS_COLLECTION}/${norm.codeLower}`;
+  const ref = doc(db, SIGN_IN_LINKS_COLLECTION, norm.codeLower);
+  let existingSnap;
+  try {
+    existingSnap = await getDoc(ref);
+  } catch (err) {
+    if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.GET, path);
+    throw err;
+  }
+
+  if (existingSnap.exists()) {
+    throw new Error(`Custom link code "${norm.code}" is already taken. Try a different code or click Randomize.`);
+  }
+
+  const now = Date.now();
+  const record = {
+    code: norm.code,
+    codeLower: norm.codeLower,
+    accountId,
+    username,
+    accountVerifier,
+    label,
+    defaultView,
+    openInAboutBlank,
+    requirePassword,
+    isActive: true,
+    useCount: 0,
+    lastUsedAt: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  try {
+    await setDoc(ref, record);
+  } catch (err) {
+    if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.CREATE, path);
+    throw err;
+  }
+
+  return sanitizeSignInLinkDoc(norm.codeLower, record);
+}
+
+export async function toggleAccountSignInLink(db, auth, codeLower, isActive) {
+  const cleanId = String(codeLower || '').trim().toLowerCase();
+  if (!db || !cleanId) throw new Error('Link ID missing.');
+  await ensureFirebaseAnonAuth(auth);
+  const path = `${SIGN_IN_LINKS_COLLECTION}/${cleanId}`;
+  try {
+    await updateDoc(doc(db, SIGN_IN_LINKS_COLLECTION, cleanId), {
+      isActive: Boolean(isActive),
+      updatedAt: Date.now(),
+    });
+  } catch (err) {
+    if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.UPDATE, path);
+    throw err;
+  }
+}
+
+export async function updateAccountSignInLinkRequirePassword(db, auth, codeLower, requirePassword) {
+  const cleanId = String(codeLower || '').trim().toLowerCase();
+  if (!db || !cleanId) throw new Error('Link ID missing.');
+  await ensureFirebaseAnonAuth(auth);
+  const path = `${SIGN_IN_LINKS_COLLECTION}/${cleanId}`;
+  try {
+    await updateDoc(doc(db, SIGN_IN_LINKS_COLLECTION, cleanId), {
+      requirePassword: Boolean(requirePassword),
+      updatedAt: Date.now(),
+    });
+  } catch (err) {
+    if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.UPDATE, path);
+    throw err;
+  }
+}
+
+export async function deleteAccountSignInLink(db, auth, codeLower) {
+  const cleanId = String(codeLower || '').trim().toLowerCase();
+  if (!db || !cleanId) return;
+  await ensureFirebaseAnonAuth(auth);
+  const path = `${SIGN_IN_LINKS_COLLECTION}/${cleanId}`;
+  try {
+    await deleteDoc(doc(db, SIGN_IN_LINKS_COLLECTION, cleanId));
+  } catch (err) {
+    if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.DELETE, path);
+    throw err;
+  }
+}
+
+export async function authenticateWithSignInLink(db, auth, rawCode) {
+  const norm = normalizeSignInCode(rawCode);
+  if (!norm.valid) {
+    throw new Error('This custom sign-in link is invalid.');
+  }
+  await ensureFirebaseAnonAuth(auth);
+
+  const linkPath = `${SIGN_IN_LINKS_COLLECTION}/${norm.codeLower}`;
+  const linkRef = doc(db, SIGN_IN_LINKS_COLLECTION, norm.codeLower);
+  let linkSnap;
+  try {
+    linkSnap = await getDoc(linkRef);
+  } catch (err) {
+    if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.GET, linkPath);
+    throw err;
+  }
+
+  if (!linkSnap.exists()) {
+    throw new Error('This custom sign-in link does not exist or was deleted.');
+  }
+
+  const linkData = sanitizeSignInLinkDoc(linkSnap.id, linkSnap.data());
+  if (!linkData || linkData.isActive === false) {
+    throw new Error('This custom sign-in link has been paused by its owner.');
+  }
+
+  const accPath = `${ACCOUNTS_COLLECTION}/${linkData.accountId}`;
+  const accRef = doc(db, ACCOUNTS_COLLECTION, linkData.accountId);
+  let accSnap;
+  try {
+    accSnap = await getDoc(accRef);
+  } catch (err) {
+    if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.GET, accPath);
+    throw err;
+  }
+
+  if (!accSnap.exists()) {
+    throw new Error('The account for this custom sign-in link no longer exists.');
+  }
+
+  const accRaw = accSnap.data();
+  if (accRaw.isActive === false) {
+    throw new Error('This account has been disabled by an admin.');
+  }
+
+  if (!accRaw.passwordHash || accRaw.passwordHash !== linkData.accountVerifier) {
+    throw new Error('This custom sign-in link expired because the account password was changed.');
+  }
+
+  const now = Date.now();
+  const todayKey = getTodayDateKey(now);
+  const nextSessionCount = Math.max(0, Math.round(Number(accRaw.sessionCount || 0))) + 1;
+  const nextTodayTimeMs =
+    accRaw.todayDateKey === todayKey ? Math.max(0, Math.round(Number(accRaw.todayTimeMs || 0))) : 0;
+
+  try {
+    await updateDoc(accRef, {
+      lastLoginAt: now,
+      lastSeenAt: now,
+      lastActivityAt: now,
+      sessionCount: nextSessionCount,
+      todayDateKey: todayKey,
+      todayTimeMs: nextTodayTimeMs,
+      isOnline: true,
+      updatedAt: now,
+    });
+  } catch (err) {
+    if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.UPDATE, accPath);
+  }
+
+  try {
+    await updateDoc(linkRef, {
+      useCount: Math.max(0, Math.round(Number(linkData.useCount || 0))) + 1,
+      lastUsedAt: now,
+      updatedAt: now,
+    });
+  } catch (err) {
+    if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.UPDATE, linkPath);
+  }
+
+  const account = sanitizeAccountDoc(accSnap.id, {
+    ...accRaw,
+    lastLoginAt: now,
+    lastSeenAt: now,
+    lastActivityAt: now,
+    sessionCount: nextSessionCount,
+    todayDateKey: todayKey,
+    todayTimeMs: nextTodayTimeMs,
+    isOnline: true,
+    updatedAt: now,
+  });
+
+  return {
+    account,
+    link: {
+      ...linkData,
+      useCount: linkData.useCount + 1,
+      lastUsedAt: now,
+      updatedAt: now,
+    },
+  };
+}
+
+const IGNORED_URL_PREFIXES = [
+  '/api/',
+  '/assets/',
+  '/gmfiles/',
+  '/thumbnails/',
+  '/websitedownload/',
+  '/public/',
+  '/src/',
+  '/@vite/',
+  '/@react-refresh',
+  '/node_modules/',
+];
+
+const IGNORED_EXACT_PATHS = new Set([
+  '',
+  '/',
+  '/index.html',
+  '/robots.txt',
+  '/sitemap.xml',
+  '/favicon.ico',
+  '/manifest.json',
+  '/sw.js',
+]);
+
+const STATIC_ASSET_EXT_RE = /\.(?:html?|js|mjs|jsx|ts|tsx|css|json|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot|mp3|wav|ogg|mp4|webm|wasm|data|unityweb|txt|xml|map|webmanifest)$/i;
+
+function safeDecodeUriSegment(raw) {
+  try {
+    return decodeURIComponent(String(raw || ''));
+  } catch {
+    return String(raw || '');
+  }
+}
+
+function splitCombinedToken(rawVal) {
+  const cleaned = String(rawVal || '').trim().replace(/^\/+/, '');
+  if (!cleaned) return null;
+  const slashIdx = cleaned.indexOf('/');
+  if (slashIdx > 0) {
+    const left = safeDecodeUriSegment(cleaned.slice(0, slashIdx)).trim();
+    const right = safeDecodeUriSegment(cleaned.slice(slashIdx + 1).replace(/\/+$/, ''));
+    if (left && right) {
+      return { type: 'credentials', identifier: left, password: right, raw: cleaned };
+    }
+    if (left) {
+      return { type: 'single_token', token: left, raw: cleaned };
+    }
+  }
+  const colonIdx = cleaned.indexOf(':');
+  if (colonIdx > 0) {
+    const left = safeDecodeUriSegment(cleaned.slice(0, colonIdx)).trim();
+    const right = safeDecodeUriSegment(cleaned.slice(colonIdx + 1));
+    if (left && right) {
+      return { type: 'credentials', identifier: left, password: right, raw: cleaned };
+    }
+  }
+  return { type: 'single_token', token: safeDecodeUriSegment(cleaned), raw: cleaned };
+}
+
+export function parseUrlSignInRequest(loc = typeof window !== 'undefined' ? window.location : null) {
+  if (!loc) return null;
+  try {
+    const searchParams = new URLSearchParams(loc.search || '');
+    const rawHash = String(loc.hash || '').replace(/^#/, '');
+    const hashLooksLikeQuery = /(?:signin|login|autologin|user|username|u|password|pass|p)=/i.test(rawHash);
+    const hashParams = hashLooksLikeQuery ? new URLSearchParams(rawHash) : null;
+
+    const getParam = (keys) => {
+      for (const k of keys) {
+        const v = searchParams.get(k);
+        if (v !== null && v !== '') return v;
+      }
+      if (hashParams) {
+        for (const k of keys) {
+          const v = hashParams.get(k);
+          if (v !== null && v !== '') return v;
+        }
+      }
+      return '';
+    };
+
+    const querySignIn = getParam(['signin', 'login', 'autologin']);
+    const queryUser = getParam(['user', 'username', 'u']).trim();
+    const queryPass = getParam(['password', 'pass', 'p']);
+
+    if (querySignIn.trim()) {
+      const split = splitCombinedToken(querySignIn);
+      if (split?.type === 'credentials') return split;
+      if (split?.type === 'single_token') {
+        if (queryPass) {
+          return {
+            type: 'credentials',
+            identifier: split.token,
+            password: queryPass,
+            raw: `${split.token}/${queryPass}`,
+          };
+        }
+        return split;
+      }
+    }
+
+    if (queryUser && queryPass) {
+      return {
+        type: 'credentials',
+        identifier: queryUser,
+        password: queryPass,
+        raw: `${queryUser}/${queryPass}`,
+      };
+    }
+
+    const pathname = String(loc.pathname || '/');
+    const lowerPath = pathname.toLowerCase();
+    const isIgnoredPath =
+      IGNORED_EXACT_PATHS.has(lowerPath) ||
+      IGNORED_URL_PREFIXES.some((prefix) => lowerPath.startsWith(prefix)) ||
+      STATIC_ASSET_EXT_RE.test(lowerPath);
+
+    if (!isIgnoredPath) {
+      const trimmedPath = pathname.replace(/^\/+|\/+$/g, '');
+      if (trimmedPath) {
+        const rawSegments = trimmedPath.split('/');
+        if (rawSegments.length === 1) {
+          const split = splitCombinedToken(rawSegments[0]);
+          if (split?.type === 'credentials') return split;
+          if (split?.type === 'single_token') {
+            if (queryPass) {
+              return {
+                type: 'credentials',
+                identifier: split.token,
+                password: queryPass,
+                raw: `${split.token}/${queryPass}`,
+              };
+            }
+            return split;
+          }
+        } else if (rawSegments.length >= 2) {
+          const firstLower = rawSegments[0].toLowerCase();
+          if (firstLower === 'signin' || firstLower === 'login') {
+            if (rawSegments.length === 2) {
+              const split = splitCombinedToken(rawSegments[1]);
+              if (split?.type === 'credentials') return split;
+              if (split?.type === 'single_token') {
+                if (queryPass) {
+                  return {
+                    type: 'credentials',
+                    identifier: split.token,
+                    password: queryPass,
+                    raw: `${split.token}/${queryPass}`,
+                  };
+                }
+                return split;
+              }
+            } else {
+              const identifier = safeDecodeUriSegment(rawSegments[1]).trim();
+              const pw = rawSegments.slice(2).map(safeDecodeUriSegment).join('/');
+              if (identifier && pw) {
+                return { type: 'credentials', identifier, password: pw, raw: trimmedPath };
+              }
+            }
+          } else {
+            const identifier = safeDecodeUriSegment(rawSegments[0]).trim();
+            const pw = rawSegments.slice(1).map(safeDecodeUriSegment).join('/');
+            if (identifier && pw) {
+              return { type: 'credentials', identifier, password: pw, raw: trimmedPath };
+            }
+          }
+        }
+      }
+    }
+
+    if (queryPass) {
+      if (queryUser) {
+        return {
+          type: 'credentials',
+          identifier: queryUser,
+          password: queryPass,
+          raw: `${queryUser}/${queryPass}`,
+        };
+      }
+      return {
+        type: 'password_only',
+        password: queryPass,
+        raw: queryPass,
+      };
+    }
+
+    if (queryUser) {
+      return {
+        type: 'single_token',
+        token: queryUser,
+        raw: queryUser,
+      };
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function completeDirectLoginUpdate(db, docSnap, rawPassword, linkData = null) {
+  const data = docSnap.data();
+  const now = Date.now();
+  const todayKey = getTodayDateKey(now);
+  const nextSessionCount = Math.max(0, Math.round(Number(data.sessionCount || 0))) + 1;
+  const nextTodayTimeMs =
+    data.todayDateKey === todayKey ? Math.max(0, Math.round(Number(data.todayTimeMs || 0))) : 0;
+  let nextEncryptedPassword = typeof data.encryptedPassword === 'string' ? data.encryptedPassword : '';
+  const loginPatch = {
+    lastLoginAt: now,
+    lastSeenAt: now,
+    lastActivityAt: now,
+    sessionCount: nextSessionCount,
+    todayDateKey: todayKey,
+    todayTimeMs: nextTodayTimeMs,
+    isOnline: true,
+    updatedAt: now,
+  };
+  if (!nextEncryptedPassword && rawPassword) {
+    const encrypted = await encryptAdminPassword(rawPassword);
+    if (encrypted) {
+      nextEncryptedPassword = encrypted;
+      loginPatch.encryptedPassword = encrypted;
+    }
+  }
+  const accPath = `${ACCOUNTS_COLLECTION}/${docSnap.id}`;
+  try {
+    await updateDoc(doc(db, ACCOUNTS_COLLECTION, docSnap.id), loginPatch);
+  } catch (err) {
+    if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.UPDATE, accPath);
+  }
+
+  let updatedLink = null;
+  if (linkData) {
+    const linkPath = `${SIGN_IN_LINKS_COLLECTION}/${linkData.codeLower}`;
+    try {
+      await updateDoc(doc(db, SIGN_IN_LINKS_COLLECTION, linkData.codeLower), {
+        useCount: Math.max(0, Math.round(Number(linkData.useCount || 0))) + 1,
+        lastUsedAt: now,
+        updatedAt: now,
+      });
+    } catch (err) {
+      if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.UPDATE, linkPath);
+    }
+    updatedLink = {
+      ...linkData,
+      useCount: Math.max(0, Math.round(Number(linkData.useCount || 0))) + 1,
+      lastUsedAt: now,
+      updatedAt: now,
+    };
+  }
+
+  const account = sanitizeAccountDoc(docSnap.id, {
+    ...data,
+    ...loginPatch,
+    encryptedPassword: nextEncryptedPassword,
+  });
+
+  return { account, link: updatedLink };
+}
+
+export async function authenticateByPasswordOnly(db, auth, rawPassword) {
+  const password = String(rawPassword || '');
+  if (!password) {
+    throw new Error('Please enter a password.');
+  }
+  await ensureFirebaseAnonAuth(auth);
+
+  let snapshot;
+  try {
+    snapshot = await getDocs(collection(db, ACCOUNTS_COLLECTION));
+  } catch (err) {
+    if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.LIST, ACCOUNTS_COLLECTION);
+    throw err;
+  }
+
+  const activeMatches = [];
+  const disabledMatches = [];
+
+  for (const docSnap of snapshot.docs) {
+    const data = docSnap.data();
+    if (!data || !data.passwordHash) continue;
+
+    let isMatch = false;
+    if (data.encryptedPassword) {
+      const decrypted = await decryptAdminPassword(data.encryptedPassword);
+      if (decrypted && decrypted === password) {
+        isMatch = true;
+      }
+    } else {
+      const computed = await hashPassword(password, data.passwordSalt || '');
+      if (computed === data.passwordHash) {
+        isMatch = true;
+      }
+    }
+
+    if (isMatch) {
+      if (data.isActive === false) {
+        disabledMatches.push(docSnap);
+      } else {
+        activeMatches.push(docSnap);
+      }
+    }
+  }
+
+  if (activeMatches.length === 1) {
+    return completeDirectLoginUpdate(db, activeMatches[0], password, null);
+  }
+  if (activeMatches.length > 1) {
+    throw Object.assign(
+      new Error('Multiple accounts use that password. Add your username before your password (example: /username/password).'),
+      { code: 'AMBIGUOUS_PASSWORD' },
+    );
+  }
+  if (disabledMatches.length > 0) {
+    throw new Error('This account has been disabled by an admin.');
+  }
+  throw new Error('No account matched that password or sign-in link.');
+}
+
+export async function authenticateFromUrlRequest(db, auth, urlReq) {
+  if (!urlReq) {
+    throw new Error('No sign-in information found in the URL.');
+  }
+  await ensureFirebaseAnonAuth(auth);
+
+  if (urlReq.type === 'password_only') {
+    return authenticateByPasswordOnly(db, auth, urlReq.password);
+  }
+
+  if (urlReq.type === 'credentials') {
+    const identifier = String(urlReq.identifier || '').trim();
+    const password = String(urlReq.password || '');
+    if (!identifier || !password) {
+      throw new Error('Please include both a username (or link code) and password.');
+    }
+
+    // First check if identifier matches a custom SignInLink code
+    const codeNorm = normalizeSignInCode(identifier);
+    if (codeNorm.valid) {
+      const linkPath = `${SIGN_IN_LINKS_COLLECTION}/${codeNorm.codeLower}`;
+      let linkSnap;
+      try {
+        linkSnap = await getDoc(doc(db, SIGN_IN_LINKS_COLLECTION, codeNorm.codeLower));
+      } catch (err) {
+        if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.GET, linkPath);
+        throw err;
+      }
+
+      if (linkSnap.exists()) {
+        const linkData = sanitizeSignInLinkDoc(linkSnap.id, linkSnap.data());
+        if (!linkData || linkData.isActive === false) {
+          throw new Error('This custom sign-in link has been paused by its owner.');
+        }
+        const accPath = `${ACCOUNTS_COLLECTION}/${linkData.accountId}`;
+        let accSnap;
+        try {
+          accSnap = await getDoc(doc(db, ACCOUNTS_COLLECTION, linkData.accountId));
+        } catch (err) {
+          if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.GET, accPath);
+          throw err;
+        }
+        if (!accSnap.exists()) {
+          throw new Error('The account for this custom sign-in link no longer exists.');
+        }
+        const accRaw = accSnap.data();
+        if (accRaw.isActive === false) {
+          throw new Error('This account has been disabled by an admin.');
+        }
+        if (!accRaw.passwordHash || accRaw.passwordHash !== linkData.accountVerifier) {
+          throw new Error('This custom sign-in link expired because the account password was changed.');
+        }
+        const computed = await hashPassword(password, accRaw.passwordSalt || '');
+        if (computed !== accRaw.passwordHash) {
+          throw Object.assign(
+            new Error(`Incorrect password for @${linkData.username}.`),
+            { code: 'INVALID_PASSWORD', username: linkData.username },
+          );
+        }
+        return completeDirectLoginUpdate(db, accSnap, password, linkData);
+      }
+    }
+
+    // Otherwise authenticate as username + password
+    const account = await authenticateAccount(db, auth, identifier, password);
+    return { account, link: null };
+  }
+
+  // single_token: check custom SignInLink first, then /<username> direct login, then password-only fallback
+  if (urlReq.type === 'single_token') {
+    const token = String(urlReq.token || '').trim();
+    if (!token) {
+      throw new Error('Invalid sign-in link.');
+    }
+
+    const codeNorm = normalizeSignInCode(token);
+    if (codeNorm.valid) {
+      const linkPath = `${SIGN_IN_LINKS_COLLECTION}/${codeNorm.codeLower}`;
+      let linkSnap;
+      try {
+        linkSnap = await getDoc(doc(db, SIGN_IN_LINKS_COLLECTION, codeNorm.codeLower));
+      } catch (err) {
+        if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.GET, linkPath);
+        throw err;
+      }
+
+      if (linkSnap.exists()) {
+        const linkData = sanitizeSignInLinkDoc(linkSnap.id, linkSnap.data());
+        if (!linkData || linkData.isActive === false) {
+          throw new Error('This custom sign-in link has been paused by its owner.');
+        }
+        if (linkData.requirePassword) {
+          throw Object.assign(
+            new Error(`This link requires your password at the end (?signin=${linkData.code}/YOUR_PASSWORD). Enter your password below to sign in as @${linkData.username}.`),
+            { code: 'PASSWORD_REQUIRED', username: linkData.username, linkCode: linkData.code },
+          );
+        }
+        return authenticateWithSignInLink(db, auth, codeNorm.codeLower);
+      }
+    }
+
+    const userNorm = normalizeUsername(token);
+    if (userNorm.valid) {
+      const accPath = `${ACCOUNTS_COLLECTION}/${userNorm.usernameLower}`;
+      let accSnap;
+      try {
+        accSnap = await getDoc(doc(db, ACCOUNTS_COLLECTION, userNorm.usernameLower));
+      } catch (err) {
+        if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.GET, accPath);
+        throw err;
+      }
+
+      if (accSnap.exists()) {
+        const accRaw = accSnap.data();
+        const accName = accRaw?.username || userNorm.username;
+        if (accRaw?.isActive === false) {
+          throw new Error('This account has been disabled by an admin.');
+        }
+        if (accRaw?.requirePasswordOnUrl) {
+          throw Object.assign(
+            new Error(`Password protection is enabled for @${accName}. Add /${'<password>'} at the end (/${accName}/YOUR_PASSWORD) or enter your password below.`),
+            { code: 'PASSWORD_REQUIRED', username: accName },
+          );
+        }
+        return completeDirectLoginUpdate(db, accSnap, '', null);
+      }
+    }
+
+    return authenticateByPasswordOnly(db, auth, token);
+  }
+
+  throw new Error('Invalid sign-in link.');
+}
+

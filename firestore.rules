@@ -23,7 +23,7 @@ service cloud.firestore {
     }
 
     function isOptionalBool(data, field) {
-      return !(field in data) || data[field] is bool;
+      return !(field in data) || data[field] == null || data[field] is bool;
     }
 
     function isOptionalNumber(data, field) {
@@ -67,16 +67,61 @@ service cloud.firestore {
         || (
           data.activityTimeMs is map
           && data.activityTimeMs.keys().hasOnly([
-            'games', 'movies', 'moremovies', 'youtube', 'lobbychat', 'ai', 'catalog'
+            'games', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'lobbychat', 'ai', 'catalog'
           ])
           && isOptionalNumber(data.activityTimeMs, 'games')
           && isOptionalNumber(data.activityTimeMs, 'movies')
           && isOptionalNumber(data.activityTimeMs, 'moremovies')
+          && isOptionalNumber(data.activityTimeMs, 'moremoremovies')
           && isOptionalNumber(data.activityTimeMs, 'youtube')
           && isOptionalNumber(data.activityTimeMs, 'lobbychat')
           && isOptionalNumber(data.activityTimeMs, 'ai')
           && isOptionalNumber(data.activityTimeMs, 'catalog')
         );
+    }
+
+    function isValidAccountFields(data, accountId) {
+      return (!('username' in data) || (data.username is string && data.username.size() >= 2 && data.username.size() <= 20 && data.username.matches('^[a-zA-Z0-9_\\-]+$')))
+        && (!('usernameLower' in data) || (data.usernameLower is string && data.usernameLower.size() >= 2 && data.usernameLower.size() <= 20 && data.usernameLower == accountId))
+        && (!('passwordSalt' in data) || (data.passwordSalt is string && data.passwordSalt.size() <= 128))
+        && (!('passwordHash' in data) || (data.passwordHash is string && data.passwordHash.size() >= 1 && data.passwordHash.size() <= 256))
+        && isOptionalString(data, 'encryptedPassword', 512)
+        && isOptionalBool(data, 'isActive')
+        && isOptionalBool(data, 'isAdmin')
+        && isOptionalBool(data, 'allowGlobalOverride')
+        && isOptionalBool(data, 'allowAiOverride')
+        && isOptionalBool(data, 'gamesAccess')
+        && isOptionalBool(data, 'moviesAccess')
+        && isOptionalBool(data, 'moreMoviesAccess')
+        && isOptionalBool(data, 'moreMoreMoviesAccess')
+        && isOptionalBool(data, 'youtubeAccess')
+        && isOptionalBool(data, 'lobbyChatAccess')
+        && isOptionalBool(data, 'aiAccess')
+        && isOptionalBool(data, 'decoysAccess')
+        && isOptionalBool(data, 'downloadAccess')
+        && isOptionalBool(data, 'chatMuted')
+        && isOptionalBool(data, 'chatBanned')
+        && isOptionalString(data, 'roleBadge', 20)
+        && (!('badgeColor' in data) || data.badgeColor == null || data.badgeColor in ['cyan', 'amber', 'emerald', 'rose', 'violet', 'neutral'])
+        && isOptionalString(data, 'adminNotes', 500)
+        && isOptionalBool(data, 'defaultGirlsTheme')
+        && isOptionalBool(data, 'requirePasswordOnUrl')
+        && (!('favorites' in data) || data.favorites == null || (data.favorites is list && data.favorites.size() <= 500 && (data.favorites.size() == 0 || data.favorites[0] is string)))
+        && (!('recentlyPlayed' in data) || data.recentlyPlayed == null || (data.recentlyPlayed is list && data.recentlyPlayed.size() <= 30 && (data.recentlyPlayed.size() == 0 || data.recentlyPlayed[0] is string)))
+        && isOptionalString(data, 'preferredTheme', 64)
+        && (!('preferredMode' in data) || data.preferredMode == null || data.preferredMode == '' || data.preferredMode in ['light', 'dark'])
+        && isOptionalNumber(data, 'totalTimeMs')
+        && isOptionalNumber(data, 'todayTimeMs')
+        && isOptionalString(data, 'todayDateKey', 16)
+        && isOptionalNumber(data, 'sessionCount')
+        && isOptionalString(data, 'currentActivity', 100)
+        && isOptionalNumber(data, 'lastActivityAt')
+        && isValidActivityTimeMs(data)
+        && isOptionalNumber(data, 'createdAt')
+        && isOptionalNumber(data, 'updatedAt')
+        && isOptionalNumber(data, 'lastLoginAt')
+        && isOptionalBool(data, 'isOnline')
+        && isOptionalNumber(data, 'lastSeenAt');
     }
 
     function isValidAccountCreate(data, accountId) {
@@ -88,25 +133,19 @@ service cloud.firestore {
           'badgeColor', 'createdAt', 'updatedAt'
         ])
         && data.keys().hasOnly([
-          'username', 'usernameLower', 'passwordSalt', 'passwordHash',
-          'isActive', 'isAdmin', 'allowGlobalOverride', 'allowAiOverride', 'gamesAccess', 'moviesAccess', 'moreMoviesAccess',
+          'username', 'usernameLower', 'passwordSalt', 'passwordHash', 'encryptedPassword',
+          'isActive', 'isAdmin', 'allowGlobalOverride', 'allowAiOverride', 'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'moreMoreMoviesAccess',
           'youtubeAccess', 'lobbyChatAccess', 'aiAccess', 'decoysAccess',
           'downloadAccess', 'chatMuted', 'chatBanned', 'roleBadge',
-          'badgeColor', 'adminNotes', 'defaultGirlsTheme', 'favorites', 'recentlyPlayed', 'preferredTheme',
+          'badgeColor', 'adminNotes', 'defaultGirlsTheme', 'requirePasswordOnUrl', 'favorites', 'recentlyPlayed', 'preferredTheme',
           'preferredMode', 'accountSettings', 'totalTimeMs', 'todayTimeMs', 'todayDateKey',
           'sessionCount', 'currentActivity', 'lastActivityAt', 'activityTimeMs',
           'createdAt', 'updatedAt', 'lastLoginAt', 'isOnline', 'lastSeenAt'
         ])
-        && data.username is string && data.username.size() >= 2 && data.username.size() <= 20
-        && data.username.matches('^[a-zA-Z0-9_\\-]+$')
-        && data.usernameLower is string && data.usernameLower.size() >= 2 && data.usernameLower.size() <= 20
-        && data.usernameLower == accountId
+        && isValidAccountFields(data, accountId)
+        && isValidAccountSettings(data)
         && data.passwordSalt is string && data.passwordSalt.size() >= 1 && data.passwordSalt.size() <= 128
-        && data.passwordHash is string && data.passwordHash.size() >= 1 && data.passwordHash.size() <= 256
         && data.isActive is bool
-        && isOptionalBool(data, 'isAdmin')
-        && isOptionalBool(data, 'allowGlobalOverride')
-        && isOptionalBool(data, 'allowAiOverride')
         && data.gamesAccess is bool
         && data.moviesAccess is bool
         && data.moreMoviesAccess is bool
@@ -119,32 +158,17 @@ service cloud.firestore {
         && data.chatBanned is bool
         && data.roleBadge is string && data.roleBadge.size() <= 20
         && data.badgeColor in ['cyan', 'amber', 'emerald', 'rose', 'violet', 'neutral']
-        && isOptionalString(data, 'adminNotes', 500)
-        && isOptionalBool(data, 'defaultGirlsTheme')
-        && (!('favorites' in data) || (data.favorites is list && data.favorites.size() <= 500 && (data.favorites.size() == 0 || data.favorites[0] is string)))
-        && (!('recentlyPlayed' in data) || (data.recentlyPlayed is list && data.recentlyPlayed.size() <= 30 && (data.recentlyPlayed.size() == 0 || data.recentlyPlayed[0] is string)))
-        && isOptionalString(data, 'preferredTheme', 64)
-        && (!('preferredMode' in data) || data.preferredMode == null || data.preferredMode in ['light', 'dark'])
-        && isValidAccountSettings(data)
-        && isOptionalNumber(data, 'totalTimeMs')
-        && isOptionalNumber(data, 'todayTimeMs')
-        && isOptionalString(data, 'todayDateKey', 16)
-        && isOptionalNumber(data, 'sessionCount')
-        && isOptionalString(data, 'currentActivity', 100)
-        && isOptionalNumber(data, 'lastActivityAt')
-        && isValidActivityTimeMs(data)
         && data.createdAt is number
-        && data.updatedAt is number
-        && isOptionalNumber(data, 'lastLoginAt')
-        && isOptionalBool(data, 'isOnline')
-        && isOptionalNumber(data, 'lastSeenAt');
+        && data.updatedAt is number;
     }
 
     function isValidAccountUpdate(data, accountId) {
-      return isValidAccountCreate(data, accountId)
-        && data.createdAt == existing().createdAt
-        && data.usernameLower == existing().usernameLower
-        && data.updatedAt >= existing().updatedAt;
+      return resource != null
+        && isValidAccountFields(data, accountId)
+        && (!('createdAt' in existing()) || data.createdAt == existing().createdAt)
+        && (!('usernameLower' in existing()) || data.usernameLower == existing().usernameLower)
+        && data.updatedAt is number && data.updatedAt >= 0
+        && (!incoming().diff(existing()).affectedKeys().hasAny(['accountSettings']) || isValidAccountSettings(data));
     }
 
     function isValidWorkspaceConfig(data) {
@@ -156,7 +180,7 @@ service cloud.firestore {
         && data.keys().hasOnly([
           'siteLockdown', 'lockdownMessage', 'allowSharedPasscodes', 'allowAccountOverrides', 'allowAiOverrides',
           'girlsThemePolicy', 'girlsThemeSyncChat',
-          'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'youtubeAccess',
+          'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'moreMoreMoviesAccess', 'youtubeAccess',
           'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess',
           'broadcastId', 'broadcastMessage', 'broadcastSender', 'broadcastAt', 'updatedAt'
         ])
@@ -170,6 +194,7 @@ service cloud.firestore {
         && data.gamesAccess is bool
         && data.moviesAccess is bool
         && data.moreMoviesAccess is bool
+        && isOptionalBool(data, 'moreMoreMoviesAccess')
         && data.youtubeAccess is bool
         && data.lobbyChatAccess is bool
         && data.aiAccess is bool
@@ -238,10 +263,11 @@ service cloud.firestore {
     }
 
     function isValidDmThreadUpdate(data, dmId) {
-      return isValidDmThread(data, dmId)
+      return resource != null
+        && isValidDmThread(data, dmId)
         && data.participants == existing().participants
         && data.createdAt == existing().createdAt
-        && data.updatedAt >= existing().updatedAt;
+        && data.updatedAt is number && data.updatedAt >= 0;
     }
 
     // Managed user accounts
@@ -252,15 +278,74 @@ service cloud.firestore {
       allow update: if isValidId(accountId)
         && isValidAccountUpdate(incoming(), accountId)
         && incoming().diff(existing()).affectedKeys().hasOnly([
-          'username', 'passwordSalt', 'passwordHash', 'isActive', 'isAdmin', 'allowGlobalOverride', 'allowAiOverride',
-          'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'youtubeAccess',
+          'username', 'passwordSalt', 'passwordHash', 'encryptedPassword', 'isActive', 'isAdmin', 'allowGlobalOverride', 'allowAiOverride',
+          'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'moreMoreMoviesAccess', 'youtubeAccess',
           'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess',
-          'chatMuted', 'chatBanned', 'roleBadge', 'badgeColor', 'adminNotes', 'defaultGirlsTheme',
+          'chatMuted', 'chatBanned', 'roleBadge', 'badgeColor', 'adminNotes', 'defaultGirlsTheme', 'requirePasswordOnUrl',
           'favorites', 'recentlyPlayed', 'preferredTheme', 'preferredMode', 'accountSettings',
           'totalTimeMs', 'todayTimeMs', 'todayDateKey', 'sessionCount', 'currentActivity', 'lastActivityAt', 'activityTimeMs',
           'updatedAt', 'lastLoginAt', 'isOnline', 'lastSeenAt'
         ]);
       allow delete: if isValidId(accountId);
+    }
+
+    function isValidSignInLink(data, linkId) {
+      return data.keys().hasAll([
+          'code', 'codeLower', 'accountId', 'username', 'accountVerifier',
+          'label', 'defaultView', 'openInAboutBlank', 'isActive',
+          'useCount', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'code', 'codeLower', 'accountId', 'username', 'accountVerifier',
+          'label', 'defaultView', 'openInAboutBlank', 'requirePassword', 'isActive',
+          'useCount', 'lastUsedAt', 'createdAt', 'updatedAt'
+        ])
+        && data.code is string && data.code.size() >= 3 && data.code.size() <= 48
+        && data.code.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.codeLower is string && data.codeLower.size() >= 3 && data.codeLower.size() <= 48
+        && data.codeLower == linkId
+        && data.codeLower.matches('^[a-z0-9_\\-]+$')
+        && data.accountId is string && data.accountId.size() >= 2 && data.accountId.size() <= 20
+        && data.accountId.matches('^[a-z0-9_\\-]+$')
+        && data.username is string && data.username.size() >= 2 && data.username.size() <= 20
+        && data.username.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.accountVerifier is string && data.accountVerifier.size() >= 1 && data.accountVerifier.size() <= 256
+        && data.label is string && data.label.size() >= 1 && data.label.size() <= 40
+        && data.defaultView in ['all', 'featured', 'favorites', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'lobbychat', 'chat']
+        && data.openInAboutBlank is bool
+        && isOptionalBool(data, 'requirePassword')
+        && data.isActive is bool
+        && data.useCount is number && data.useCount >= 0
+        && isOptionalNumber(data, 'lastUsedAt')
+        && data.createdAt is number
+        && data.updatedAt is number;
+    }
+
+    function isValidSignInLinkUpdate(data, linkId) {
+      return resource != null
+        && isValidSignInLink(data, linkId)
+        && data.createdAt == existing().createdAt
+        && data.codeLower == existing().codeLower
+        && data.accountId == existing().accountId
+        && data.accountVerifier == existing().accountVerifier
+        && data.updatedAt is number && data.updatedAt >= 0;
+    }
+
+    // Custom instant sign-in links
+    match /signInLinks/{linkId} {
+      allow get: if isValidId(linkId);
+      allow list: if resource.data.accountId is string && resource.data.accountId.size() >= 2;
+      allow create: if isValidId(linkId)
+        && isValidSignInLink(incoming(), linkId)
+        && exists(/databases/$(database)/documents/siteAccounts/$(incoming().accountId))
+        && get(/databases/$(database)/documents/siteAccounts/$(incoming().accountId)).data.passwordHash == incoming().accountVerifier;
+      allow update: if isValidId(linkId)
+        && isValidSignInLinkUpdate(incoming(), linkId)
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'label', 'defaultView', 'openInAboutBlank', 'requirePassword', 'isActive',
+          'useCount', 'lastUsedAt', 'updatedAt'
+        ]);
+      allow delete: if isValidId(linkId);
     }
 
     // Global workspace configuration

@@ -6,13 +6,22 @@
 // anyone opens the website or the games portal.
 // ============================================================================
 
-export const WHATS_NEW_SENTENCE = "Gambling (Casino) Game, BTD6 & BTD Battles 2 Copy, and Quoridor are out! All games support solo and multiplayer.";
+export const WHATS_NEW_SENTENCE = "New: Create Custom Instant Sign-In Links in your Account menu to log in with one click—plus Casino, BTD6 & Quoridor!";
 
 // Version identifier (used if you want to track modal dismissals)
-export const WHATS_NEW_VERSION = '2026-11-11';
+export const WHATS_NEW_VERSION = '2026-11-19';
 
 // Detailed changelog items (viewable in the full "View all changes" modal)
 export const WHATS_NEW_CHANGES = [
+  {
+    id: 'custom-signin-links',
+    icon: '🔗',
+    iconBg: 'bg-cyan-500/20 text-cyan-400',
+    title: 'Custom Instant Sign-In Links',
+    description: 'Make your own custom bookmark link in the Account menu—or just add /username (or /username/password if protected) at the end of the URL to sign right in.',
+    actionLabel: 'Create Sign-In Link',
+    actionAccountTab: 'links'
+  },
   {
     id: 'gambling-casino',
     icon: '🎰',

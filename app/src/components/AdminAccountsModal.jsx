@@ -3,6 +3,8 @@ import {
   Ban,
   BarChart3,
   Check,
+  Clapperboard,
+  Copy,
   Download,
   Edit3,
   Eraser,
@@ -60,6 +62,7 @@ import {
   generateStrongPassword,
   getAccountTodayTimeMs,
   isAccountOnline,
+  revealAccountPassword,
   subscribeToAllManagedAccounts,
   sendAdminBroadcast,
   clearAdminBroadcast,
@@ -80,6 +83,7 @@ const WORKSPACE_ICONS = {
   gamesAccess: Gamepad2,
   moviesAccess: Tv,
   moreMoviesAccess: Film,
+  moreMoreMoviesAccess: Clapperboard,
   youtubeAccess: Youtube,
   lobbyChatAccess: MessageSquare,
   aiAccess: Sparkles,
@@ -91,6 +95,7 @@ const DEFAULT_CREATE_PERMS = {
   gamesAccess: true,
   moviesAccess: true,
   moreMoviesAccess: true,
+  moreMoreMoviesAccess: true,
   youtubeAccess: true,
   lobbyChatAccess: true,
   aiAccess: false,
@@ -135,6 +140,7 @@ export default function AdminAccountsModal({
   // Per-account inline actions state
   const [resetTarget, setResetTarget] = useState(null);
   const [resetPassValue, setResetPassValue] = useState('');
+  const [revealedPasswords, setRevealedPasswords] = useState({});
   const [editTarget, setEditTarget] = useState(null);
   const [editUsername, setEditUsername] = useState('');
   const [editBadge, setEditBadge] = useState('');
@@ -394,10 +400,25 @@ export default function AdminAccountsModal({
 
   const handlePasswordReset = async (e, acc) => {
     e.preventDefault();
-    if (!resetPassValue.trim()) return;
+    const nextPw = resetPassValue.trim();
+    if (!nextPw) return;
     setBusyKey(`${acc.usernameLower}:reset`);
     try {
-      await updateManagedAccount(db, auth, acc.usernameLower, { newPassword: resetPassValue.trim() });
+      await updateManagedAccount(db, auth, acc.usernameLower, { newPassword: nextPw });
+      setRevealedPasswords((prev) => {
+        const existing = prev[acc.usernameLower];
+        if (!existing) return prev;
+        return {
+          ...prev,
+          [acc.usernameLower]: {
+            ...existing,
+            available: true,
+            value: nextPw,
+            reason: '',
+            copied: false,
+          },
+        };
+      });
       setResetTarget(null);
       setResetPassValue('');
       showNotice('success', `Password updated for @${acc.username}`);
@@ -405,6 +426,54 @@ export default function AdminAccountsModal({
       showNotice('error', err?.message || 'Password reset failed.');
     } finally {
       setBusyKey(null);
+    }
+  };
+
+  const handleToggleRevealPassword = async (acc) => {
+    const key = acc.usernameLower;
+    const current = revealedPasswords[key];
+    if (current?.visible) {
+      setRevealedPasswords((prev) => ({
+        ...prev,
+        [key]: { ...prev[key], visible: false, copied: false },
+      }));
+      return;
+    }
+
+    setRevealedPasswords((prev) => ({
+      ...prev,
+      [key]: { visible: true, loading: true, available: false, value: '', reason: '', copied: false },
+    }));
+    const res = await revealAccountPassword(acc);
+    setRevealedPasswords((prev) => ({
+      ...prev,
+      [key]: {
+        visible: true,
+        loading: false,
+        available: res.available,
+        value: res.password,
+        reason: res.reason,
+        copied: false,
+      },
+    }));
+  };
+
+  const handleCopyRevealedPassword = async (acc, pw) => {
+    if (!pw) return;
+    const key = acc.usernameLower;
+    try {
+      await navigator.clipboard.writeText(pw);
+      setRevealedPasswords((prev) => ({
+        ...prev,
+        [key]: { ...prev[key], copied: true },
+      }));
+      setTimeout(() => {
+        setRevealedPasswords((prev) =>
+          prev[key] ? { ...prev, [key]: { ...prev[key], copied: false } } : prev,
+        );
+      }, 2000);
+    } catch {
+      showNotice('error', 'Copy failed — please select and copy the password manually.');
     }
   };
 
@@ -2112,6 +2181,30 @@ export default function AdminAccountsModal({
 
                             <button
                               type="button"
+                              onClick={() => handleToggleRevealPassword(acc)}
+                              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                                revealedPasswords[acc.usernameLower]?.visible
+                                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                                  : isLight
+                                    ? 'bg-neutral-100 border-neutral-300 text-neutral-700 hover:bg-neutral-200'
+                                    : 'bg-white/5 border-white/15 text-neutral-300 hover:bg-white/10'
+                              }`}
+                              title={
+                                revealedPasswords[acc.usernameLower]?.visible
+                                  ? 'Hide user password'
+                                  : 'View user password'
+                              }
+                            >
+                              {revealedPasswords[acc.usernameLower]?.visible ? (
+                                <EyeOff className="w-2.5 h-2.5" />
+                              ) : (
+                                <Eye className="w-2.5 h-2.5" />
+                              )}
+                              <span>{revealedPasswords[acc.usernameLower]?.visible ? 'Hide' : 'View'}</span>
+                            </button>
+
+                            <button
+                              type="button"
                               onClick={() => {
                                 if (resetTarget === acc.usernameLower) {
                                   setResetTarget(null);
@@ -2373,6 +2466,79 @@ export default function AdminAccountsModal({
                             </button>
                           </div>
                         </div>
+
+                        {/* Inline Revealed Password Viewer */}
+                        {revealedPasswords[acc.usernameLower]?.visible && (() => {
+                          const revealEntry = revealedPasswords[acc.usernameLower];
+                          return (
+                            <div
+                              className={`pt-2 border-t flex flex-wrap items-center gap-2 animate-fade-in ${
+                                isLight ? 'border-neutral-200' : 'border-white/10'
+                              }`}
+                            >
+                              <span className="text-[10px] font-mono font-bold uppercase text-emerald-400 flex items-center gap-1">
+                                <Eye className="w-3 h-3" />
+                                <span>Password:</span>
+                              </span>
+                              {revealEntry.loading ? (
+                                <span className={`text-[11px] font-mono ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>
+                                  Decrypting...
+                                </span>
+                              ) : revealEntry.available ? (
+                                <>
+                                  <code
+                                    className={`px-2.5 py-1 rounded-lg border text-xs font-mono font-bold select-all ${
+                                      isLight
+                                        ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                                        : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+                                    }`}
+                                  >
+                                    {revealEntry.value}
+                                  </code>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyRevealedPassword(acc, revealEntry.value)}
+                                    className={`px-2 py-1 rounded-lg border text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                                      revealEntry.copied
+                                        ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                                        : isLight
+                                          ? 'border-neutral-300 hover:bg-neutral-100 text-neutral-700'
+                                          : 'border-white/15 hover:bg-white/10 text-neutral-200'
+                                    }`}
+                                  >
+                                    {revealEntry.copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                    <span>{revealEntry.copied ? 'Copied' : 'Copy'}</span>
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <span className={`text-[10.5px] ${isLight ? 'text-amber-700' : 'text-amber-300/90'}`}>
+                                    {revealEntry.reason}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setResetTarget(acc.usernameLower);
+                                      setResetPassValue('');
+                                    }}
+                                    className="px-2 py-0.5 rounded-md border border-amber-500/40 bg-amber-500/15 text-amber-300 text-[10px] font-mono font-bold cursor-pointer hover:bg-amber-500/25"
+                                  >
+                                    Set Password
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleRevealPassword(acc)}
+                                className={`ml-auto px-2 py-0.5 rounded text-[10px] font-mono cursor-pointer ${
+                                  isLight ? 'text-neutral-500 hover:bg-neutral-100' : 'text-neutral-400 hover:bg-white/10'
+                                }`}
+                              >
+                                Hide
+                              </button>
+                            </div>
+                          );
+                        })()}
 
                         {/* Inline Password Reset Form */}
                         {resetTarget === acc.usernameLower && (

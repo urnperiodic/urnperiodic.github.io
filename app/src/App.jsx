@@ -5,7 +5,8 @@ import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/f
 import { lobbyAuth, lobbyDb, handleFirestoreError, isFirestorePermissionError, OperationType } from './firebase';
 import { decryptChatPayload, deleteAllChatMessages } from './utils/chatModeration';
 import { getActiveMutedUsers, isSenderMuted, subscribeUserMutes } from './utils/userMute';
-import { PUBLIC_GAMES_BASE_URL } from './data/gameSource';
+import { PUBLIC_GAMES_BASE_URL, resolvePublicFileUrl } from './data/gameSource';
+import { GMFILES_PATH_LOOKUP } from './data/gmfilesPaths';
 import { gameRankings } from './data/gameRankings';
 import { WHATS_NEW_SENTENCE, WHATS_NEW_CHANGES, WHATS_NEW_VERSION } from './whatsNewData';
 const GAMES_PER_PAGE = 36;
@@ -93,29 +94,77 @@ const createGameLoadErrorDocument = (url) => ({
 });
 
 const loadGameFrame = async (url, signal) => {
-  if (!url.startsWith(PUBLIC_GAMES_BASE_URL)) return { src: url };
+  if (!url) return { src: '' };
+  if (/^https?:\/\//i.test(url)) return { src: url };
+
+  const normalizedUrl = url.startsWith('/') ? url : resolvePublicFileUrl(url, 'Gmfiles');
+  const isLocalHtml =
+    normalizedUrl.startsWith(PUBLIC_GAMES_BASE_URL) ||
+    /\.html?(\?|#|$)/i.test(normalizedUrl);
+
+  if (!isLocalHtml) return { src: normalizedUrl };
 
   const loadHtml = async (sourceUrl) => {
     const response = await fetch(sourceUrl, { signal });
     if (!response.ok) throw new Error(`Portal file request failed: ${response.status}`);
     const html = await response.text();
+    // Guard against Vite/Express SPA fallback returning the main app's index.html
+    if (html.includes('<div id="root"></div>') && (html.includes('/src/main.') || html.includes('Study Tools'))) {
+      throw new Error('SPA fallback returned instead of portal HTML');
+    }
     const baseUrl = sourceUrl.slice(0, sourceUrl.lastIndexOf('/') + 1);
     return prepareGameHtml(html, baseUrl);
   };
 
-  try {
-    const srcDoc = await loadHtml(url);
-    return { srcDoc };
-  } catch (error) {
-    if (error.name === 'AbortError') throw error;
+  const filename = decodeURIComponent(
+    new URL(normalizedUrl, window.location.origin).pathname.split('/').pop() || ''
+  );
+  const mappedSubpath =
+    GMFILES_PATH_LOOKUP[filename] ||
+    Object.entries(GMFILES_PATH_LOOKUP).find(([k]) => k.toLowerCase() === filename.toLowerCase())?.[1];
 
-    const filename = new URL(url, window.location.origin).pathname.split('/').pop();
-    if (!filename) throw error;
+  const candidatePaths = Array.from(
+    new Set(
+      [
+        normalizedUrl,
+        resolvePublicFileUrl(filename),
+        mappedSubpath ? `${PUBLIC_GAMES_BASE_URL}${mappedSubpath}` : null,
+        filename ? `/${filename}` : null,
+        filename ? `/Gmfiles/${filename}` : null,
+        filename ? `/Gmfiles/html5-games/${filename}` : null,
+        filename ? `/Gmfiles/flash/${filename}` : null,
+        filename ? `/Gmfiles/html5-games/eagler/${filename}` : null,
+        filename ? `/Gmfiles/html5-games/fnf/${filename}` : null,
+        filename ? `/Gmfiles/gba/${filename}` : null,
+        filename ? `/Gmfiles/nds/${filename}` : null,
+        filename ? `/Gmfiles/n64/${filename}` : null,
+        filename ? `/Gmfiles/snes/${filename}` : null,
+        filename ? `/Gmfiles/nes/${filename}` : null,
+        filename ? `/Gmfiles/pokemon/${filename}` : null,
+        filename ? `/Gmfiles/segaMD/${filename}` : null,
+        filename ? `/Gmfiles/psx/${filename}` : null,
+        filename ? `/Gmfiles/arcade/${filename}` : null,
+        filename ? `/Gmfiles/dos/${filename}` : null,
+        filename ? `/iframe/${filename}` : null,
+      ].filter(Boolean)
+    )
+  );
 
-    const localUrl = `${window.location.origin}/${filename}`;
-    const srcDoc = await loadHtml(localUrl);
-    return { srcDoc };
+  let lastError = null;
+  for (const candidate of candidatePaths) {
+    try {
+      const targetUrl = candidate.startsWith('http')
+        ? candidate
+        : `${window.location.origin}${candidate.startsWith('/') ? '' : '/'}${candidate}`;
+      const srcDoc = await loadHtml(targetUrl);
+      return { srcDoc };
+    } catch (error) {
+      if (error.name === 'AbortError') throw error;
+      lastError = error;
+    }
   }
+
+  throw lastError || new Error('Portal file could not be resolved');
 };
 import { initialArticles } from './data/articles';
 const FlashcardsWorkspace = lazy(() => import('./components/FlashcardsWorkspace'));
@@ -133,6 +182,7 @@ import {
   INACTIVITY_TIMEOUT_MS,
   LAST_ACTIVITY_KEY,
   authenticateAccount,
+  authenticateFromUrlRequest,
   clearAccountSession,
   clearSessionActivity,
   getCachedWorkspaceConfig,
@@ -142,6 +192,7 @@ import {
   getTodayDateKey,
   isAutoSignOutOnIdleEnabled,
   isSessionInactiveExpired,
+  parseUrlSignInRequest,
   recordAccountUsageHeartbeat,
   removeRememberedLocalUser,
   sanitizeActivityTimeMs,
@@ -192,6 +243,7 @@ import {
   Volume2,
   Tv,
   Film,
+  Clapperboard,
   MessageCircle,
   MessageSquare,
   Globe,
@@ -236,6 +288,8 @@ import {
   Trash2,
   User,
   LogIn,
+  Link2,
+  KeyRound,
   LayoutGrid,
   Grid3X3,
   Megaphone
@@ -353,12 +407,20 @@ const getLocalGameDownloadUrl = (url) => {
 const getDirectGmfilesUrl = (url) => {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  let cleanName = url.startsWith('/') ? url.slice(1) : url;
+  let cleanName = url.replace(/^\/+/, '').replace(/^public\//i, '');
   if (cleanName.toLowerCase().startsWith('iframe/')) {
     return `https://urnperiodic.github.io/public/${cleanName}`;
   }
   if (cleanName.toLowerCase().startsWith('gmfiles/')) {
     cleanName = cleanName.slice(8);
+  }
+  if (!cleanName.includes('/')) {
+    const mapped =
+      GMFILES_PATH_LOOKUP[cleanName] ||
+      Object.entries(GMFILES_PATH_LOOKUP).find(([k]) => k.toLowerCase() === cleanName.toLowerCase())?.[1];
+    if (mapped) {
+      cleanName = mapped;
+    }
   }
   return `https://urnperiodic.github.io/Gmfiles/${cleanName}`;
 };
@@ -643,10 +705,10 @@ function WhatsNewNotificationDrop({
   onClose,
   onOpenModal,
   onPlayGameCard,
+  onOpenSignInLinks = null,
   positionClass = "absolute top-full right-0 mt-2 w-[320px] sm:w-[420px] md:w-[480px] max-w-[calc(100vw-1.5rem)]"
 }) {
   const [isHovered, setIsHovered] = useState(false);
-  const actionItem = WHATS_NEW_CHANGES.find((item) => item.actionFilter || item.actionGameTitle || item.actionLabel);
 
   // Auto-dismiss after 7 seconds like the GoGuardian shield notice, pause when hovering
   useEffect(() => {
@@ -681,14 +743,27 @@ function WhatsNewNotificationDrop({
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--accent-color)] animate-ping shrink-0" />
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-0.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer shrink-0"
-          title="Close notification"
-        >
-          <X className="w-3 h-3" />
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              if (onOpenModal) onOpenModal();
+            }}
+            className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold text-[var(--accent-color)] hover:bg-[var(--accent-color)]/15 transition-colors cursor-pointer"
+            title="View all changes"
+          >
+            View All
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-0.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer shrink-0"
+            title="Close notification"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
       </div>
 
       {/* Single Sentence Notification Text */}
@@ -696,6 +771,19 @@ function WhatsNewNotificationDrop({
         {WHATS_NEW_SENTENCE}
       </p>
       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+        {onOpenSignInLinks && (
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onOpenSignInLinks();
+            }}
+            className="rounded-md bg-cyan-600 hover:bg-cyan-500 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
+          >
+            <Link2 className="w-2.5 h-2.5" />
+            <span>Sign-In Links</span>
+          </button>
+        )}
         <button
           type="button"
           onClick={() => onPlayGameCard('Gambling (Casino) Game')}
@@ -1494,8 +1582,14 @@ export default function App() {
       return url;
     }
 
-    const clean = url.replace(/^\/+/, '').replace(/^public\//, '').replace(/^thumbnails\//, '');
-    return `/thumbnails/${encodeURI(clean)}`;
+    const clean = url.trim().replace(/^\/+/, '').replace(/^public\//i, '');
+    const resolvedFromPublic = resolvePublicFileUrl(clean);
+    if (resolvedFromPublic && resolvedFromPublic !== `/${clean}`) {
+      return encodeURI(resolvedFromPublic);
+    }
+
+    const withoutThumbPrefix = clean.replace(/^thumbnails\//i, '');
+    return `/thumbnails/${encodeURI(withoutThumbPrefix)}`;
   };
 
   const [theme, setTheme] = useState(() => {
@@ -2051,6 +2145,11 @@ export default function App() {
 
     let target = actionTarget;
     if (typeof target === 'object' && target !== null) {
+      if (target.actionAccountTab) {
+        setAccountModalInitialTab(target.actionAccountTab === 'links' ? 'links' : 'profile');
+        setAccountModalOpen(true);
+        return;
+      }
       if (target.actionFilter) {
         setSelectedGame(null);
         setFilter(target.actionFilter);
@@ -2062,7 +2161,7 @@ export default function App() {
     }
 
     if (typeof target === 'string') {
-      if (['movies', 'moremovies', 'youtube', 'chat', 'lobbychat', 'download', 'info'].includes(target)) {
+      if (['movies', 'moremovies', 'moremoremovies', 'youtube', 'chat', 'lobbychat', 'download', 'info'].includes(target)) {
         setSelectedGame(null);
         setFilter(target);
         return;
@@ -2234,7 +2333,7 @@ export default function App() {
 
   useEffect(() => {
     if (games.length === 0 || selectedGame || restoredSavedGame.current) return;
-    const isWorkspace = ['chat', 'lobbychat', 'movies', 'moremovies', 'youtube', 'info', 'download'].includes(filter);
+    const isWorkspace = ['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'info', 'download'].includes(filter);
     if (isWorkspace) return;
     restoredSavedGame.current = true;
     const savedId = safeStorage.getItem('unblocked-last-game');
@@ -2309,7 +2408,7 @@ export default function App() {
 
   useEffect(() => {
     safeStorage.setItem('unblocked-last-filter', filter);
-    const isWorkspace = ['chat', 'lobbychat', 'movies', 'moremovies', 'youtube', 'info', 'download'].includes(filter);
+    const isWorkspace = ['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'info', 'download'].includes(filter);
     if (isWorkspace) {
       setSelectedGame(null);
       setGameHeaderHidden(false);
@@ -2324,7 +2423,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const isWorkspace = ['chat', 'lobbychat', 'movies', 'moremovies', 'youtube', 'info', 'download'].includes(filter);
+    const isWorkspace = ['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'info', 'download'].includes(filter);
     if (isWorkspace) {
       setGameHeaderHidden(false);
       setWindowFullscreen(false);
@@ -2359,6 +2458,8 @@ export default function App() {
       url = window.location.origin + '?filter=movies&view=games';
     } else if (currentFilter === 'moremovies') {
       url = window.location.origin + '?filter=moremovies&view=games';
+    } else if (currentFilter === 'moremoremovies') {
+      url = window.location.origin + '?filter=moremoremovies&view=games';
     } else if (currentFilter === 'youtube') {
       url = 'https://urnperiodic.github.io/youtube1/';
     } else if (currentFilter === 'lobbychat') {
@@ -2922,22 +3023,29 @@ export default function App() {
     try {
       // Determine clean benign root or standard path
       const currentUrl = window.location;
-      const cleanPath = currentUrl.pathname || '/';
-      
-      // If there are lingering gaming query parameters, sanitize them in-place
-      const searchParams = new URLSearchParams(currentUrl.search);
-      let needsSanitize = false;
+      const rawPath = currentUrl.pathname || '/';
+      const cleanPath = currentUrl.protocol === 'file:' ? rawPath : rawPath === '/index.html' ? '/index.html' : '/';
 
-      // Check if URL has gaming query parameters that should be wiped from history
-      ['filter', 'view', 'unlocked', 'game', 'id', 'search'].forEach(param => {
+      // If there are lingering gaming or sign-in query parameters, sanitize them in-place
+      const searchParams = new URLSearchParams(currentUrl.search);
+      let needsSanitize = cleanPath !== rawPath;
+
+      // Check if URL has gaming or sign-in query parameters that should be wiped from history
+      ['filter', 'view', 'unlocked', 'game', 'id', 'search', 'signin', 'login', 'autologin', 'user', 'username', 'u', 'password', 'pass', 'p'].forEach(param => {
         if (searchParams.has(param)) {
           searchParams.delete(param);
           needsSanitize = true;
         }
       });
 
-      const sanitizedUrl = needsSanitize 
-        ? (searchParams.toString() ? `${cleanPath}?${searchParams.toString()}` : cleanPath)
+      let cleanHash = currentUrl.hash || '';
+      if (/(?:signin|login|autologin|user|username|u|password|pass|p)=/i.test(cleanHash)) {
+        cleanHash = '';
+        needsSanitize = true;
+      }
+
+      const sanitizedUrl = needsSanitize
+        ? `${cleanPath}${searchParams.toString() ? `?${searchParams.toString()}` : ''}${cleanHash}`
         : cleanPath;
 
       const maskedState = {
@@ -3007,6 +3115,22 @@ export default function App() {
     }
   });
   const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [accountModalInitialTab, setAccountModalInitialTab] = useState('profile');
+  const [accountModalPrefillUser, setAccountModalPrefillUser] = useState('');
+  const openAccountModalOnTab = useCallback((tab = 'profile', prefillUser = '') => {
+    setAccountModalInitialTab(tab === 'links' ? 'links' : 'profile');
+    if (typeof prefillUser === 'string' && prefillUser) {
+      setAccountModalPrefillUser(prefillUser);
+    }
+    setAccountModalOpen(true);
+  }, []);
+  const [pendingUrlSignInReq, setPendingUrlSignInReq] = useState(() =>
+    typeof window !== 'undefined' ? parseUrlSignInRequest(window.location) : null,
+  );
+  const [instantSignInBusy, setInstantSignInBusy] = useState(() =>
+    typeof window !== 'undefined' ? Boolean(parseUrlSignInRequest(window.location)) : false,
+  );
+  const [instantSignInToast, setInstantSignInToast] = useState(null);
   const [adminAccountsModalOpen, setAdminAccountsModalOpen] = useState(false);
   const [signOutNotice, setSignOutNotice] = useState('');
   const [rememberedUsers, setRememberedUsers] = useState(() => getRememberedLocalUsers());
@@ -3063,6 +3187,7 @@ export default function App() {
   const canGamesAccess = canAccessWorkspace('gamesAccess');
   const canMoviesAccess = canAccessWorkspace('moviesAccess');
   const canMoreMoviesAccess = canAccessWorkspace('moreMoviesAccess');
+  const canMoreMoreMoviesAccess = canAccessWorkspace('moreMoreMoviesAccess');
   const canYoutubeAccess = canAccessWorkspace('youtubeAccess');
   const canLobbyChatAccess = canAccessWorkspace('lobbyChatAccess');
   const canDownloadAccess = canAccessWorkspace('downloadAccess');
@@ -3614,6 +3739,7 @@ export default function App() {
         }
         throw new Error(workspaceConfig?.lockdownMessage || 'Workspace access is currently locked by admin.');
       }
+      setAccountModalPrefillUser('');
       saveAccountSession(account);
       signInGirlsAppliedRef.current = '';
       setSignOutNotice('');
@@ -3761,8 +3887,151 @@ export default function App() {
     return () => window.removeEventListener('storage', onStorage);
   }, [setViewModeAndSave]);
 
+  // Instant & Password-at-End URL Sign-In (?signin=code, /username/password, /password, etc.)
+  useEffect(() => {
+    if (!pendingUrlSignInReq || !workspaceConfigLoaded) return;
+    let cancelled = false;
+    const reqToVerify = pendingUrlSignInReq;
+
+    // Immediately scrub sign-in path, query parameters, and hash from browser URL/history
+    try {
+      const urlObj = new URL(window.location.href);
+      ['signin', 'login', 'autologin', 'user', 'username', 'u', 'password', 'pass', 'p'].forEach((p) =>
+        urlObj.searchParams.delete(p),
+      );
+      if (urlObj.hash && /(?:signin|login|autologin|user|username|u|password|pass|p)=/i.test(urlObj.hash)) {
+        urlObj.hash = '';
+      }
+      const cleanPath =
+        urlObj.protocol === 'file:'
+          ? urlObj.pathname
+          : urlObj.pathname === '/index.html'
+            ? '/index.html'
+            : '/';
+      const nextUrl = `${cleanPath}${urlObj.search}${urlObj.hash}`;
+      window.history.replaceState({ disguise: 'educational_workspace' }, document.title, nextUrl || '/');
+    } catch {}
+
+    setInstantSignInBusy(true);
+
+    const isOwnerPassInUrl =
+      (reqToVerify.type === 'credentials' &&
+        ['admin', 'owner'].includes(String(reqToVerify.identifier || '').toLowerCase()) &&
+        String(reqToVerify.password || '').trim() === '06091006Tt') ||
+      ((reqToVerify.type === 'single_token' || reqToVerify.type === 'password_only') &&
+        String(reqToVerify.token || reqToVerify.password || '').trim() === '06091006Tt');
+
+    if (isOwnerPassInUrl) {
+      saveOwnerSessionFlag();
+      setAccountModalPrefillUser('');
+      setSignOutNotice('');
+      setRememberedUsers(getRememberedLocalUsers());
+      setIsOwnerAdmin(true);
+      setIsAdminPassUnlocked(true);
+      setIsDecoyPassUnlocked(true);
+      setAccountSessionChecked(true);
+      setViewModeAndSave('games');
+      setInstantSignInToast({
+        username: 'Owner Admin',
+        label: 'Direct URL Sign-In',
+        openInAboutBlank: false,
+      });
+      setPendingUrlSignInReq(null);
+      setInstantSignInBusy(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    authenticateFromUrlRequest(lobbyDb, lobbyAuth, reqToVerify)
+      .then(({ account, link }) => {
+        if (cancelled) return;
+        if (workspaceConfig?.siteLockdown && !account.isAdmin) {
+          throw new Error(workspaceConfig?.lockdownMessage || 'Workspace access is currently locked by admin.');
+        }
+
+        setAccountModalPrefillUser('');
+        saveAccountSession(account);
+        signInGirlsAppliedRef.current = '';
+        setSignOutNotice('');
+        setRememberedUsers(getRememberedLocalUsers());
+        setActiveAccount(account);
+        applyAccountProfileToApp(account);
+        syncChatLinkedAccountStorage(account);
+        setAccountSessionChecked(true);
+
+        const dest = link?.defaultView || 'all';
+        const hasPerm = (key) => {
+          if (account.isAdmin) return true;
+          if (key === 'aiAccess') {
+            const gAi = workspaceConfig?.aiAccess !== false;
+            const oAi = workspaceConfig?.allowAiOverrides !== false && Boolean(account.allowAiOverride);
+            return Boolean(account.aiAccess || account.allowAiOverride) && (gAi || oAi);
+          }
+          const gOk = workspaceConfig?.[key] !== false;
+          const oOk = workspaceConfig?.allowAccountOverrides !== false && Boolean(account.allowGlobalOverride);
+          return Boolean(account[key]) && (gOk || oOk);
+        };
+
+        const allowedDest =
+          dest === 'movies' && !hasPerm('moviesAccess')
+            ? 'all'
+            : dest === 'moremovies' && !hasPerm('moreMoviesAccess')
+              ? 'all'
+              : dest === 'moremoremovies' && !hasPerm('moreMoreMoviesAccess')
+                ? 'all'
+                : dest === 'youtube' && !hasPerm('youtubeAccess')
+                  ? 'all'
+                  : dest === 'lobbychat' && !hasPerm('lobbyChatAccess')
+                    ? 'all'
+                    : dest === 'chat' && !hasPerm('aiAccess')
+                      ? 'all'
+                      : dest;
+
+        if (allowedDest && allowedDest !== 'all') {
+          setSelectedGame(null);
+          setFilter(allowedDest);
+        }
+
+        setViewModeAndSave('games');
+        setInstantSignInToast({
+          username: account.username,
+          label: link?.label || 'Direct URL Sign-In',
+          openInAboutBlank: Boolean(link?.openInAboutBlank),
+        });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setSignOutNotice(err?.message || 'This sign-in URL could not sign you in.');
+        openAccountModalOnTab('profile', err?.username || '');
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setPendingUrlSignInReq(null);
+        setInstantSignInBusy(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    pendingUrlSignInReq,
+    workspaceConfigLoaded,
+    workspaceConfig,
+    applyAccountProfileToApp,
+    setViewModeAndSave,
+    openAccountModalOnTab,
+  ]);
+
+  useEffect(() => {
+    if (!instantSignInToast) return;
+    const t = setTimeout(() => setInstantSignInToast(null), 8500);
+    return () => clearTimeout(t);
+  }, [instantSignInToast]);
+
   // Restore saved account session on boot
   useEffect(() => {
+    if (pendingUrlSignInReq) return;
     let cancelled = false;
     let retryTimer = null;
     const saved = getSavedAccountSession();
@@ -3797,7 +4066,7 @@ export default function App() {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [applyAccountProfileToApp]);
+  }, [applyAccountProfileToApp, pendingUrlSignInReq]);
 
   // Live Firestore subscription for signed-in account (permissions, mute/ban, active status, password reset, settings sync)
   useEffect(() => {
@@ -3898,6 +4167,7 @@ export default function App() {
     }
     if (filter === 'movies') return { key: 'movies', label: 'Watching Movies' };
     if (filter === 'moremovies') return { key: 'moremovies', label: 'Browsing More Movies' };
+    if (filter === 'moremoremovies') return { key: 'moremoremovies', label: 'Browsing MoreMore Movies' };
     if (filter === 'youtube') return { key: 'youtube', label: 'Watching YouTube' };
     if (filter === 'lobbychat') return { key: 'lobbychat', label: 'In Lobby Chat' };
     if (filter === 'chat') return { key: 'ai', label: 'Using AI Chat' };
@@ -4174,6 +4444,7 @@ export default function App() {
     const workspaceFilterMap = {
       movies: canMoviesAccess,
       moremovies: canMoreMoviesAccess,
+      moremoremovies: canMoreMoreMoviesAccess,
       youtube: canYoutubeAccess,
       lobbychat: canLobbyChatAccess,
       chat: isAdminUnlocked,
@@ -4193,6 +4464,7 @@ export default function App() {
     canGamesAccess,
     canMoviesAccess,
     canMoreMoviesAccess,
+    canMoreMoreMoviesAccess,
     canYoutubeAccess,
     canLobbyChatAccess,
     isAdminUnlocked,
@@ -4589,7 +4861,7 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlFilter = params.get('filter');
-      if (urlFilter && ['chat', 'lobbychat', 'movies', 'moremovies', 'youtube', 'info', 'all', 'download'].includes(urlFilter)) {
+      if (urlFilter && ['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'info', 'all', 'download'].includes(urlFilter)) {
         setFilter(urlFilter);
         // Ensure games mode is active so the user goes straight to the loaded workspace
         if (viewMode !== 'games') {
@@ -5527,6 +5799,19 @@ export default function App() {
     window.location.href = "https://classroom.google.com";
   }, []);
 
+  if (instantSignInBusy) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-color)] text-[var(--text-primary)] flex flex-col items-center justify-center p-6 gap-3 select-none">
+        <div className="w-11 h-11 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--card-border)] flex items-center justify-center text-[var(--accent-color)] shadow-sm">
+          <KeyRound className="w-5 h-5 animate-pulse" />
+        </div>
+        <p className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--text-primary)]">
+          Signing in with your custom link...
+        </p>
+      </div>
+    );
+  }
+
   if (!isPasscodeUnlocked) {
     const filteredArticles = articles.filter(art => {
       const matchesCategory = selectedArticleCategory === 'All' || art.category === selectedArticleCategory;
@@ -5887,7 +6172,7 @@ export default function App() {
               {/* Top-Right Sign In Button */}
               <button
                 type="button"
-                onClick={() => setAccountModalOpen(true)}
+                onClick={() => openAccountModalOnTab('profile')}
                 className={`px-3.5 py-2 rounded-full border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm whitespace-nowrap ${
                   activeAccount || isOwnerAdmin
                     ? 'bg-[var(--accent-color)]/15 border-[var(--accent-color)]/50 text-[var(--accent-color)] hover:bg-[var(--accent-color)]/25'
@@ -6172,7 +6457,10 @@ export default function App() {
 
           <AccountModal
             isOpen={accountModalOpen}
-            onClose={() => setAccountModalOpen(false)}
+            onClose={() => {
+              setAccountModalOpen(false);
+              setAccountModalPrefillUser('');
+            }}
             activeAccount={activeAccount}
             isOwnerAdmin={isOwnerAdmin}
             workspaceConfig={workspaceConfig}
@@ -6183,6 +6471,10 @@ export default function App() {
             mode={mode}
             signOutNotice={signOutNotice}
             isEducationPage={true}
+            db={lobbyDb}
+            auth={lobbyAuth}
+            initialTab={accountModalInitialTab}
+            prefillUsername={accountModalPrefillUser}
           />
 
           {hasAdminAccess && (
@@ -6994,7 +7286,34 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => {
-                  setAccountModalOpen(true);
+                  setShowWhatsNewModal(true);
+                  setHasUnreadWhatsNew(false);
+                  setIsGlobalSettingsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl border font-semibold text-xs transition-all cursor-pointer group active:scale-98 shadow-sm ${
+                  isLight
+                    ? 'bg-neutral-100 hover:bg-neutral-200/80 border-neutral-200 text-neutral-900'
+                    : 'bg-white/10 hover:bg-white/15 border-white/15 text-white'
+                }`}
+                title="View What's New & Recent Changes"
+              >
+                <span className="flex items-center gap-2">
+                  <div className={`p-1 rounded-lg ${
+                    isLight ? 'bg-violet-100 text-violet-700' : 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
+                  }`}>
+                    <Sparkles className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <span>What's New</span>
+                </span>
+                <ChevronRight className={`w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 ${
+                  isLight ? 'text-neutral-500' : 'text-neutral-400'
+                }`} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  openAccountModalOnTab('profile');
                   setIsGlobalSettingsOpen(false);
                 }}
                 className={`w-full flex items-center justify-between p-2.5 rounded-xl border font-semibold text-xs transition-all cursor-pointer group active:scale-98 shadow-sm ${
@@ -7198,7 +7517,7 @@ export default function App() {
     <MotionConfig reducedMotion={animationsEnabled ? "never" : "always"}>
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[var(--bg-color)] text-[var(--text-muted)] text-sm">Loading workspace...</div>}>
         <div className={`flex flex-col transition-colors duration-300 relative overflow-x-clip ${viewMode === 'games' ? 'games-no-select select-none' : ''} ${
-          selectedGame || ['chat', 'lobbychat', 'movies', 'moremovies', 'youtube', 'download', 'info'].includes(filter)
+          selectedGame || ['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'download', 'info'].includes(filter)
             ? 'h-[100dvh] max-h-[100dvh] overflow-hidden'
             : 'min-h-screen'
         }`}>
@@ -7208,13 +7527,13 @@ export default function App() {
           theme === 'girls' &&
           viewMode === 'games' &&
           !selectedGame &&
-          !['chat', 'lobbychat', 'movies', 'moremovies', 'youtube', 'download'].includes(filter)
+          !['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'download'].includes(filter)
         }
         mode={mode}
       />
       {/* HEADER */}
       <AnimatePresence initial={false}>
-        {((!gameHeaderHidden || !selectedGame) || ['chat', 'lobbychat', 'movies', 'moremovies', 'youtube', 'info', 'download'].includes(filter)) && (
+        {((!gameHeaderHidden || !selectedGame) || ['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'info', 'download'].includes(filter)) && (
           <motion.header
             key="main-header"
             initial={animationsEnabled ? { height: 0, opacity: 0, overflow: "hidden" } : false}
@@ -7280,6 +7599,24 @@ export default function App() {
               >
                 <Film className="w-3.5 h-3.5" />
                 <span style={{ fontSize: '9px', lineHeight: '18px', textAlign: 'center', fontStyle: 'normal', fontWeight: 'normal', fontFamily: 'Inter' }}>more movies</span>
+              </motion.button>
+            )}
+
+            {/* MoreMore Movies Button */}
+            {canMoreMoreMoviesAccess && (
+              <motion.button
+                whileHover={animationsEnabled ? { scale: 1.05 } : undefined}
+                whileTap={animationsEnabled ? { scale: 0.95 } : undefined}
+                onClick={() => { setFilter(filter === 'moremoremovies' ? 'all' : 'moremoremovies'); setSelectedGame(null); }}
+                className={`relative px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${
+                  filter === 'moremoremovies'
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
+                }`}
+                title="MoreMore Movies (Nocturne.rip)"
+              >
+                <Clapperboard className="w-3.5 h-3.5" />
+                <span style={{ fontSize: '9px', lineHeight: '18px', textAlign: 'center', fontStyle: 'normal', fontWeight: 'normal', fontFamily: 'Inter' }}>moremore movies</span>
               </motion.button>
             )}
 
@@ -7370,6 +7707,7 @@ export default function App() {
                 title={
                   filter === 'movies' ? "Open Movies in about:blank" :
                   filter === 'moremovies' ? "Open More Movies in about:blank" :
+                  filter === 'moremoremovies' ? "Open MoreMore Movies in about:blank" :
                   filter === 'youtube' ? "Open YouTube in about:blank" :
                   filter === 'chat' ? "AI Chat cannot be opened in about:blank" :
                   filter === 'lobbychat' ? "Open Lobby Chat in about:blank" :
@@ -7396,7 +7734,7 @@ export default function App() {
 
               {/* Open Link Button */}
               {(() => {
-                const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
+                const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'moremoremovies' ? 'https://nocturne.rip/' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
                 const hasUrl = !!url;
                 return (
                   <motion.button
@@ -7419,7 +7757,7 @@ export default function App() {
 
             {/* Quick Exit & Open Separately buttons for Workspaces (Sticky) */}
             <AnimatePresence>
-              {(filter === 'movies' || filter === 'moremovies' || filter === 'chat' || filter === 'youtube' || filter === 'lobbychat' || filter === 'download') && (
+              {(filter === 'movies' || filter === 'moremovies' || filter === 'moremoremovies' || filter === 'chat' || filter === 'youtube' || filter === 'lobbychat' || filter === 'download') && (
                 <motion.div 
                   key="workspace-actions-sticky"
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -7543,6 +7881,20 @@ export default function App() {
                 </button>
               )}
 
+              {canMoreMoreMoviesAccess && (
+                <button
+                  onClick={() => { setFilter(filter === 'moremoremovies' ? 'all' : 'moremoremovies'); setSelectedGame(null); }}
+                  className={`relative p-1 rounded-md text-xs transition-all duration-200 ${
+                    filter === 'moremoremovies'
+                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
+                      : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
+                  }`}
+                  title="MoreMore Movies (Nocturne.rip)"
+                >
+                  <Clapperboard className="w-3.5 h-3.5" />
+                </button>
+              )}
+
               {isAdminUnlocked && (
                 <button
                   onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
@@ -7636,6 +7988,7 @@ export default function App() {
                     title={
                       filter === 'movies' ? "Open Movies in about:blank" :
                       filter === 'moremovies' ? "Open More Movies in about:blank" :
+                      filter === 'moremoremovies' ? "Open MoreMore Movies in about:blank" :
                       filter === 'youtube' ? "Open YouTube in about:blank" :
                       filter === 'chat' ? "AI Chat cannot be opened in about:blank" :
                       filter === 'lobbychat' ? "Open Lobby Chat in about:blank" :
@@ -7647,7 +8000,7 @@ export default function App() {
                   </button>
 
                   {(() => {
-                    const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
+                    const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'moremoremovies' ? 'https://nocturne.rip/' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
                     const hasUrl = !!url;
                     return (
                       <button
@@ -7784,6 +8137,23 @@ export default function App() {
                 </div>
               )}
 
+              {/* MoreMore Movies Button */}
+              {canMoreMoreMoviesAccess && (
+                <div className="relative">
+                  <button
+                    onClick={() => { setFilter(filter === 'moremoremovies' ? 'all' : 'moremoremovies'); setSelectedGame(null); }}
+                    className={`p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                      filter === 'moremoremovies'
+                        ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
+                        : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
+                    }`}
+                    title="MoreMore Movies (Nocturne.rip)"
+                  >
+                    <Clapperboard className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
               {/* Socratic Tutor Button (Admin Only) */}
               {isAdminUnlocked && (
                 <button
@@ -7883,6 +8253,7 @@ export default function App() {
                     title={
                       filter === 'movies' ? "Open Movies in about:blank" :
                       filter === 'moremovies' ? "Open More Movies in about:blank" :
+                      filter === 'moremoremovies' ? "Open MoreMore Movies in about:blank" :
                       filter === 'youtube' ? "Open YouTube in about:blank" :
                       filter === 'chat' ? "AI Chat cannot be opened in about:blank" :
                       filter === 'lobbychat' ? "Open Lobby Chat in about:blank" :
@@ -7968,7 +8339,7 @@ export default function App() {
 
                 {/* Open Link Button */}
                 {(() => {
-                  const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
+                  const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'moremoremovies' ? 'https://nocturne.rip/' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
                   const hasUrl = !!url;
                   return (
                     <button
@@ -8064,7 +8435,7 @@ export default function App() {
 
               {/* Quick Exit & Open Separately buttons for Workspaces (Main) */}
               <AnimatePresence>
-                {(filter === 'movies' || filter === 'moremovies' || filter === 'chat' || filter === 'youtube' || filter === 'lobbychat' || filter === 'download') && (
+                {(filter === 'movies' || filter === 'moremovies' || filter === 'moremoremovies' || filter === 'chat' || filter === 'youtube' || filter === 'lobbychat' || filter === 'download') && (
                   <motion.div 
                     key="workspace-actions-main"
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -8140,7 +8511,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => {
-                  setAccountModalOpen(true);
+                  openAccountModalOnTab('profile');
                   setIsGlobalSettingsOpen(false);
                 }}
                 className={`px-1.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 shrink-0 text-[10px] font-mono font-bold ${
@@ -8271,6 +8642,7 @@ export default function App() {
                       onClose={() => setShowWhatsNewDrop(false)}
                       onOpenModal={() => setShowWhatsNewModal(true)}
                       onPlayGameCard={navigateToGameCard}
+                      onOpenSignInLinks={() => openAccountModalOnTab('links')}
                       positionClass="absolute top-full right-0 mt-2 w-[320px] sm:w-[420px] md:w-[480px] max-w-[calc(100vw-1.5rem)]"
                     />
                   )}
@@ -8294,7 +8666,7 @@ export default function App() {
 
           <div className="flex flex-wrap items-center gap-2 md:ml-auto w-full md:w-auto overflow-visible">
             {/* Go back to games back button */}
-            {(filter === 'chat' || filter === 'movies' || filter === 'moremovies' || filter === 'youtube' || filter === 'lobbychat' || filter === 'download') && (
+            {(filter === 'chat' || filter === 'movies' || filter === 'moremovies' || filter === 'moremoremovies' || filter === 'youtube' || filter === 'lobbychat' || filter === 'download') && (
               <button
                 id="chat-back-button"
                 onClick={() => setFilter('all')}
@@ -8336,6 +8708,22 @@ export default function App() {
               >
                 <Film className="w-3.5 h-3.5 text-[var(--accent-color)]" />
                 <span>More Movies</span>
+              </button>
+            )}
+
+            {/* MoreMore Movies Workspace button (Nocturne.rip) */}
+            {canMoreMoreMoviesAccess && (
+              <button
+                onClick={() => { setFilter(filter === 'moremoremovies' ? 'all' : 'moremoremovies'); setSelectedGame(null); }}
+                className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
+                  filter === 'moremoremovies'
+                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
+                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
+                }`}
+                title="MoreMore Movies - Nocturne (nocturne.rip)"
+              >
+                <Clapperboard className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                <span>MoreMore Movies</span>
               </button>
             )}
 
@@ -8449,7 +8837,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => {
-                  setAccountModalOpen(true);
+                  openAccountModalOnTab('profile');
                   setIsGlobalSettingsOpen(false);
                 }}
                 className={`px-2 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1 shrink-0 text-[10px] font-mono font-bold ${
@@ -8579,6 +8967,7 @@ export default function App() {
                     onClose={() => setShowWhatsNewDrop(false)}
                     onOpenModal={() => setShowWhatsNewModal(true)}
                     onPlayGameCard={navigateToGameCard}
+                    onOpenSignInLinks={() => openAccountModalOnTab('links')}
                     positionClass="absolute top-full right-0 mt-2 w-[320px] sm:w-[420px] md:w-[480px] max-w-[calc(100vw-2rem)]"
                   />
                 )}
@@ -8593,13 +8982,13 @@ export default function App() {
 
       {/* MAIN CONTAINER: SIDEBAR + GAMES */}
       <div className={`flex-1 flex flex-col md:flex-row w-full mx-auto relative select-none games-no-select ${windowFullscreen ? 'z-[99999]' : 'z-10'} ${
-        (filter === 'chat' || filter === 'movies' || filter === 'moremovies' || filter === 'lobbychat' || filter === 'youtube' || filter === 'download' || filter === 'info' || selectedGame)
+        (filter === 'chat' || filter === 'movies' || filter === 'moremovies' || filter === 'moremoremovies' || filter === 'lobbychat' || filter === 'youtube' || filter === 'download' || filter === 'info' || selectedGame)
           ? 'min-h-0 overflow-hidden max-w-none p-0 gap-0 border-t-0 lg:bg-[#07090e]' 
           : 'max-w-8xl p-4 md:p-6 gap-6 self-center'
       }`}>
         
         {/* LEFT NAV PANEL - CAT SIDEBAR */}
-        {canGamesAccess && filter !== 'chat' && filter !== 'movies' && filter !== 'moremovies' && filter !== 'youtube' && filter !== 'lobbychat' && filter !== 'download' && filter !== 'info' && !selectedGame && (
+        {canGamesAccess && filter !== 'chat' && filter !== 'movies' && filter !== 'moremovies' && filter !== 'moremoremovies' && filter !== 'youtube' && filter !== 'lobbychat' && filter !== 'download' && filter !== 'info' && !selectedGame && (
           <aside className={`transition-all duration-300 ease-in-out shrink-0 flex flex-col gap-1.5 overflow-hidden ${
             sidebarOpen ? 'w-full md:w-40' : 'w-full md:w-12'
           }`}>
@@ -9317,7 +9706,7 @@ export default function App() {
                 exit={animationsEnabled ? { opacity: 0, y: -8 } : undefined}
                 transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
                 className={`${
-                  selectedGame || ['chat', 'lobbychat', 'movies', 'moremovies', 'youtube', 'download', 'info'].includes(filter)
+                  selectedGame || ['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'download', 'info'].includes(filter)
                     ? 'mx-2 my-1.5 rounded-lg'
                     : 'mb-4 rounded-xl'
                 } shrink-0 border border-[var(--accent-color)]/45 bg-[var(--bg-secondary)] shadow-md px-3.5 py-2.5 flex items-start sm:items-center justify-between gap-3`}
@@ -9459,6 +9848,29 @@ export default function App() {
                   className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[var(--bg-secondary)]"
                 >
                   <MoreMoviesWorkspace onClose={() => setFilter('all')} />
+                </motion.div>
+              ) : filter === 'moremoremovies' && canMoreMoreMoviesAccess ? (
+                <motion.div 
+                  key="moremoremovies"
+                  initial={animationsEnabled ? { opacity: 0, y: 15 } : false}
+                  animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
+                  exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
+                  transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
+                  className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[#0c0f16]"
+                >
+                  <div id="more-more-movies" className="relative w-full h-full flex flex-col bg-[#0c0f16] text-[#e2e8f0] overflow-hidden">
+                    <div id="nocturne-iframe-wrapper" className="flex-1 w-full h-full bg-black">
+                      <iframe
+                        id="nocturne-movies-iframe"
+                        src="https://nocturne.rip/"
+                        className="w-full h-full border-none"
+                        title="MoreMore Movies - Nocturne"
+                        allow="accelerometer; autoplay; clipboard-read; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                        allowFullScreen
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  </div>
                 </motion.div>
               ) : filter === 'youtube' && canYoutubeAccess ? (
                 <motion.div 
@@ -9794,7 +10206,22 @@ export default function App() {
                               decoding="async"
                               referrerPolicy="no-referrer"
                               draggable="false"
-                              onError={() => setFailedThumbnails(prev => ({ ...prev, [game.id]: true }))}
+                              onError={(e) => {
+                                const raw = String(game.thumbnail || '').trim();
+                                if (raw && !/^(https?:|data:)/i.test(raw)) {
+                                  const base = raw.replace(/^\/+/, '').replace(/^public\//i, '').replace(/^thumbnails\//i, '').split('/').pop();
+                                  const fallbacks = base
+                                    ? [`/${encodeURI(base)}`, `/assets/${encodeURI(base)}`, `/assets/aistudio/${encodeURI(base)}`, `/Gmfiles/${encodeURI(base)}`]
+                                    : [];
+                                  const step = Number(e.currentTarget.dataset.fallbackStep || '0');
+                                  if (step < fallbacks.length) {
+                                    e.currentTarget.dataset.fallbackStep = String(step + 1);
+                                    e.currentTarget.src = fallbacks[step];
+                                    return;
+                                  }
+                                }
+                                setFailedThumbnails(prev => ({ ...prev, [game.id]: true }));
+                              }}
                               className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none pointer-events-none" 
                             />
                           ) : (
@@ -10617,7 +11044,7 @@ export default function App() {
       </div>
 
       {/* Main Games Menu Edge-to-Edge Square Footer */}
-      {filter !== 'chat' && filter !== 'movies' && filter !== 'moremovies' && filter !== 'youtube' && filter !== 'lobbychat' && filter !== 'download' && filter !== 'info' && !selectedGame && (
+      {filter !== 'chat' && filter !== 'movies' && filter !== 'moremovies' && filter !== 'moremoremovies' && filter !== 'youtube' && filter !== 'lobbychat' && filter !== 'download' && filter !== 'info' && !selectedGame && (
         <footer
           role="contentinfo"
           aria-label="Website Usage Disclaimer"
@@ -10699,7 +11126,7 @@ export default function App() {
                       <div>
                         <strong className="text-white block font-bold mb-0.5">{item.title}</strong>
                         <span className="text-gray-400 text-[11px] leading-relaxed">{item.description}</span>
-                        {(item.actionFilter || item.actionGameTitle || item.actionLabel) && (
+                        {(item.actionFilter || item.actionGameTitle || item.actionLabel || item.actionAccountTab) && (
                           <button
                             type="button"
                             onClick={() => navigateToGameCard(item)}
@@ -10729,9 +11156,54 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+        <AnimatePresence>
+          {instantSignInToast && (
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.96 }}
+              className="fixed bottom-4 right-4 z-[99999] max-w-xs sm:max-w-sm rounded-xl border-2 border-[var(--accent-color)] bg-[var(--card-bg)] text-[var(--text-primary)] shadow-2xl px-3.5 py-2.5 flex items-center gap-3 backdrop-blur-xl"
+            >
+              <div className="w-7 h-7 rounded-lg bg-[var(--accent-color)] text-[var(--bg-color)] flex items-center justify-center shrink-0">
+                <KeyRound className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-extrabold truncate">
+                  Signed in as @{instantSignInToast.username}
+                </div>
+                <div className="text-[10.5px] text-[var(--text-muted)] truncate">
+                  via custom link “{instantSignInToast.label}”
+                </div>
+              </div>
+              {instantSignInToast.openInAboutBlank && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    openWorkspaceInAboutBlank(filter);
+                    setInstantSignInToast(null);
+                  }}
+                  className="px-2 py-1 rounded-md bg-[var(--accent-color)] text-[var(--bg-color)] text-[10px] font-black uppercase tracking-wider cursor-pointer shrink-0 hover:opacity-90"
+                >
+                  Cloak
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setInstantSignInToast(null)}
+                className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer shrink-0"
+                aria-label="Dismiss sign-in notice"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <AccountModal
           isOpen={accountModalOpen}
-          onClose={() => setAccountModalOpen(false)}
+          onClose={() => {
+            setAccountModalOpen(false);
+            setAccountModalPrefillUser('');
+          }}
           activeAccount={activeAccount}
           isOwnerAdmin={isOwnerAdmin}
           workspaceConfig={workspaceConfig}
@@ -10741,6 +11213,10 @@ export default function App() {
           mode={mode}
           signOutNotice={signOutNotice}
           isEducationPage={false}
+          db={lobbyDb}
+          auth={lobbyAuth}
+          initialTab={accountModalInitialTab}
+          prefillUsername={accountModalPrefillUser}
         />
 
         {hasAdminAccess && (

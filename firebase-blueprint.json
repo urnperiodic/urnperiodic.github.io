@@ -31,6 +31,11 @@
           "maxLength": 256,
           "description": "Salted PBKDF2 password hash verifier."
         },
+        "encryptedPassword": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "Encrypted copy of the account password so administrators can view or recover user passwords."
+        },
         "isActive": {
           "type": "boolean",
           "description": "Whether the account can currently sign in."
@@ -58,6 +63,10 @@
         "moreMoviesAccess": {
           "type": "boolean",
           "description": "Access to More Movies (Atlantic.st) workspace."
+        },
+        "moreMoreMoviesAccess": {
+          "type": "boolean",
+          "description": "Access to MoreMore Movies (Nocturne.rip) workspace."
         },
         "youtubeAccess": {
           "type": "boolean",
@@ -124,6 +133,10 @@
           "type": "boolean",
           "description": "Whether the administrator assigned the Girls theme by default to this account."
         },
+        "requirePasswordOnUrl": {
+          "type": "boolean",
+          "description": "Whether direct /username URL sign-in requires appending /password at the end (false by default so /username signs in without a password)."
+        },
         "totalTimeMs": {
           "type": "number",
           "description": "Cumulative active milliseconds spent by this account across sessions."
@@ -152,7 +165,7 @@
         },
         "activityTimeMs": {
           "type": "object",
-          "description": "Map of cumulative active milliseconds spent per activity category (games, movies, moremovies, youtube, lobbychat, ai, catalog)."
+          "description": "Map of cumulative active milliseconds spent per activity category (games, movies, moremovies, moremoremovies, youtube, lobbychat, ai, catalog)."
         },
         "accountSettings": {
           "type": "object",
@@ -247,6 +260,10 @@
         "moreMoviesAccess": {
           "type": "boolean",
           "description": "Global toggle for More Movies workspace."
+        },
+        "moreMoreMoviesAccess": {
+          "type": "boolean",
+          "description": "Global toggle for MoreMore Movies workspace."
         },
         "youtubeAccess": {
           "type": "boolean",
@@ -452,12 +469,110 @@
         }
       },
       "required": ["participants", "createdAt", "updatedAt"]
+    },
+    "SignInLink": {
+      "title": "Custom Instant Sign-In Link",
+      "description": "User-created custom shortcut link that instantly authenticates into their managed account.",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 48,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Display custom link code slug."
+        },
+        "codeLower": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 48,
+          "pattern": "^[a-z0-9_\\-]+$",
+          "description": "Canonical lowercase custom link code matching the document ID."
+        },
+        "accountId": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 20,
+          "pattern": "^[a-z0-9_\\-]+$",
+          "description": "Owner account lowercase username."
+        },
+        "username": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 20,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner account display username."
+        },
+        "accountVerifier": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Matches the owner account passwordHash at creation so password resets automatically invalidate old links."
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "User-facing bookmark label for the link."
+        },
+        "defaultView": {
+          "type": "string",
+          "enum": ["all", "featured", "favorites", "movies", "moremovies", "moremoremovies", "youtube", "lobbychat", "chat"],
+          "description": "Starting workspace or catalog filter after instant sign-in."
+        },
+        "openInAboutBlank": {
+          "type": "boolean",
+          "description": "Whether launching this link prefers opening in an about:blank cloaked tab."
+        },
+        "requirePassword": {
+          "type": "boolean",
+          "description": "Whether this custom link requires adding the account password at the end of the URL to sign in."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the custom sign-in link is currently active."
+        },
+        "useCount": {
+          "type": "number",
+          "description": "Total number of times this link has signed the user in."
+        },
+        "lastUsedAt": {
+          "type": "number",
+          "description": "Epoch millisecond timestamp of last sign-in via this link or null."
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Epoch millisecond creation timestamp."
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Epoch millisecond last update timestamp."
+        }
+      },
+      "required": [
+        "code",
+        "codeLower",
+        "accountId",
+        "username",
+        "accountVerifier",
+        "label",
+        "defaultView",
+        "openInAboutBlank",
+        "isActive",
+        "useCount",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
     "/siteAccounts/{accountId}": {
       "schema": { "$ref": "#/entities/Account" },
       "description": "Stores admin-managed user accounts keyed by lowercase username."
+    },
+    "/signInLinks/{linkId}": {
+      "schema": { "$ref": "#/entities/SignInLink" },
+      "description": "Stores user-created custom instant sign-in links keyed by lowercase link code."
     },
     "/siteConfig/{configId}": {
       "schema": { "$ref": "#/entities/WorkspaceConfig" },
