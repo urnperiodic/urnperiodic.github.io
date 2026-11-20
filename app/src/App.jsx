@@ -167,11 +167,18 @@ const loadGameFrame = async (url, signal) => {
   throw lastError || new Error('Portal file could not be resolved');
 };
 import { initialArticles } from './data/articles';
-const FlashcardsWorkspace = lazy(() => import('./components/FlashcardsWorkspace'));
-const QuizWorkspace = lazy(() => import('./components/QuizWorkspace'));
-const NotesWorkspace = lazy(() => import('./components/NotesWorkspace'));
-const StudyTimer = lazy(() => import('./components/StudyTimer'));
-const AiChatWorkspace = lazy(() => import('./components/AiChatWorkspace'));
+import {
+  FlashcardsWorkspace,
+  QuizWorkspace,
+  NotesWorkspace,
+  StudyTimer,
+  AiChatWorkspace,
+  PortalWorkspaceView,
+  isPortalWorkspaceFilter,
+  getWorkspaceExternalUrl,
+  getWorkspaceAboutBlankTitle,
+  getWorkspaceAboutBlankTargetUrl,
+} from './components/Workspaces';
 import UserChat from './components/UserChat';
 import AccountModal from './components/AccountModal';
 import AdminAccountsModal from './components/AdminAccountsModal';
@@ -207,8 +214,6 @@ import {
   updateAccountPresence,
   verifySessionAccount,
 } from './utils/accountService';
-const MoviesWorkspace = lazy(() => import('./components/MoviesWorkspace'));
-const MoreMoviesWorkspace = lazy(() => import('./components/MoreMoviesWorkspace'));
 import InformationSection from './components/InformationSection';
 
 function LobbyUnreadIndicator({ visible }) {
@@ -243,7 +248,6 @@ import {
   Volume2,
   Tv,
   Film,
-  Clapperboard,
   MessageCircle,
   MessageSquare,
   Globe,
@@ -495,7 +499,7 @@ function ThemeDropdown({ theme, setTheme, mode, lockedTheme = null, onSelectThem
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--card-border)] shadow-2xl p-1.5 z-[99999] animate-fade-in backdrop-blur-xl">
+        <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--card-border)] shadow-2xl p-1.5 z-[99999]">
           <div className="px-3 py-2 border-b border-[var(--card-border)]/70 flex items-center justify-between mb-1">
             <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
               <Palette className="w-3.5 h-3.5 text-[var(--accent-color)]" />
@@ -684,7 +688,7 @@ function GoGuardianDecoyNotice({
         handleClose();
         onToggleMode();
       }}
-      className={`${positionClass} z-[99999] rounded-xl bg-[var(--card-bg)] border-2 border-red-500/90 shadow-2xl shadow-red-500/10 p-3 text-left select-none cursor-pointer transition-all hover:border-red-400 group backdrop-blur-xl flex flex-col gap-1.5`}
+      className={`${positionClass} z-[99999] rounded-xl bg-[var(--card-bg)] border-2 border-red-500/90 shadow-2xl shadow-red-500/10 p-3 text-left select-none cursor-pointer transition-colors hover:border-red-400 group flex flex-col gap-1.5`}
       title="Click anywhere to swap between Light and Dark mode"
     >
       <div className="text-red-500 font-bold underline tracking-wider text-center" style={{ fontSize: '12px', lineHeight: '16px', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -727,7 +731,7 @@ function WhatsNewNotificationDrop({
       transition={{ duration: 0.2, ease: "easeOut" }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`${positionClass} z-[99999] rounded-xl bg-[var(--card-bg)] border-2 border-[var(--accent-color)] shadow-2xl shadow-[var(--accent-color)]/20 px-3 py-2 text-left select-none backdrop-blur-xl flex flex-col gap-1 transition-all hover:border-[var(--accent-color)] group`}
+      className={`${positionClass} z-[99999] rounded-xl bg-[var(--card-bg)] border-2 border-[var(--accent-color)] shadow-2xl shadow-[var(--accent-color)]/20 px-3 py-2 text-left select-none flex flex-col gap-1 transition-colors hover:border-[var(--accent-color)] group`}
       role="dialog"
       aria-label="What's New Notification"
     >
@@ -818,24 +822,47 @@ function CursorSpotlight({ active }) {
 
   useEffect(() => {
     if (!active) return;
+    if (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches) return;
 
     const el = ref.current;
     if (!el) return;
 
+    let rafId = 0;
+    let latestX = -1000;
+    let latestY = -1000;
+    let visible = false;
+
+    const commit = () => {
+      rafId = 0;
+      el.style.transform = `translate3d(${latestX - 210}px, ${latestY - 210}px, 0)`;
+      if (!visible) {
+        visible = true;
+        el.style.opacity = '1';
+      }
+    };
+
     const handleMouseMove = (e) => {
-      el.style.setProperty('--x', `${e.clientX}px`);
-      el.style.setProperty('--y', `${e.clientY}px`);
-      el.style.opacity = '1';
+      latestX = e.clientX;
+      latestY = e.clientY;
+      if (!rafId) {
+        rafId = requestAnimationFrame(commit);
+      }
     };
 
     const handleMouseLeave = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+      visible = false;
       el.style.opacity = '0';
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
     document.addEventListener('mouseleave', handleMouseLeave);
 
     return () => {
+      if (rafId) cancelAnimationFrame(rafId);
       window.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseleave', handleMouseLeave);
     };
@@ -846,68 +873,44 @@ function CursorSpotlight({ active }) {
   return (
     <div
       ref={ref}
-      className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-500 opacity-0"
+      className="pointer-events-none fixed top-0 left-0 w-[420px] h-[420px] rounded-full z-0 opacity-0 transition-opacity duration-200 will-change-transform"
       style={{
-        background: 'radial-gradient(circle 350px at var(--x, -1000px) var(--y, -1000px), color-mix(in srgb, var(--accent-color) 12%, transparent), transparent 80%)',
+        transform: 'translate3d(-1000px, -1000px, 0)',
+        background: 'radial-gradient(circle closest-side, color-mix(in srgb, var(--accent-color) 11%, transparent), transparent)',
       }}
     />
   );
 }
 
-function GirlsThemeDecorations({ active, mode }) {
+function GirlsThemeDecorations({ active, mode, animationsEnabled }) {
   if (!active) return null;
   const isLight = mode === 'light';
-  const primaryFill = isLight ? 'url(#girlsLightPetalGrad)' : 'rgba(244, 114, 182, 0.26)';
-  const secondaryFill = isLight ? 'url(#girlsLightRibbonGrad)' : 'rgba(251, 182, 206, 0.22)';
-  const sparkleFill = isLight ? 'url(#girlsLightSparkleGrad)' : 'rgba(253, 224, 239, 0.42)';
+  const primaryFill = isLight ? 'rgba(244, 114, 182, 0.55)' : 'rgba(244, 114, 182, 0.26)';
+  const secondaryFill = isLight ? 'rgba(251, 182, 206, 0.65)' : 'rgba(251, 182, 206, 0.22)';
+  const sparkleFill = isLight ? 'rgba(219, 39, 119, 0.45)' : 'rgba(253, 224, 239, 0.42)';
   const ribbonStroke = isLight ? 'rgba(219, 39, 119, 0.34)' : 'rgba(249, 168, 212, 0.32)';
   const petalStroke = isLight ? 'rgba(219, 39, 119, 0.22)' : 'none';
-  const charmShadow = isLight ? 'drop-shadow(0 6px 14px rgba(219, 39, 119, 0.16))' : undefined;
+  const floatCls = animationsEnabled ? 'girls-float-slow' : '';
+  const driftCls = animationsEnabled ? 'girls-drift' : '';
+  const twinkleCls = animationsEnabled ? 'girls-twinkle' : '';
 
   return (
     <div
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden select-none"
       aria-hidden="true"
     >
-      {/* Shared gradients for crisp porcelain-silk light mode charms */}
-      {isLight && (
-        <svg className="absolute w-0 h-0" aria-hidden="true">
-          <defs>
-            <linearGradient id="girlsLightPetalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#fbcfe8" stopOpacity="0.88" />
-              <stop offset="100%" stopColor="#f472b6" stopOpacity="0.52" />
-            </linearGradient>
-            <linearGradient id="girlsLightRibbonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#fce7f3" stopOpacity="0.92" />
-              <stop offset="55%" stopColor="#fbcfe8" stopOpacity="0.72" />
-              <stop offset="100%" stopColor="#f9a8d4" stopOpacity="0.62" />
-            </linearGradient>
-            <linearGradient id="girlsLightSparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#f472b6" stopOpacity="0.72" />
-              <stop offset="100%" stopColor="#db2777" stopOpacity="0.48" />
-            </linearGradient>
-          </defs>
-        </svg>
-      )}
-
-      {/* Soft Pastel Halo Clouds */}
+      {/* Soft Pastel Halo Clouds (pure radial falloff without expensive blur-3xl) */}
       <div
-        className="absolute -top-24 -left-24 w-96 h-96 rounded-full blur-3xl opacity-75"
-        style={{ background: isLight ? 'radial-gradient(circle, rgba(244,114,182,0.20), transparent 70%)' : 'radial-gradient(circle, rgba(244,114,182,0.18), transparent 70%)' }}
+        className="absolute -top-24 -left-24 w-96 h-96 rounded-full opacity-80"
+        style={{ background: isLight ? 'radial-gradient(circle, rgba(244,114,182,0.18), transparent 70%)' : 'radial-gradient(circle, rgba(244,114,182,0.16), transparent 70%)' }}
       />
-      {isLight && (
-        <div
-          className="absolute -top-20 right-12 w-80 h-80 rounded-full blur-3xl opacity-65"
-          style={{ background: 'radial-gradient(circle, rgba(251,191,36,0.11), rgba(249,168,212,0.14) 48%, transparent 72%)' }}
-        />
-      )}
       <div
-        className="absolute -bottom-28 -right-24 w-[28rem] h-[28rem] rounded-full blur-3xl opacity-75"
-        style={{ background: isLight ? 'radial-gradient(circle, rgba(216,180,254,0.18), rgba(251,113,133,0.14) 55%, transparent 72%)' : 'radial-gradient(circle, rgba(217,70,239,0.15), transparent 70%)' }}
+        className="absolute -bottom-28 -right-24 w-[28rem] h-[28rem] rounded-full opacity-80"
+        style={{ background: isLight ? 'radial-gradient(circle, rgba(216,180,254,0.16), rgba(251,113,133,0.12) 55%, transparent 72%)' : 'radial-gradient(circle, rgba(217,70,239,0.14), transparent 70%)' }}
       />
 
       {/* Top-left Cherry Blossom Cluster */}
-      <svg className="absolute top-20 left-5 w-16 h-16 girls-float-slow" style={{ filter: charmShadow }} viewBox="0 0 64 64" fill="none">
+      <svg className={`absolute top-20 left-5 w-16 h-16 ${floatCls}`} viewBox="0 0 64 64" fill="none">
         <g transform="translate(32 32)">
           {[0, 72, 144, 216, 288].map((deg) => (
             <path
@@ -924,7 +927,7 @@ function GirlsThemeDecorations({ active, mode }) {
       </svg>
 
       {/* Top-right Dainty Ribbon Bow */}
-      <svg className="absolute top-24 right-8 w-16 h-12 girls-drift" style={{ filter: charmShadow }} viewBox="0 0 80 56" fill="none">
+      <svg className={`absolute top-24 right-8 w-16 h-12 ${driftCls}`} viewBox="0 0 80 56" fill="none">
         <path
           d="M40 26 C28 10, 8 10, 12 26 C16 38, 30 34, 40 26 Z M40 26 C52 10, 72 10, 68 26 C64 38, 50 34, 40 26 Z"
           fill={secondaryFill}
@@ -941,16 +944,13 @@ function GirlsThemeDecorations({ active, mode }) {
         <circle cx="40" cy="26" r="4.2" fill={sparkleFill} />
       </svg>
 
-      {/* Mid-left Four-Point Sparkles */}
-      <svg className="absolute top-[42%] left-7 w-9 h-9 girls-twinkle" style={{ filter: charmShadow }} viewBox="0 0 36 36" fill="none">
+      {/* Mid-left Four-Point Sparkle */}
+      <svg className={`absolute top-[44%] left-7 w-8 h-8 ${twinkleCls}`} viewBox="0 0 36 36" fill="none">
         <path d="M18 2 L21 15 L34 18 L21 21 L18 34 L15 21 L2 18 L15 15 Z" fill={sparkleFill} />
       </svg>
-      <svg className="absolute top-[52%] left-16 w-5 h-5 girls-twinkle" style={{ animationDelay: '1.4s', filter: charmShadow }} viewBox="0 0 24 24" fill="none">
-        <path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill={primaryFill} />
-      </svg>
 
-      {/* Mid-right Heart & Sparkle Duo */}
-      <svg className="absolute top-[46%] right-9 w-11 h-11 girls-float-slow" style={{ animationDelay: '1.8s', filter: charmShadow }} viewBox="0 0 40 40" fill="none">
+      {/* Mid-right Heart */}
+      <svg className={`absolute top-[46%] right-9 w-11 h-11 ${floatCls}`} style={animationsEnabled ? { animationDelay: '1.8s' } : undefined} viewBox="0 0 40 40" fill="none">
         <path
           d="M20 33 C11 26.5 5 21 5 14.5 C5 10.2 8.4 7 12.6 7 C15.4 7 18.1 8.5 20 11 C21.9 8.5 24.6 7 27.4 7 C31.6 7 35 10.2 35 14.5 C35 21 29 26.5 20 33 Z"
           fill={primaryFill}
@@ -958,23 +958,9 @@ function GirlsThemeDecorations({ active, mode }) {
           strokeWidth="1.5"
         />
       </svg>
-      <svg className="absolute top-[34%] right-20 w-6 h-6 girls-twinkle" style={{ animationDelay: '0.9s', filter: charmShadow }} viewBox="0 0 24 24" fill="none">
-        <path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill={sparkleFill} />
-      </svg>
 
-      {/* Bottom-left Crescent Moon & Star */}
-      <svg className="absolute bottom-14 left-10 w-14 h-14 girls-drift" style={{ animationDelay: '2.2s', filter: charmShadow }} viewBox="0 0 56 56" fill="none">
-        <path
-          d="M34 12 C23 14 17 24 20 34 C23 44 34 48 43 43 C32 43 26 35 27 25 C28 19 30 15 34 12 Z"
-          fill={secondaryFill}
-          stroke={ribbonStroke}
-          strokeWidth="1.5"
-        />
-        <path d="M40 16 L41.8 20.2 L46 22 L41.8 23.8 L40 28 L38.2 23.8 L34 22 L38.2 20.2 Z" fill={sparkleFill} />
-      </svg>
-
-      {/* Bottom-right Blossom & Floating Heart */}
-      <svg className="absolute bottom-12 right-8 w-16 h-16 girls-float-slow" style={{ animationDelay: '0.6s', filter: charmShadow }} viewBox="0 0 64 64" fill="none">
+      {/* Bottom-right Blossom */}
+      <svg className={`absolute bottom-12 right-8 w-16 h-16 ${driftCls}`} style={animationsEnabled ? { animationDelay: '0.8s' } : undefined} viewBox="0 0 64 64" fill="none">
         <g transform="translate(32 32)">
           {[0, 72, 144, 216, 288].map((deg) => (
             <path
@@ -988,9 +974,6 @@ function GirlsThemeDecorations({ active, mode }) {
           ))}
           <circle cx="0" cy="0" r="3.8" fill={isLight ? '#fbbf24' : sparkleFill} fillOpacity={isLight ? '0.65' : '1'} />
         </g>
-      </svg>
-      <svg className="absolute bottom-28 right-24 w-6 h-6 girls-twinkle" style={{ animationDelay: '2.5s', filter: charmShadow }} viewBox="0 0 24 24" fill="none">
-        <path d="M12 21 C7 17 3 13.8 3 9.8 C3 7.1 5.1 5 7.8 5 C9.6 5 11.1 5.9 12 7.4 C12.9 5.9 14.4 5 16.2 5 C18.9 5 21 7.1 21 9.8 C21 13.8 17 17 12 21 Z" fill={sparkleFill} />
       </svg>
     </div>
   );
@@ -1371,7 +1354,7 @@ function AutoRandomizeDecoyButton({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.95 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute top-full right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-[#12121a]/95 backdrop-blur-xl border border-white/10 p-3.5 shadow-2xl z-[2800] overflow-hidden select-none text-left"
+            className="absolute top-full right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-[#12121a] border border-white/10 p-3.5 shadow-2xl z-[2800] overflow-hidden select-none text-left"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-white/10 pb-2.5 mb-3">
@@ -1613,6 +1596,11 @@ export default function App() {
   const autoAppliedGirlsThemeRef = useRef(false);
   const autoAppliedGirlsChatThemeRef = useRef(false);
   const signInGirlsAppliedRef = useRef('');
+  const manualThemeOverrideUserRef = useRef('');
+  const manualChatThemeOverrideUserRef = useRef('');
+  const appliedDefaultGirlsForUserRef = useRef('');
+  const appliedDefaultGirlsChatForUserRef = useRef('');
+  const activeAccountLowerRef = useRef('');
 
   const [chatTheme, setChatTheme] = useState(() => {
     const saved = safeStorage.getItem('chat_theme');
@@ -1623,6 +1611,7 @@ export default function App() {
       const next = e?.detail;
       if (typeof next === 'string' && next.trim()) {
         autoAppliedGirlsChatThemeRef.current = false;
+        manualChatThemeOverrideUserRef.current = activeAccountLowerRef.current || '__guest__';
         setChatTheme(next.trim().slice(0, 32));
       }
     };
@@ -2161,8 +2150,9 @@ export default function App() {
     }
 
     if (typeof target === 'string') {
-      if (['movies', 'moremovies', 'moremoremovies', 'youtube', 'chat', 'lobbychat', 'download', 'info'].includes(target)) {
+      if (isPortalWorkspaceFilter(target) || target === 'info') {
         setSelectedGame(null);
+        setAdminAccountsModalOpen(false);
         setFilter(target);
         return;
       }
@@ -2333,7 +2323,7 @@ export default function App() {
 
   useEffect(() => {
     if (games.length === 0 || selectedGame || restoredSavedGame.current) return;
-    const isWorkspace = ['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'info', 'download'].includes(filter);
+    const isWorkspace = isPortalWorkspaceFilter(filter) || filter === 'info';
     if (isWorkspace) return;
     restoredSavedGame.current = true;
     const savedId = safeStorage.getItem('unblocked-last-game');
@@ -2408,7 +2398,7 @@ export default function App() {
 
   useEffect(() => {
     safeStorage.setItem('unblocked-last-filter', filter);
-    const isWorkspace = ['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'info', 'download'].includes(filter);
+    const isWorkspace = isPortalWorkspaceFilter(filter) || filter === 'info';
     if (isWorkspace) {
       setSelectedGame(null);
       setGameHeaderHidden(false);
@@ -2423,7 +2413,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const isWorkspace = ['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'info', 'download'].includes(filter);
+    const isWorkspace = isPortalWorkspaceFilter(filter) || filter === 'info';
     if (isWorkspace) {
       setGameHeaderHidden(false);
       setWindowFullscreen(false);
@@ -2453,21 +2443,13 @@ export default function App() {
 
   const openWorkspaceInAboutBlank = (currentFilter) => {
     if (currentFilter === 'chat') return false;
-    let url = "";
-    const encodedDecoy = encodeURIComponent(decoyType || 'classroom');
-    if (currentFilter === 'movies') {
-      url = `${window.location.origin}/?filter=movies&view=games&unlocked=true&decoyType=${encodedDecoy}`;
-    } else if (currentFilter === 'moremovies') {
-      url = `${window.location.origin}/?filter=moremovies&view=games&unlocked=true&decoyType=${encodedDecoy}`;
-    } else if (currentFilter === 'moremoremovies') {
-      url = `${window.location.origin}/?filter=moremoremovies&view=games&unlocked=true&decoyType=${encodedDecoy}`;
-    } else if (currentFilter === 'youtube') {
-      url = 'https://urnperiodic.github.io/youtube1/';
-    } else if (currentFilter === 'lobbychat') {
-      url = `${window.location.origin}/?filter=lobbychat&view=games&unlocked=true&decoyType=${encodedDecoy}`;
-    } else if (currentFilter === 'download') {
-      url = 'https://urnperiodic.github.io/download/';
-    } else {
+    const workspaceTarget = getWorkspaceAboutBlankTargetUrl(
+      currentFilter,
+      window.location.origin,
+      decoyType || 'classroom',
+    );
+    let url = workspaceTarget || '';
+    if (!url) {
       const searchParams = new URLSearchParams(window.location.search);
       searchParams.set('decoyType', decoyType);
       searchParams.set('view', 'games');
@@ -3108,6 +3090,13 @@ export default function App() {
   const [isDecoyPassUnlocked, setIsDecoyPassUnlocked] = useState(() => getSavedOwnerSession());
   const [isOwnerAdmin, setIsOwnerAdmin] = useState(() => getSavedOwnerSession());
   const [activeAccount, setActiveAccount] = useState(null);
+  if (activeAccountLowerRef.current !== (activeAccount?.usernameLower || '')) {
+    activeAccountLowerRef.current = activeAccount?.usernameLower || '';
+    manualThemeOverrideUserRef.current = '';
+    manualChatThemeOverrideUserRef.current = '';
+    appliedDefaultGirlsForUserRef.current = '';
+    appliedDefaultGirlsChatForUserRef.current = '';
+  }
   const [accountSessionChecked, setAccountSessionChecked] = useState(() => !getSavedAccountSession());
   const [workspaceConfig, setWorkspaceConfig] = useState(() => getCachedWorkspaceConfig());
   const [workspaceConfigLoaded, setWorkspaceConfigLoaded] = useState(false);
@@ -3136,6 +3125,35 @@ export default function App() {
   );
   const [instantSignInToast, setInstantSignInToast] = useState(null);
   const [pendingAboutBlankLaunch, setPendingAboutBlankLaunch] = useState(null);
+  const [isInAboutBlank] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      if (typeof window.location?.href === 'string' && window.location.href.startsWith('about:blank')) {
+        return true;
+      }
+      if (window.self !== window.top) {
+        const parentHref = window.parent?.location?.href;
+        if (typeof parentHref === 'string' && parentHref.startsWith('about:blank')) return true;
+        const topHref = window.top?.location?.href;
+        if (typeof topHref === 'string' && topHref.startsWith('about:blank')) return true;
+      }
+    } catch {}
+    return false;
+  });
+  const [aboutBlankNoticeDismissed, setAboutBlankNoticeDismissed] = useState(false);
+  const [aboutBlankNoticePopupBlocked, setAboutBlankNoticePopupBlocked] = useState(false);
+  const [aboutBlankNoticeOpen, setAboutBlankNoticeOpen] = useState(false);
+  const aboutBlankNoticeRef = useRef(null);
+  useEffect(() => {
+    if (!aboutBlankNoticeOpen) return;
+    const handleOutside = (e) => {
+      if (aboutBlankNoticeRef.current && !aboutBlankNoticeRef.current.contains(e.target)) {
+        setAboutBlankNoticeOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [aboutBlankNoticeOpen]);
   const [adminAccountsModalOpen, setAdminAccountsModalOpen] = useState(false);
   const [signOutNotice, setSignOutNotice] = useState('');
   const [rememberedUsers, setRememberedUsers] = useState(() => getRememberedLocalUsers());
@@ -3192,7 +3210,6 @@ export default function App() {
   const canGamesAccess = canAccessWorkspace('gamesAccess');
   const canMoviesAccess = canAccessWorkspace('moviesAccess');
   const canMoreMoviesAccess = canAccessWorkspace('moreMoviesAccess');
-  const canMoreMoreMoviesAccess = canAccessWorkspace('moreMoreMoviesAccess');
   const canYoutubeAccess = canAccessWorkspace('youtubeAccess');
   const canLobbyChatAccess = canAccessWorkspace('lobbyChatAccess');
   const canDownloadAccess = canAccessWorkspace('downloadAccess');
@@ -3487,7 +3504,9 @@ export default function App() {
     (nextTheme) => {
       if (isThemeLockedToGirls && nextTheme !== 'girls') return;
       autoAppliedGirlsThemeRef.current = false;
+      manualThemeOverrideUserRef.current = activeAccountLowerRef.current || '__guest__';
       setTheme(nextTheme);
+      safeStorage.setItem('unblocked-theme', nextTheme);
     },
     [isThemeLockedToGirls],
   );
@@ -3521,29 +3540,30 @@ export default function App() {
       signInGirlsAppliedRef.current !== signInSessionTag;
     if (shouldApplyGirlsOnSignIn) {
       signInGirlsAppliedRef.current = signInSessionTag;
+      manualThemeOverrideUserRef.current = '';
+      manualChatThemeOverrideUserRef.current = '';
     }
 
-    const hasValidSavedTheme =
-      account.preferredTheme &&
-      ['cyborg', 'sunset', 'midnight', 'forest', 'violet', 'ice', 'rose-pine', 'girls', 'none'].includes(account.preferredTheme);
-    const hasCustomSavedTheme = hasValidSavedTheme && account.preferredTheme !== 'none';
+    const VALID_THEMES = ['cyborg', 'sunset', 'midnight', 'forest', 'violet', 'ice', 'rose-pine', 'girls', 'none'];
+    const hasCustomSavedTheme =
+      typeof account.preferredTheme === 'string' && VALID_THEMES.includes(account.preferredTheme);
+    const hasManualThemeOverride = manualThemeOverrideUserRef.current === account.usernameLower;
 
     if (hasGirlsDefault && (girlsPolicy === 'lock' || shouldApplyGirlsOnSignIn)) {
       autoAppliedGirlsThemeRef.current = true;
       setTheme('girls');
       safeStorage.setItem('unblocked-theme', 'girls');
+    } else if (hasManualThemeOverride) {
+      // Keep the user's explicit theme swap in this session
     } else if (hasCustomSavedTheme) {
       autoAppliedGirlsThemeRef.current = false;
       setTheme(account.preferredTheme);
       safeStorage.setItem('unblocked-theme', account.preferredTheme);
     } else if (hasGirlsDefault && girlsPolicy === 'default_if_unset') {
       autoAppliedGirlsThemeRef.current = true;
+      appliedDefaultGirlsForUserRef.current = `${account.usernameLower}:true`;
       setTheme('girls');
       safeStorage.setItem('unblocked-theme', 'girls');
-    } else if (hasValidSavedTheme) {
-      autoAppliedGirlsThemeRef.current = false;
-      setTheme(account.preferredTheme);
-      safeStorage.setItem('unblocked-theme', account.preferredTheme);
     }
 
     if (account.preferredMode === 'light' || account.preferredMode === 'dark') {
@@ -3619,7 +3639,8 @@ export default function App() {
         safeStorage.setItem('study-tools-custom-decoy-titles', JSON.stringify(s.customDecoyTitles));
       } catch {}
     }
-    const hasCustomSavedChatTheme = typeof s.chatTheme === 'string' && s.chatTheme.trim() && s.chatTheme.trim() !== 'mono';
+    const hasCustomSavedChatTheme = typeof s.chatTheme === 'string' && s.chatTheme.trim().length > 0;
+    const hasManualChatOverride = manualChatThemeOverrideUserRef.current === account.usernameLower;
     if (hasGirlsDefault && girlsSyncChat && (girlsPolicy === 'lock' || shouldApplyGirlsOnSignIn)) {
       autoAppliedGirlsChatThemeRef.current = true;
       setChatTheme('girls');
@@ -3627,6 +3648,8 @@ export default function App() {
       try {
         window.dispatchEvent(new CustomEvent('urnperiodic-chat-theme-sync', { detail: 'girls' }));
       } catch {}
+    } else if (hasManualChatOverride) {
+      // Keep the user's explicit chat theme swap in this session
     } else if (hasCustomSavedChatTheme) {
       autoAppliedGirlsChatThemeRef.current = false;
       setChatTheme(s.chatTheme);
@@ -3636,17 +3659,11 @@ export default function App() {
       } catch {}
     } else if (hasGirlsDefault && girlsSyncChat && girlsPolicy === 'default_if_unset') {
       autoAppliedGirlsChatThemeRef.current = true;
+      appliedDefaultGirlsChatForUserRef.current = `${account.usernameLower}:true`;
       setChatTheme('girls');
       safeStorage.setItem('chat_theme', 'girls');
       try {
         window.dispatchEvent(new CustomEvent('urnperiodic-chat-theme-sync', { detail: 'girls' }));
-      } catch {}
-    } else if (typeof s.chatTheme === 'string' && s.chatTheme.trim()) {
-      autoAppliedGirlsChatThemeRef.current = false;
-      setChatTheme(s.chatTheme);
-      safeStorage.setItem('chat_theme', s.chatTheme);
-      try {
-        window.dispatchEvent(new CustomEvent('urnperiodic-chat-theme-sync', { detail: s.chatTheme }));
       } catch {}
     }
     if (typeof s.sidebarOpen === 'boolean') {
@@ -4020,15 +4037,13 @@ export default function App() {
             ? 'all'
             : dest === 'moremovies' && !hasPerm('moreMoviesAccess')
               ? 'all'
-              : dest === 'moremoremovies' && !hasPerm('moreMoreMoviesAccess')
+              : dest === 'youtube' && !hasPerm('youtubeAccess')
                 ? 'all'
-                : dest === 'youtube' && !hasPerm('youtubeAccess')
+                : dest === 'lobbychat' && !hasPerm('lobbyChatAccess')
                   ? 'all'
-                  : dest === 'lobbychat' && !hasPerm('lobbyChatAccess')
+                  : dest === 'chat' && !hasPerm('aiAccess')
                     ? 'all'
-                    : dest === 'chat' && !hasPerm('aiAccess')
-                      ? 'all'
-                      : dest;
+                    : dest;
 
         if (allowedDest && allowedDest !== 'all') {
           setSelectedGame(null);
@@ -4174,9 +4189,17 @@ export default function App() {
 
   // Live enforcement when admin toggles per-user Girls theme or changes Girls policy
   useEffect(() => {
-    if (!activeAccount?.isActive || !activeAccount?.defaultGirlsTheme) return;
+    if (!activeAccount?.isActive) return;
+    if (!activeAccount?.defaultGirlsTheme) {
+      appliedDefaultGirlsForUserRef.current = '';
+      appliedDefaultGirlsChatForUserRef.current = '';
+      return;
+    }
     const policy = workspaceConfig?.girlsThemePolicy || 'default_if_unset';
     const syncChat = workspaceConfig?.girlsThemeSyncChat !== false;
+    const uname = activeAccount.usernameLower || '';
+    const applyKey = `${uname}:true`;
+
     if (policy === 'lock') {
       if (theme !== 'girls') {
         autoAppliedGirlsThemeRef.current = true;
@@ -4192,24 +4215,33 @@ export default function App() {
         } catch {}
       }
     } else if (policy === 'default_if_unset') {
-      const hasCustom = activeAccount.preferredTheme && activeAccount.preferredTheme !== 'none';
-      if (!hasCustom && theme !== 'girls') {
-        autoAppliedGirlsThemeRef.current = true;
-        setTheme('girls');
-        safeStorage.setItem('unblocked-theme', 'girls');
+      const hasCustom = typeof activeAccount.preferredTheme === 'string' && activeAccount.preferredTheme.length > 0;
+      const userSwapped = manualThemeOverrideUserRef.current === uname;
+      if (!hasCustom && !userSwapped && appliedDefaultGirlsForUserRef.current !== applyKey) {
+        appliedDefaultGirlsForUserRef.current = applyKey;
+        if (theme !== 'girls') {
+          autoAppliedGirlsThemeRef.current = true;
+          setTheme('girls');
+          safeStorage.setItem('unblocked-theme', 'girls');
+        }
       }
       const savedChat = activeAccount.accountSettings?.chatTheme;
-      const hasCustomChat = savedChat && savedChat !== 'mono';
-      if (syncChat && !hasCustomChat && chatTheme !== 'girls') {
-        autoAppliedGirlsChatThemeRef.current = true;
-        setChatTheme('girls');
-        safeStorage.setItem('chat_theme', 'girls');
-        try {
-          window.dispatchEvent(new CustomEvent('urnperiodic-chat-theme-sync', { detail: 'girls' }));
-        } catch {}
+      const hasCustomChat = typeof savedChat === 'string' && savedChat.trim().length > 0;
+      const userSwappedChat = manualChatThemeOverrideUserRef.current === uname;
+      if (syncChat && !hasCustomChat && !userSwappedChat && appliedDefaultGirlsChatForUserRef.current !== applyKey) {
+        appliedDefaultGirlsChatForUserRef.current = applyKey;
+        if (chatTheme !== 'girls') {
+          autoAppliedGirlsChatThemeRef.current = true;
+          setChatTheme('girls');
+          safeStorage.setItem('chat_theme', 'girls');
+          try {
+            window.dispatchEvent(new CustomEvent('urnperiodic-chat-theme-sync', { detail: 'girls' }));
+          } catch {}
+        }
       }
     }
   }, [
+    activeAccount?.usernameLower,
     activeAccount?.isActive,
     activeAccount?.defaultGirlsTheme,
     activeAccount?.preferredTheme,
@@ -4233,7 +4265,6 @@ export default function App() {
     }
     if (filter === 'movies') return { key: 'movies', label: 'Watching Movies' };
     if (filter === 'moremovies') return { key: 'moremovies', label: 'Browsing More Movies' };
-    if (filter === 'moremoremovies') return { key: 'moremoremovies', label: 'Browsing MoreMore Movies' };
     if (filter === 'youtube') return { key: 'youtube', label: 'Watching YouTube' };
     if (filter === 'lobbychat') return { key: 'lobbychat', label: 'In Lobby Chat' };
     if (filter === 'chat') return { key: 'ai', label: 'Using AI Chat' };
@@ -4510,7 +4541,6 @@ export default function App() {
     const workspaceFilterMap = {
       movies: canMoviesAccess,
       moremovies: canMoreMoviesAccess,
-      moremoremovies: canMoreMoreMoviesAccess,
       youtube: canYoutubeAccess,
       lobbychat: canLobbyChatAccess,
       chat: isAdminUnlocked,
@@ -4530,7 +4560,6 @@ export default function App() {
     canGamesAccess,
     canMoviesAccess,
     canMoreMoviesAccess,
-    canMoreMoreMoviesAccess,
     canYoutubeAccess,
     canLobbyChatAccess,
     isAdminUnlocked,
@@ -4927,7 +4956,7 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlFilter = params.get('filter');
-      if (urlFilter && ['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'info', 'all', 'download'].includes(urlFilter)) {
+      if (urlFilter && (isPortalWorkspaceFilter(urlFilter) || urlFilter === 'info' || urlFilter === 'all')) {
         setFilter(urlFilter);
         // Ensure games mode is active so the user goes straight to the loaded workspace
         if (viewMode !== 'games') {
@@ -7629,7 +7658,7 @@ export default function App() {
     <MotionConfig reducedMotion={animationsEnabled ? "never" : "always"}>
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[var(--bg-color)] text-[var(--text-muted)] text-sm">Loading workspace...</div>}>
         <div className={`flex flex-col transition-colors duration-300 relative overflow-x-clip ${viewMode === 'games' ? 'games-no-select select-none' : ''} ${
-          selectedGame || ['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'download', 'info'].includes(filter)
+          selectedGame || (adminAccountsModalOpen && hasAdminAccess) || isPortalWorkspaceFilter(filter) || filter === 'info'
             ? 'h-[100dvh] max-h-[100dvh] overflow-hidden'
             : 'min-h-screen'
         }`}>
@@ -7639,13 +7668,15 @@ export default function App() {
           theme === 'girls' &&
           viewMode === 'games' &&
           !selectedGame &&
-          !['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'download'].includes(filter)
+          !(adminAccountsModalOpen && hasAdminAccess) &&
+          !isPortalWorkspaceFilter(filter)
         }
         mode={mode}
+        animationsEnabled={animationsEnabled}
       />
       {/* HEADER */}
       <AnimatePresence initial={false}>
-        {((!gameHeaderHidden || !selectedGame) || ['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'info', 'download'].includes(filter)) && (
+        {((!gameHeaderHidden || !selectedGame) || (adminAccountsModalOpen && hasAdminAccess) || isPortalWorkspaceFilter(filter) || filter === 'info') && (
           <motion.header
             key="main-header"
             initial={animationsEnabled ? { height: 0, opacity: 0, overflow: "hidden" } : false}
@@ -7659,7 +7690,7 @@ export default function App() {
         
         {/* Left Side: Logo & Title */}
         <div 
-          onClick={() => { setFilter('all'); setSelectedGame(null); setSearchQuery(''); }}
+          onClick={() => { setFilter('all'); setSelectedGame(null); setAdminAccountsModalOpen(false); setSearchQuery(''); }}
           className="flex items-center gap-2 cursor-pointer select-none group shrink-0"
           title="Go to homepage"
         >
@@ -7683,9 +7714,9 @@ export default function App() {
               <motion.button
                 whileHover={animationsEnabled ? { scale: 1.05 } : undefined}
                 whileTap={animationsEnabled ? { scale: 0.95 } : undefined}
-                onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
+                onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                 className={`relative px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${
-                  filter === 'movies'
+                  filter === 'movies' && !adminAccountsModalOpen
                     ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
                     : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
                 }`}
@@ -7701,9 +7732,9 @@ export default function App() {
               <motion.button
                 whileHover={animationsEnabled ? { scale: 1.05 } : undefined}
                 whileTap={animationsEnabled ? { scale: 0.95 } : undefined}
-                onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); }}
+                onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                 className={`relative px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${
-                  filter === 'moremovies'
+                  filter === 'moremovies' && !adminAccountsModalOpen
                     ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
                     : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
                 }`}
@@ -7714,30 +7745,12 @@ export default function App() {
               </motion.button>
             )}
 
-            {/* MoreMore Movies Button */}
-            {canMoreMoreMoviesAccess && (
-              <motion.button
-                whileHover={animationsEnabled ? { scale: 1.05 } : undefined}
-                whileTap={animationsEnabled ? { scale: 0.95 } : undefined}
-                onClick={() => { setFilter(filter === 'moremoremovies' ? 'all' : 'moremoremovies'); setSelectedGame(null); }}
-                className={`relative px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${
-                  filter === 'moremoremovies'
-                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
-                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
-                }`}
-                title="MoreMore Movies (Nocturne.rip)"
-              >
-                <Clapperboard className="w-3.5 h-3.5" />
-                <span style={{ fontSize: '9px', lineHeight: '18px', textAlign: 'center', fontStyle: 'normal', fontWeight: 'normal', fontFamily: 'Inter' }}>moremore movies</span>
-              </motion.button>
-            )}
-
             {/* Lobby Chat Button */}
             {canLobbyChatAccess && (
               <motion.button
                 whileHover={animationsEnabled ? { scale: 1.05 } : undefined}
                 whileTap={animationsEnabled ? { scale: 0.95 } : undefined}
-                onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); }}
+                onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                 className={`relative px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${
                   filter === 'lobbychat'
                     ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)] font-bold'
@@ -7816,20 +7829,74 @@ export default function App() {
                     ? 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] hover:border-[var(--accent-color)] cursor-pointer'
                     : 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] opacity-40 cursor-not-allowed'
                 }`}
-                title={
-                  filter === 'movies' ? "Open Movies in about:blank" :
-                  filter === 'moremovies' ? "Open More Movies in about:blank" :
-                  filter === 'moremoremovies' ? "Open MoreMore Movies in about:blank" :
-                  filter === 'youtube' ? "Open YouTube in about:blank" :
-                  filter === 'chat' ? "AI Chat cannot be opened in about:blank" :
-                  filter === 'lobbychat' ? "Open Lobby Chat in about:blank" :
-                  filter === 'download' ? "Open Download in about:blank" :
-                  "Cloak site in about:blank"
-                }
+                title={getWorkspaceAboutBlankTitle(filter)}
               >
                 <ExternalLink className="w-3.5 h-3.5" />
                 <span>Cloak</span>
               </motion.button>
+
+              {!isInAboutBlank && !aboutBlankNoticeDismissed && !pendingAboutBlankLaunch && (
+                <div className="relative" ref={headerOpen ? aboutBlankNoticeRef : undefined}>
+                  <button
+                    type="button"
+                    onClick={() => setAboutBlankNoticeOpen((prev) => !prev)}
+                    className={`relative p-1.5 rounded-lg border flex items-center justify-center cursor-pointer transition-colors shrink-0 ${
+                      mode === 'light'
+                        ? 'border-amber-500/80 bg-amber-100 text-amber-700 hover:bg-amber-200'
+                        : 'border-amber-400/60 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
+                    }`}
+                    title="Not on about:blank — click to open or dismiss"
+                    aria-label="Not on about:blank"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 ring-1 ring-[var(--bg-secondary)]" />
+                  </button>
+                  {aboutBlankNoticeOpen && (
+                    <div className="absolute top-full right-0 mt-2 w-64 rounded-xl border border-amber-500/60 bg-[var(--card-bg)] text-[var(--text-primary)] shadow-2xl p-3 z-[99999] text-left">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                          <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                          <span>Not on about:blank</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAboutBlankNoticeOpen(false);
+                            setAboutBlankNoticeDismissed(true);
+                          }}
+                          className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                          title="Dismiss notice"
+                          aria-label="Dismiss about:blank notice"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <p className="text-[10.5px] text-[var(--text-muted)] leading-snug mb-2.5">
+                        {aboutBlankNoticePopupBlocked
+                          ? 'Popup blocked — allow popups in your browser, then click Open.'
+                          : 'Your tab URL is visible. Open in about:blank to cloak your tab.'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const opened = openWorkspaceInAboutBlank(filter === 'chat' ? 'all' : filter);
+                          if (opened) {
+                            setViewMode('articles');
+                            setAboutBlankNoticeOpen(false);
+                            setAboutBlankNoticeDismissed(true);
+                            setAboutBlankNoticePopupBlocked(false);
+                          } else {
+                            setAboutBlankNoticePopupBlocked(true);
+                          }
+                        }}
+                        className="w-full py-1.5 px-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors"
+                      >
+                        Open about:blank
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Built-in Refresh Page Button */}
               <motion.button
@@ -7846,7 +7913,7 @@ export default function App() {
 
               {/* Open Link Button */}
               {(() => {
-                const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'moremoremovies' ? 'https://nocturne.rip/' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
+                const url = getWorkspaceExternalUrl(filter, window.location.origin);
                 const hasUrl = !!url;
                 return (
                   <motion.button
@@ -7869,7 +7936,7 @@ export default function App() {
 
             {/* Quick Exit & Open Separately buttons for Workspaces (Sticky) */}
             <AnimatePresence>
-              {(filter === 'movies' || filter === 'moremovies' || filter === 'moremoremovies' || filter === 'chat' || filter === 'youtube' || filter === 'lobbychat' || filter === 'download') && (
+              {(isPortalWorkspaceFilter(filter) || (adminAccountsModalOpen && hasAdminAccess)) && (
                 <motion.div 
                   key="workspace-actions-sticky"
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -7879,7 +7946,7 @@ export default function App() {
                   className="flex items-center gap-1.5 pl-2 ml-1 border-l border-[var(--card-border)]/50 whitespace-nowrap"
                 >
                   <button
-                    onClick={() => setFilter('all')}
+                    onClick={() => { setFilter('all'); setAdminAccountsModalOpen(false); }}
                     className="p-1.5 rounded-lg border border-rose-500/40 hover:border-rose-500 bg-rose-500/10 text-rose-500 hover:text-white hover:bg-rose-500 transition-all cursor-pointer flex items-center justify-center shrink-0 group"
                     title="Close Workspace"
                   >
@@ -7903,7 +7970,7 @@ export default function App() {
           <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 z-10">
             <div 
               ref={compactLeftRef}
-              onClick={() => { setFilter('all'); setSelectedGame(null); setSearchQuery(''); }}
+              onClick={() => { setFilter('all'); setSelectedGame(null); setAdminAccountsModalOpen(false); setSearchQuery(''); }}
               className="flex items-center gap-2 cursor-pointer select-none group shrink-0 justify-start"
               title="Go to homepage"
             >
@@ -7967,9 +8034,9 @@ export default function App() {
             <div className="flex md:hidden items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--card-border)]/50 p-0.5 rounded-lg shadow-sm shrink-0">
               {canMoviesAccess && (
                 <button
-                  onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
+                  onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                   className={`relative p-1 rounded-md text-xs transition-all duration-200 ${
-                    filter === 'movies'
+                    filter === 'movies' && !adminAccountsModalOpen
                       ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
                       : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
                   }`}
@@ -7981,9 +8048,9 @@ export default function App() {
 
               {canMoreMoviesAccess && (
                 <button
-                  onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); }}
+                  onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                   className={`relative p-1 rounded-md text-xs transition-all duration-200 ${
-                    filter === 'moremovies'
+                    filter === 'moremovies' && !adminAccountsModalOpen
                       ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
                       : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
                   }`}
@@ -7993,25 +8060,11 @@ export default function App() {
                 </button>
               )}
 
-              {canMoreMoreMoviesAccess && (
-                <button
-                  onClick={() => { setFilter(filter === 'moremoremovies' ? 'all' : 'moremoremovies'); setSelectedGame(null); }}
-                  className={`relative p-1 rounded-md text-xs transition-all duration-200 ${
-                    filter === 'moremoremovies'
-                      ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
-                      : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
-                  }`}
-                  title="MoreMore Movies (Nocturne.rip)"
-                >
-                  <Clapperboard className="w-3.5 h-3.5" />
-                </button>
-              )}
-
               {isAdminUnlocked && (
                 <button
-                  onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
+                  onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                   className={`p-1 px-1.5 rounded-md text-xs font-sans font-black transition-all duration-200 flex items-center justify-center ${
-                    filter === 'chat'
+                    filter === 'chat' && !adminAccountsModalOpen
                       ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)]'
                       : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
                   }`}
@@ -8025,9 +8078,9 @@ export default function App() {
 
               {canLobbyChatAccess && (
                 <button
-                  onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); }}
+                  onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                   className={`relative p-1 rounded-md text-xs transition-all duration-200 ${
-                    filter === 'lobbychat'
+                    filter === 'lobbychat' && !adminAccountsModalOpen
                       ? 'bg-[var(--accent-color)] text-[var(--bg-color)] shadow-[0_1px_5px_var(--accent-shadow)] font-bold'
                       : 'bg-transparent text-[var(--text-primary)] hover:text-[var(--accent-color)]'
                   }`}
@@ -8040,17 +8093,17 @@ export default function App() {
 
               {canYoutubeAccess && (
                 <button
-                  onClick={() => { setFilter(filter === 'youtube' ? 'all' : 'youtube'); setSelectedGame(null); }}
+                  onClick={() => { setFilter(filter === 'youtube' ? 'all' : 'youtube'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                   className={`p-1 rounded-md text-xs transition-all duration-200 ${
-                    filter === 'youtube'
+                    filter === 'youtube' && !adminAccountsModalOpen
                       ? 'bg-red-600 text-white shadow-[0_1px_5px_rgba(220,38,38,0.5)] font-bold'
                       : 'bg-transparent text-[var(--text-primary)] hover:text-red-500'
                   }`}
                   title="YouTube"
                 >
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837z" fill={filter === 'youtube' ? "#FFFFFF" : "#FF0000"} />
-                    <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill={filter === 'youtube' ? "#FF0000" : "#FFFFFF"} />
+                    <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837z" fill={filter === 'youtube' && !adminAccountsModalOpen ? "#FFFFFF" : "#FF0000"} />
+                    <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill={filter === 'youtube' && !adminAccountsModalOpen ? "#FF0000" : "#FFFFFF"} />
                   </svg>
                 </button>
               )}
@@ -8097,22 +8150,13 @@ export default function App() {
                         ? 'text-[var(--accent-color)] hover:bg-[var(--accent-color)]/10 cursor-pointer'
                         : 'text-[var(--accent-color)] opacity-40 cursor-not-allowed'
                     }`}
-                    title={
-                      filter === 'movies' ? "Open Movies in about:blank" :
-                      filter === 'moremovies' ? "Open More Movies in about:blank" :
-                      filter === 'moremoremovies' ? "Open MoreMore Movies in about:blank" :
-                      filter === 'youtube' ? "Open YouTube in about:blank" :
-                      filter === 'chat' ? "AI Chat cannot be opened in about:blank" :
-                      filter === 'lobbychat' ? "Open Lobby Chat in about:blank" :
-                      filter === 'download' ? "Open Download in about:blank" :
-                      "Cloak site in about:blank"
-                    }
+                    title={getWorkspaceAboutBlankTitle(filter)}
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                   </button>
 
                   {(() => {
-                    const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'moremoremovies' ? 'https://nocturne.rip/' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
+                    const url = getWorkspaceExternalUrl(filter, window.location.origin);
                     const hasUrl = !!url;
                     return (
                       <button
@@ -8147,9 +8191,9 @@ export default function App() {
               {canMoviesAccess && (
               <div className="relative">
                 <button
-                  onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
+                  onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                   className={`p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                    filter === 'movies'
+                    filter === 'movies' && !adminAccountsModalOpen
                       ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
                       : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
                   } ${showNotices && noticeStep === 1 ? 'ring-2 ring-[var(--accent-color)] ring-offset-2 ring-offset-[#0d0d12] animate-pulse' : ''}`}
@@ -8236,9 +8280,9 @@ export default function App() {
               {canMoreMoviesAccess && (
                 <div className="relative">
                   <button
-                    onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); }}
+                    onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                     className={`p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                      filter === 'moremovies'
+                      filter === 'moremovies' && !adminAccountsModalOpen
                         ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
                         : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
                     }`}
@@ -8249,29 +8293,12 @@ export default function App() {
                 </div>
               )}
 
-              {/* MoreMore Movies Button */}
-              {canMoreMoreMoviesAccess && (
-                <div className="relative">
-                  <button
-                    onClick={() => { setFilter(filter === 'moremoremovies' ? 'all' : 'moremoremovies'); setSelectedGame(null); }}
-                    className={`p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                      filter === 'moremoremovies'
-                        ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
-                        : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
-                    }`}
-                    title="MoreMore Movies (Nocturne.rip)"
-                  >
-                    <Clapperboard className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-
               {/* Socratic Tutor Button (Admin Only) */}
               {isAdminUnlocked && (
                 <button
-                  onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); }}
+                  onClick={() => { setFilter(filter === 'chat' ? 'all' : 'chat'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                   className={`p-1.5 px-2.5 rounded-lg border text-xs font-sans font-black flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                    filter === 'chat'
+                    filter === 'chat' && !adminAccountsModalOpen
                       ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
                       : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
                   }`}
@@ -8286,9 +8313,9 @@ export default function App() {
               {/* Lobby Chat Button */}
               {canLobbyChatAccess && (
                 <button
-                  onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); }}
+                  onClick={() => { setFilter(filter === 'lobbychat' ? 'all' : 'lobbychat'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                   className={`relative p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                    filter === 'lobbychat'
+                    filter === 'lobbychat' && !adminAccountsModalOpen
                       ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_2px_8px_var(--accent-shadow)]'
                       : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)]/50 hover:text-[var(--accent-color)]'
                   }`}
@@ -8302,17 +8329,17 @@ export default function App() {
               {/* YouTube Workspace Button */}
               {canYoutubeAccess && (
                 <button
-                  onClick={() => { setFilter(filter === 'youtube' ? 'all' : 'youtube'); setSelectedGame(null); }}
+                  onClick={() => { setFilter(filter === 'youtube' ? 'all' : 'youtube'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                   className={`p-1.5 rounded-lg border text-xs font-mono font-bold flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                    filter === 'youtube'
+                    filter === 'youtube' && !adminAccountsModalOpen
                       ? 'bg-red-600 text-white border-red-600 shadow-[0_2px_8px_rgba(220,38,38,0.5)] font-bold'
                       : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-red-500/50 hover:text-red-500'
                   }`}
                   title="YouTube"
                 >
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837z" fill={filter === 'youtube' ? "#FFFFFF" : "#FF0000"} />
-                    <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill={filter === 'youtube' ? "#FF0000" : "#FFFFFF"} />
+                    <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837z" fill={filter === 'youtube' && !adminAccountsModalOpen ? "#FFFFFF" : "#FF0000"} />
+                    <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill={filter === 'youtube' && !adminAccountsModalOpen ? "#FF0000" : "#FFFFFF"} />
                   </svg>
                 </button>
               )}
@@ -8362,16 +8389,7 @@ export default function App() {
                         ? 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] hover:border-[var(--accent-color)] cursor-pointer'
                         : 'border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] opacity-40 cursor-not-allowed'
                     } ${showNotices && noticeStep === 2 ? 'ring-2 ring-[var(--accent-color)] ring-offset-2 ring-offset-[#0d0d12] animate-pulse' : ''}`}
-                    title={
-                      filter === 'movies' ? "Open Movies in about:blank" :
-                      filter === 'moremovies' ? "Open More Movies in about:blank" :
-                      filter === 'moremoremovies' ? "Open MoreMore Movies in about:blank" :
-                      filter === 'youtube' ? "Open YouTube in about:blank" :
-                      filter === 'chat' ? "AI Chat cannot be opened in about:blank" :
-                      filter === 'lobbychat' ? "Open Lobby Chat in about:blank" :
-                      filter === 'download' ? "Open Download in about:blank" :
-                      "Cloak site in about:blank"
-                    }
+                    title={getWorkspaceAboutBlankTitle(filter)}
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                   </button>
@@ -8451,7 +8469,7 @@ export default function App() {
 
                 {/* Open Link Button */}
                 {(() => {
-                  const url = filter === 'movies' ? 'https://urnperiodic.github.io/p/' : filter === 'moremovies' ? 'https://atlantic.st' : filter === 'moremoremovies' ? 'https://nocturne.rip/' : filter === 'youtube' ? 'https://urnperiodic.github.io/youtube1/' : filter === 'download' ? 'https://urnperiodic.github.io/download/' : filter === 'lobbychat' ? `${window.location.origin}?filter=lobbychat&view=games` : '';
+                  const url = getWorkspaceExternalUrl(filter, window.location.origin);
                   const hasUrl = !!url;
                   return (
                     <button
@@ -8547,7 +8565,7 @@ export default function App() {
 
               {/* Quick Exit & Open Separately buttons for Workspaces (Main) */}
               <AnimatePresence>
-                {(filter === 'movies' || filter === 'moremovies' || filter === 'moremoremovies' || filter === 'chat' || filter === 'youtube' || filter === 'lobbychat' || filter === 'download') && (
+                {(isPortalWorkspaceFilter(filter) || (adminAccountsModalOpen && hasAdminAccess)) && (
                   <motion.div 
                     key="workspace-actions-main"
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -8557,7 +8575,7 @@ export default function App() {
                     className="flex items-center gap-1.5 pl-2 ml-1 border-l border-[var(--card-border)]/50 whitespace-nowrap"
                   >
                     <button
-                      onClick={() => setFilter('all')}
+                      onClick={() => { setFilter('all'); setAdminAccountsModalOpen(false); }}
                       className="p-1.5 rounded-lg border border-rose-500/40 hover:border-rose-500 bg-rose-500/10 text-rose-500 hover:text-white hover:bg-rose-500 transition-all cursor-pointer flex items-center justify-center shrink-0 group"
                       title="Close Workspace"
                     >
@@ -8647,7 +8665,8 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    setAdminAccountsModalOpen(true);
+                    setAdminAccountsModalOpen((prev) => !prev);
+                    setSelectedGame(null);
                     setIsGlobalSettingsOpen(false);
                   }}
                   className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shrink-0 ${
@@ -8709,6 +8728,69 @@ export default function App() {
 
               {/* Light/Dark slider with GoGuardian Decoy notice (Joined with color palette bar) */}
               <div className="relative flex items-center gap-1">
+                {!isInAboutBlank && !aboutBlankNoticeDismissed && !pendingAboutBlankLaunch && (
+                  <div className="relative flex items-center" ref={!headerOpen ? aboutBlankNoticeRef : undefined}>
+                    <button
+                      type="button"
+                      onClick={() => setAboutBlankNoticeOpen((prev) => !prev)}
+                      className={`relative p-1 rounded-md border flex items-center justify-center cursor-pointer transition-colors shrink-0 ${
+                        mode === 'light'
+                          ? 'border-amber-500/80 bg-amber-100 text-amber-700 hover:bg-amber-200'
+                          : 'border-amber-400/60 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
+                      }`}
+                      title="Not on about:blank — click to open or dismiss"
+                      aria-label="Not on about:blank"
+                    >
+                      <ShieldAlert className="w-3 h-3" />
+                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500 ring-1 ring-[var(--bg-secondary)]" />
+                    </button>
+                    {aboutBlankNoticeOpen && (
+                      <div className="absolute top-full right-0 mt-2 w-64 rounded-xl border border-amber-500/60 bg-[var(--card-bg)] text-[var(--text-primary)] shadow-2xl p-3 z-[99999] text-left">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                            <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                            <span>Not on about:blank</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAboutBlankNoticeOpen(false);
+                              setAboutBlankNoticeDismissed(true);
+                            }}
+                            className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                            title="Dismiss notice"
+                            aria-label="Dismiss about:blank notice"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <p className="text-[10.5px] text-[var(--text-muted)] leading-snug mb-2.5">
+                          {aboutBlankNoticePopupBlocked
+                            ? 'Popup blocked — allow popups in your browser, then click Open.'
+                            : 'Your tab URL is visible. Open in about:blank to cloak your tab.'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const opened = openWorkspaceInAboutBlank(filter === 'chat' ? 'all' : filter);
+                            if (opened) {
+                              setViewMode('articles');
+                              setAboutBlankNoticeOpen(false);
+                              setAboutBlankNoticeDismissed(true);
+                              setAboutBlankNoticePopupBlocked(false);
+                            } else {
+                              setAboutBlankNoticePopupBlocked(true);
+                            }
+                          }}
+                          className="w-full py-1.5 px-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors"
+                        >
+                          Open about:blank
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {isWhiteDecoy && (
                   <button
                     type="button"
@@ -8778,10 +8860,10 @@ export default function App() {
 
           <div className="flex flex-wrap items-center gap-2 md:ml-auto w-full md:w-auto overflow-visible">
             {/* Go back to games back button */}
-            {(filter === 'chat' || filter === 'movies' || filter === 'moremovies' || filter === 'moremoremovies' || filter === 'youtube' || filter === 'lobbychat' || filter === 'download') && (
+            {(isPortalWorkspaceFilter(filter) || (adminAccountsModalOpen && hasAdminAccess)) && (
               <button
                 id="chat-back-button"
-                onClick={() => setFilter('all')}
+                onClick={() => { setFilter('all'); setAdminAccountsModalOpen(false); }}
                 className="flex items-center gap-1.5 text-xs font-mono font-bold py-1.5 px-3.5 rounded-full border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-primary)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-all cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] active:scale-98"
                 title="Go back to portals list"
                 aria-label="Back"
@@ -8794,9 +8876,9 @@ export default function App() {
             {/* Movies Workspace button */}
             {canMoviesAccess && (
               <button
-                onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); }}
+                onClick={() => { setFilter(filter === 'movies' ? 'all' : 'movies'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                 className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
-                  filter === 'movies'
+                  filter === 'movies' && !adminAccountsModalOpen
                     ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
                     : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
                 }`}
@@ -8810,9 +8892,9 @@ export default function App() {
             {/* More Movies Workspace button (Atlantic.st) */}
             {canMoreMoviesAccess && (
               <button
-                onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); }}
+                onClick={() => { setFilter(filter === 'moremovies' ? 'all' : 'moremovies'); setSelectedGame(null); setAdminAccountsModalOpen(false); }}
                 className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
-                  filter === 'moremovies'
+                  filter === 'moremovies' && !adminAccountsModalOpen
                     ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
                     : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
                 }`}
@@ -8820,22 +8902,6 @@ export default function App() {
               >
                 <Film className="w-3.5 h-3.5 text-[var(--accent-color)]" />
                 <span>More Movies</span>
-              </button>
-            )}
-
-            {/* MoreMore Movies Workspace button (Nocturne.rip) */}
-            {canMoreMoreMoviesAccess && (
-              <button
-                onClick={() => { setFilter(filter === 'moremoremovies' ? 'all' : 'moremoremovies'); setSelectedGame(null); }}
-                className={`text-xs border py-1.5 px-3.5 rounded-full font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8.5px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-98 ${
-                  filter === 'moremoremovies'
-                    ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)] shadow-[0_4px_12px_var(--accent-shadow)] font-extrabold'
-                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--card-border)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]'
-                }`}
-                title="MoreMore Movies - Nocturne (nocturne.rip)"
-              >
-                <Clapperboard className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-                <span>MoreMore Movies</span>
               </button>
             )}
 
@@ -8973,7 +9039,8 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    setAdminAccountsModalOpen(true);
+                    setAdminAccountsModalOpen((prev) => !prev);
+                    setSelectedGame(null);
                     setIsGlobalSettingsOpen(false);
                   }}
                   className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0 ${
@@ -9094,13 +9161,13 @@ export default function App() {
 
       {/* MAIN CONTAINER: SIDEBAR + GAMES */}
       <div className={`flex-1 flex flex-col md:flex-row w-full mx-auto relative select-none games-no-select ${windowFullscreen ? 'z-[99999]' : 'z-10'} ${
-        (filter === 'chat' || filter === 'movies' || filter === 'moremovies' || filter === 'moremoremovies' || filter === 'lobbychat' || filter === 'youtube' || filter === 'download' || filter === 'info' || selectedGame)
+        ((adminAccountsModalOpen && hasAdminAccess) || isPortalWorkspaceFilter(filter) || filter === 'info' || selectedGame)
           ? 'min-h-0 overflow-hidden max-w-none p-0 gap-0 border-t-0 lg:bg-[#07090e]' 
           : 'max-w-8xl p-4 md:p-6 gap-6 self-center'
       }`}>
         
         {/* LEFT NAV PANEL - CAT SIDEBAR */}
-        {canGamesAccess && filter !== 'chat' && filter !== 'movies' && filter !== 'moremovies' && filter !== 'moremoremovies' && filter !== 'youtube' && filter !== 'lobbychat' && filter !== 'download' && filter !== 'info' && !selectedGame && (
+        {canGamesAccess && !(adminAccountsModalOpen && hasAdminAccess) && !isPortalWorkspaceFilter(filter) && filter !== 'info' && !selectedGame && (
           <aside className={`transition-all duration-300 ease-in-out shrink-0 flex flex-col gap-1.5 overflow-hidden ${
             sidebarOpen ? 'w-full md:w-40' : 'w-full md:w-12'
           }`}>
@@ -9281,10 +9348,10 @@ export default function App() {
               <AnimatePresence>
                 {sidebarOpen && emulatedDropdownOpen && (
                   <motion.div
-                    initial={{ opacity: 0, height: 0, y: -4 }}
+                    initial={animationsEnabled ? { opacity: 0, height: 0, y: -4 } : false}
                     animate={{ opacity: 1, height: 'auto', y: 0 }}
-                    exit={{ opacity: 0, height: 0, y: -4 }}
-                    transition={{ duration: 0.22, ease: 'easeOut' }}
+                    exit={animationsEnabled ? { opacity: 0, height: 0, y: -4 } : undefined}
+                    transition={animationsEnabled ? { duration: 0.16, ease: 'easeOut' } : { duration: 0 }}
                     className="overflow-hidden mt-1 px-0.5"
                   >
                     <div className="bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl p-1.5 shadow-lg flex flex-col gap-1">
@@ -9818,7 +9885,7 @@ export default function App() {
                 exit={animationsEnabled ? { opacity: 0, y: -8 } : undefined}
                 transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
                 className={`${
-                  selectedGame || ['chat', 'lobbychat', 'movies', 'moremovies', 'moremoremovies', 'youtube', 'download', 'info'].includes(filter)
+                  selectedGame || (adminAccountsModalOpen && hasAdminAccess) || isPortalWorkspaceFilter(filter) || filter === 'info'
                     ? 'mx-2 my-1.5 rounded-lg'
                     : 'mb-4 rounded-xl'
                 } shrink-0 border border-[var(--accent-color)]/45 bg-[var(--bg-secondary)] shadow-md px-3.5 py-2.5 flex items-start sm:items-center justify-between gap-3`}
@@ -9863,7 +9930,21 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          {!selectedGame ? (
+          {adminAccountsModalOpen && hasAdminAccess ? (
+            <div className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[var(--bg-secondary)]">
+              <AdminAccountsModal
+                isOpen={true}
+                isInline={true}
+                onClose={() => setAdminAccountsModalOpen(false)}
+                db={lobbyDb}
+                auth={lobbyAuth}
+                mode={mode}
+                activeAccount={activeAccount}
+                workspaceConfig={workspaceConfig}
+                games={games}
+              />
+            </div>
+          ) : !selectedGame ? (
             <AnimatePresence mode="wait">
               {filter === 'chat' ? (
                 <motion.div 
@@ -9939,111 +10020,27 @@ export default function App() {
                     onDownloadWebsite={canDownloadAccess ? downloadEntireWebsite : undefined}
                   />
                 </motion.div>
-              ) : filter === 'movies' && canMoviesAccess ? (
-                <motion.div 
-                  key="movies"
+              ) : (filter === 'movies' && canMoviesAccess) ||
+                (filter === 'moremovies' && canMoreMoviesAccess) ||
+                (filter === 'youtube' && canYoutubeAccess) ||
+                (filter === 'download' && canDownloadAccess) ? (
+                <motion.div
+                  key={filter}
                   initial={animationsEnabled ? { opacity: 0, y: 15 } : false}
                   animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
                   exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
                   transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
                   className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[var(--bg-secondary)]"
                 >
-                  <MoviesWorkspace onClose={() => setFilter('all')} />
-                </motion.div>
-              ) : filter === 'moremovies' && canMoreMoviesAccess ? (
-                <motion.div 
-                  key="moremovies"
-                  initial={animationsEnabled ? { opacity: 0, y: 15 } : false}
-                  animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
-                  exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
-                  transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
-                  className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[var(--bg-secondary)]"
-                >
-                  <MoreMoviesWorkspace onClose={() => setFilter('all')} />
-                </motion.div>
-              ) : filter === 'moremoremovies' && canMoreMoreMoviesAccess ? (
-                <motion.div 
-                  key="moremoremovies"
-                  initial={animationsEnabled ? { opacity: 0, y: 15 } : false}
-                  animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
-                  exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
-                  transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
-                  className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[#0c0f16]"
-                >
-                  <div id="more-more-movies" className="relative w-full h-full flex flex-col bg-[#0c0f16] text-[#e2e8f0] overflow-hidden">
-                    <div id="nocturne-iframe-wrapper" className="flex-1 w-full h-full bg-black">
-                      <iframe
-                        id="nocturne-movies-iframe"
-                        src="https://nocturne.rip/"
-                        className="w-full h-full border-none"
-                        title="MoreMore Movies - Nocturne"
-                        allow="accelerometer; autoplay; clipboard-read; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                        allowFullScreen
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              ) : filter === 'youtube' && canYoutubeAccess ? (
-                <motion.div 
-                  key="youtube"
-                  initial={animationsEnabled ? { opacity: 0, y: 15 } : false}
-                  animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
-                  exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
-                  transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
-                  className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[#0c0a09]"
-                >
-                  <div className="flex items-center justify-between px-3 py-1.5 bg-[#121019] border-b border-white/10 text-xs shrink-0">
-                    <button
-                      onClick={() => setFilter('all')}
-                      className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/10 hover:bg-[var(--accent-color)] text-white hover:text-black font-bold font-mono transition-all cursor-pointer"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Go back to portals</span>
-                    </button>
-                    <span className="font-mono text-[11px] text-neutral-400">YouTube Workspace</span>
-                  </div>
-                  <iframe 
-                    src="https://urnperiodic.github.io/youtube1/" 
-                    className="w-full h-full border-none flex-1 shadow-inner bg-[#0c0a09]"
-                    allow="fullscreen; autoplay; clipboard-write; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                    referrerPolicy="no-referrer"
-                  />
-                </motion.div>
-              ) : filter === 'download' && canDownloadAccess ? (
-                <motion.div 
-                  key="download"
-                  initial={animationsEnabled ? { opacity: 0, y: 15 } : false}
-                  animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
-                  exit={animationsEnabled ? { opacity: 0, y: -15 } : undefined}
-                  transition={animationsEnabled ? { duration: 0.2 } : { duration: 0 }}
-                  className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[#0c0a09]"
-                >
-                  <div className="flex items-center justify-between px-3 py-1.5 bg-[#121019] border-b border-white/10 text-xs shrink-0">
-                    <button
-                      onClick={() => setFilter('all')}
-                      className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/10 hover:bg-[var(--accent-color)] text-white hover:text-black font-bold font-mono transition-all cursor-pointer"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Go back to portals</span>
-                    </button>
-                    <span className="font-mono text-[11px] text-neutral-400">Download Workspace</span>
-                  </div>
-                  <iframe 
-                    src="https://urnperiodic.github.io/download/" 
-                    className="w-full h-full border-none flex-1 shadow-inner bg-[#0c0a09]"
-                    allow="fullscreen; autoplay; clipboard-write; encrypted-media"
-                    referrerPolicy="no-referrer"
-                  />
+                  <PortalWorkspaceView workspaceId={filter} onClose={() => setFilter('all')} />
                 </motion.div>
               ) : !canGamesAccess ? (
                 <motion.div
                   key="games-restricted"
-                  initial={{ opacity: 0 }}
+                  initial={animationsEnabled ? { opacity: 0 } : false}
                   animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                  exit={animationsEnabled ? { opacity: 0 } : undefined}
+                  transition={animationsEnabled ? { duration: 0.14 } : { duration: 0 }}
                   className="flex flex-col items-center justify-center py-20 px-6 text-center border border-dashed border-[var(--card-border)] rounded-2xl bg-[var(--bg-secondary)] max-w-xl mx-auto my-8"
                 >
                   <Lock className="w-12 h-12 text-rose-400/80 mb-3" />
@@ -10057,10 +10054,10 @@ export default function App() {
               ) : (
                 <motion.div 
                   key="games-list"
-                  initial={{ opacity: 0 }}
+                  initial={animationsEnabled ? { opacity: 0 } : false}
                   animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                  exit={animationsEnabled ? { opacity: 0 } : undefined}
+                  transition={animationsEnabled ? { duration: 0.14 } : { duration: 0 }}
                   className="flex flex-col gap-6"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -10282,19 +10279,15 @@ export default function App() {
                         initial={animationsEnabled ? { opacity: 0 } : false}
                         animate={{ opacity: 1 }}
                         exit={animationsEnabled ? { opacity: 0 } : undefined}
-                        transition={animationsEnabled ? { duration: 0.15 } : { duration: 0 }}
-                        whileHover={animationsEnabled ? { scale: 1.03, y: -4, transition: { duration: 0.2 } } : undefined}
-                        whileTap={animationsEnabled ? { scale: 0.98 } : undefined}
+                        transition={animationsEnabled ? { duration: 0.12 } : { duration: 0 }}
                         onClick={() => {
                           launchGame(game);
                         }}
                         className={`custom-card flex flex-col rounded-xl overflow-hidden cursor-pointer h-full ${
-                          animationsEnabled ? 'transition-all duration-300' : ''
-                        } ${
                           theme === 'girls' && game.girlsFeatured
-                            ? 'border-pink-400/45 hover:border-pink-500 shadow-md hover:shadow-pink-500/15'
+                            ? 'border-pink-400/45 hover:border-pink-500 shadow-sm'
                             : game.featured 
-                              ? 'border-amber-500/20 hover:border-amber-500/50 shadow-md hover:shadow-amber-500/5' 
+                              ? 'border-amber-500/20 hover:border-amber-500/50 shadow-sm' 
                               : ''
                         }`}
                       >
@@ -10334,7 +10327,7 @@ export default function App() {
                                 }
                                 setFailedThumbnails(prev => ({ ...prev, [game.id]: true }));
                               }}
-                              className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none pointer-events-none" 
+                              className="w-full h-full object-cover select-none pointer-events-none" 
                             />
                           ) : (
                             <div
@@ -10375,7 +10368,7 @@ export default function App() {
                                     ? 'bg-slate-200 text-slate-900 border border-slate-300'
                                     : rankInfo.rank === 3
                                     ? 'bg-amber-700 text-amber-100 border border-amber-600'
-                                    : 'bg-black/85 text-amber-300 border border-amber-400/40 backdrop-blur-sm'
+                                    : 'bg-black/90 text-amber-300 border border-amber-400/40'
                                 }`}>
                                   <Trophy className={`${isCompactLayout ? 'w-2 h-2' : 'w-2.5 h-2.5'} shrink-0`} />
                                   <span>#{rankInfo.rank} · TIER {rankInfo.tier}</span>
@@ -10387,7 +10380,7 @@ export default function App() {
                                 <span className={`absolute top-2 left-2 font-black rounded-md inline-flex items-center justify-center gap-1 z-10 shadow-sm font-mono border ${
                                   mode === 'light'
                                     ? 'bg-[#db2777] text-white border-pink-300/60'
-                                    : 'bg-[#2c1227]/90 text-pink-300 border-pink-400/45 backdrop-blur-sm'
+                                    : 'bg-[#2c1227]/95 text-pink-300 border-pink-400/45'
                                 } ${
                                   isCompactLayout ? 'text-[9px] px-1.5 h-5' : 'text-[9px] px-2 h-6'
                                 }`}>
@@ -10408,20 +10401,20 @@ export default function App() {
                             return null;
                           })()}
 
-                          <span className={`absolute top-2 right-2 font-bold uppercase tracking-widest backdrop-blur-sm border rounded-full inline-block z-10 ${
+                          <span className={`absolute top-2 right-2 font-bold uppercase tracking-widest border rounded-full inline-block z-10 ${
                             isCompactLayout ? 'text-[7px] px-1.5 py-0.5' : 'text-[8px] px-2.5 py-0.5'
                           } ${
                             theme === 'girls' && mode === 'light' && (!game.thumbnail || failedThumbnails[game.id])
-                              ? 'bg-white/90 text-[#9d174d] border-pink-200/90 shadow-xs'
+                              ? 'bg-white/95 text-[#9d174d] border-pink-200/90 shadow-xs'
                               : theme === 'girls' && mode === 'light'
-                                ? 'bg-[#2d1624]/80 text-white border-pink-200/25'
-                                : 'bg-black/75 text-white border-white/10'
+                                ? 'bg-[#2d1624]/90 text-white border-pink-200/25'
+                                : 'bg-black/85 text-white border-white/10'
                           }`}>
                             {game.category}
                           </span>
 
                           {game.isAiGenerated && (
-                            <span className="absolute bottom-2 left-2 flex items-center gap-1 text-[7.5px] font-extrabold tracking-wider bg-black/85 backdrop-blur-sm text-white border border-white/20 px-2 py-0.5 rounded-full inline-flex z-10 shadow-sm font-mono uppercase">
+                            <span className="absolute bottom-2 left-2 flex items-center gap-1 text-[7.5px] font-extrabold tracking-wider bg-black/90 text-white border border-white/20 px-2 py-0.5 rounded-full inline-flex z-10 shadow-sm font-mono uppercase">
                               <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z" fill="currentColor" />
                               </svg>
@@ -11156,7 +11149,7 @@ export default function App() {
       </div>
 
       {/* Main Games Menu Edge-to-Edge Square Footer */}
-      {filter !== 'chat' && filter !== 'movies' && filter !== 'moremovies' && filter !== 'moremoremovies' && filter !== 'youtube' && filter !== 'lobbychat' && filter !== 'download' && filter !== 'info' && !selectedGame && (
+      {!(adminAccountsModalOpen && hasAdminAccess) && !isPortalWorkspaceFilter(filter) && filter !== 'info' && !selectedGame && (
         <footer
           role="contentinfo"
           aria-label="Website Usage Disclaimer"
@@ -11193,18 +11186,19 @@ export default function App() {
         <AnimatePresence>
           {showWhatsNewModal && (
             <motion.div
-              initial={{ opacity: 0 }}
+              initial={animationsEnabled ? { opacity: 0 } : false}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[99999] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in"
+              exit={animationsEnabled ? { opacity: 0 } : undefined}
+              transition={animationsEnabled ? { duration: 0.14 } : { duration: 0 }}
+              className="fixed inset-0 z-[99999] bg-black/80 flex items-center justify-center p-4"
             >
               <motion.div
-                initial={{ scale: 0.9, opacity: 0, y: 10 }}
+                initial={animationsEnabled ? { scale: 0.96, opacity: 0, y: 8 } : false}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.9, opacity: 0, y: 10 }}
+                exit={animationsEnabled ? { scale: 0.96, opacity: 0, y: 8 } : undefined}
+                transition={animationsEnabled ? { duration: 0.16 } : { duration: 0 }}
                 className="w-full max-w-md bg-[#0c0f16] border border-[var(--card-border)] rounded-2xl p-6 shadow-2xl flex flex-col gap-5 text-left text-white relative overflow-hidden"
               >
-                <div className="absolute top-0 right-0 w-48 h-48 bg-[var(--accent-color)]/10 rounded-full blur-2xl pointer-events-none" />
 
                 <div className="flex items-center justify-between border-b border-white/10 pb-4">
                   <div className="flex items-center gap-2.5">
@@ -11271,10 +11265,11 @@ export default function App() {
         <AnimatePresence>
           {instantSignInToast && (
             <motion.div
-              initial={{ opacity: 0, y: 12, scale: 0.96 }}
+              initial={animationsEnabled ? { opacity: 0, y: 10, scale: 0.97 } : false}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 12, scale: 0.96 }}
-              className="fixed bottom-4 right-4 z-[99999] max-w-xs sm:max-w-sm rounded-xl border-2 border-[var(--accent-color)] bg-[var(--card-bg)] text-[var(--text-primary)] shadow-2xl px-3.5 py-2.5 flex items-center gap-3 backdrop-blur-xl"
+              exit={animationsEnabled ? { opacity: 0, y: 10, scale: 0.97 } : undefined}
+              transition={animationsEnabled ? { duration: 0.16 } : { duration: 0 }}
+              className="fixed bottom-4 right-4 z-[99999] max-w-xs sm:max-w-sm rounded-xl border-2 border-[var(--accent-color)] bg-[var(--card-bg)] text-[var(--text-primary)] shadow-2xl px-3.5 py-2.5 flex items-center gap-3"
             >
               <div className="w-7 h-7 rounded-lg bg-[var(--accent-color)] text-[var(--bg-color)] flex items-center justify-center shrink-0">
                 <KeyRound className="w-4 h-4" />
@@ -11326,7 +11321,15 @@ export default function App() {
           workspaceConfig={workspaceConfig}
           onLogin={handleAccountSignIn}
           onLogout={handleAccountSignOut}
-          onOpenAdmin={hasAdminAccess ? () => setAdminAccountsModalOpen(true) : null}
+          onOpenAdmin={
+            hasAdminAccess
+              ? () => {
+                  setAccountModalOpen(false);
+                  setSelectedGame(null);
+                  setAdminAccountsModalOpen(true);
+                }
+              : null
+          }
           mode={mode}
           signOutNotice={signOutNotice}
           isEducationPage={false}
@@ -11335,19 +11338,6 @@ export default function App() {
           initialTab={accountModalInitialTab}
           prefillUsername={accountModalPrefillUser}
         />
-
-        {hasAdminAccess && (
-          <AdminAccountsModal
-            isOpen={adminAccountsModalOpen}
-            onClose={() => setAdminAccountsModalOpen(false)}
-            db={lobbyDb}
-            auth={lobbyAuth}
-            mode={mode}
-            activeAccount={activeAccount}
-            workspaceConfig={workspaceConfig}
-            games={games}
-          />
-        )}
       </Suspense>
     </MotionConfig>
   );

@@ -54,7 +54,6 @@ export const ACTIVITY_BUCKET_KEYS = [
   'games',
   'movies',
   'moremovies',
-  'moremoremovies',
   'youtube',
   'lobbychat',
   'ai',
@@ -65,7 +64,6 @@ export const ACTIVITY_LABELS = {
   games: 'Games',
   movies: 'Movies',
   moremovies: 'More Movies',
-  moremoremovies: 'MoreMore Movies',
   youtube: 'Clarity Video',
   lobbychat: 'Lobby Chat',
   ai: 'AI Chat',
@@ -131,7 +129,6 @@ export const WORKSPACE_ACCESS_KEYS = [
   { key: 'gamesAccess', label: 'Games', description: 'Games & Portals catalog', defaultForAccount: true, defaultGlobal: true },
   { key: 'moviesAccess', label: 'Movies', description: 'Movies workspace', defaultForAccount: true, defaultGlobal: true },
   { key: 'moreMoviesAccess', label: 'More Movies', description: 'Atlantic.st workspace', defaultForAccount: true, defaultGlobal: true },
-  { key: 'moreMoreMoviesAccess', label: 'MoreMore Movies', description: 'Nocturne.rip workspace', defaultForAccount: true, defaultGlobal: true },
   { key: 'youtubeAccess', label: 'YouTube', description: 'YouTube workspace', defaultForAccount: true, defaultGlobal: true },
   { key: 'lobbyChatAccess', label: 'Lobby Chat', description: 'Live community chat', defaultForAccount: true, defaultGlobal: true },
   { key: 'aiAccess', label: 'AI Chat', description: 'Gemini AI chat tutor', defaultForAccount: false, defaultGlobal: true },
@@ -150,7 +147,6 @@ export const DEFAULT_WORKSPACE_CONFIG = {
   gamesAccess: true,
   moviesAccess: true,
   moreMoviesAccess: true,
-  moreMoreMoviesAccess: true,
   youtubeAccess: true,
   lobbyChatAccess: true,
   aiAccess: true,
@@ -184,7 +180,6 @@ export function sanitizeWorkspaceConfig(data) {
     gamesAccess: data.gamesAccess !== false,
     moviesAccess: data.moviesAccess !== false,
     moreMoviesAccess: data.moreMoviesAccess !== false,
-    moreMoreMoviesAccess: data.moreMoreMoviesAccess !== false,
     youtubeAccess: data.youtubeAccess !== false,
     lobbyChatAccess: data.lobbyChatAccess !== false,
     aiAccess: data.aiAccess !== false,
@@ -566,7 +561,6 @@ export function sanitizeAccountDoc(docId, data) {
     gamesAccess: data.gamesAccess !== false,
     moviesAccess: data.moviesAccess !== false,
     moreMoviesAccess: data.moreMoviesAccess !== false,
-    moreMoreMoviesAccess: data.moreMoreMoviesAccess !== false,
     youtubeAccess: data.youtubeAccess !== false,
     lobbyChatAccess: data.lobbyChatAccess !== false,
     aiAccess: Boolean(data.aiAccess),
@@ -975,7 +969,6 @@ export async function createManagedAccount(db, auth, payload) {
     gamesAccess: payload.gamesAccess !== false,
     moviesAccess: payload.moviesAccess !== false,
     moreMoviesAccess: payload.moreMoviesAccess !== false,
-    moreMoreMoviesAccess: payload.moreMoreMoviesAccess !== false,
     youtubeAccess: payload.youtubeAccess !== false,
     lobbyChatAccess: payload.lobbyChatAccess !== false,
     aiAccess: Boolean(payload.aiAccess || payload.allowAiOverride),
@@ -1031,7 +1024,6 @@ export async function updateManagedAccount(db, auth, currentUsernameLower, updat
   if (typeof updates.gamesAccess === 'boolean') patch.gamesAccess = updates.gamesAccess;
   if (typeof updates.moviesAccess === 'boolean') patch.moviesAccess = updates.moviesAccess;
   if (typeof updates.moreMoviesAccess === 'boolean') patch.moreMoviesAccess = updates.moreMoviesAccess;
-  if (typeof updates.moreMoreMoviesAccess === 'boolean') patch.moreMoreMoviesAccess = updates.moreMoreMoviesAccess;
   if (typeof updates.youtubeAccess === 'boolean') patch.youtubeAccess = updates.youtubeAccess;
   if (typeof updates.lobbyChatAccess === 'boolean') patch.lobbyChatAccess = updates.lobbyChatAccess;
   if (typeof updates.aiAccess === 'boolean') patch.aiAccess = updates.aiAccess;
@@ -1325,7 +1317,6 @@ export const SIGN_IN_LINK_DESTINATIONS = [
   { value: 'favorites', label: 'Favorites' },
   { value: 'movies', label: 'Movies', accessKey: 'moviesAccess' },
   { value: 'moremovies', label: 'More Movies', accessKey: 'moreMoviesAccess' },
-  { value: 'moremoremovies', label: 'MoreMore Movies', accessKey: 'moreMoreMoviesAccess' },
   { value: 'youtube', label: 'YouTube', accessKey: 'youtubeAccess' },
   { value: 'lobbychat', label: 'Lobby Chat', accessKey: 'lobbyChatAccess' },
   { value: 'chat', label: 'AI Chat', accessKey: 'aiAccess' },

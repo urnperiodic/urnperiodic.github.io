@@ -124,6 +124,28 @@ export async function clearChannelMessages(db, channelId) {
   });
   await Promise.all(tasks);
 
+  for (const subName of ['typing', 'readReceipts']) {
+    const subPath = `${rootCol}/${channelId}/${subName}`;
+    try {
+      const subSnap = await getDocs(collection(db, rootCol, channelId, subName));
+      const subDeletes = [];
+      subSnap.forEach((docSnap) => {
+        subDeletes.push(
+          deleteDoc(doc(db, rootCol, channelId, subName, docSnap.id)).catch((delErr) => {
+            if (isFirestorePermissionError(delErr)) {
+              handleFirestoreError(delErr, OperationType.DELETE, `${subPath}/${docSnap.id}`);
+            }
+          })
+        );
+      });
+      if (subDeletes.length > 0) await Promise.all(subDeletes);
+    } catch (subErr) {
+      if (isFirestorePermissionError(subErr)) {
+        handleFirestoreError(subErr, OperationType.LIST, subPath);
+      }
+    }
+  }
+
   try {
     localStorage.removeItem(`local_messages_${channelId}`);
   } catch {}

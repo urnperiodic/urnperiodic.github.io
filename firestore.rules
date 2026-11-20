@@ -147,7 +147,7 @@ service cloud.firestore {
       return data.keys().hasAll(['name', 'text', 'timestamp', 'channelId'])
         && data.keys().hasOnly([
           'name', 'userId', 'senderId', 'accountId', 'roleBadge', 'badgeColor',
-          'isRegistered', 'isAdmin', 'text', 'imageUrl', 'replyTo', 'isEncrypted', 'timestamp', 'channelId'
+          'isRegistered', 'isAdmin', 'text', 'imageUrl', 'replyTo', 'isEncrypted', 'editedAt', 'timestamp', 'channelId'
         ])
         && data.name is string && data.name.size() >= 1 && data.name.size() <= 40
         && isOptionalString(data, 'userId', 128)
@@ -157,12 +157,57 @@ service cloud.firestore {
         && isOptionalString(data, 'badgeColor', 24)
         && isOptionalBool(data, 'isRegistered')
         && isOptionalBool(data, 'isAdmin')
-        && data.text is string && data.text.size() <= 20000
+        && data.text is string && data.text.size() <= 100000
         && isOptionalString(data, 'imageUrl', 900000)
         && (!('replyTo' in data) || data.replyTo == null || data.replyTo is map)
         && isOptionalBool(data, 'isEncrypted')
+        && isOptionalNumber(data, 'editedAt')
         && data.timestamp is number
         && data.channelId is string && data.channelId == chanId && data.channelId.size() <= 128;
+    }
+
+    function isValidMessageEdit(chanId, messageId) {
+      return isValidId(chanId)
+        && isValidId(messageId)
+        && resource != null
+        && isValidMessage(incoming(), chanId)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['text', 'editedAt', 'isEncrypted'])
+        && incoming().editedAt is number
+        && incoming().editedAt >= 0;
+    }
+
+    function isValidTypingStatus(data, chanId, actorId) {
+      return data.keys().hasAll(['channelId', 'actorId', 'name', 'isTyping', 'updatedAt', 'expiresAt'])
+        && data.keys().hasOnly([
+          'channelId', 'actorId', 'name', 'accountId', 'senderId',
+          'isRegistered', 'isTyping', 'updatedAt', 'expiresAt'
+        ])
+        && data.channelId is string && data.channelId == chanId && data.channelId.size() <= 128
+        && data.actorId is string && data.actorId == actorId && data.actorId.size() <= 128
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 40
+        && isOptionalString(data, 'accountId', 20)
+        && isOptionalString(data, 'senderId', 128)
+        && isOptionalBool(data, 'isRegistered')
+        && data.isTyping is bool
+        && data.updatedAt is number && data.updatedAt >= 0
+        && data.expiresAt is number && data.expiresAt >= 0;
+    }
+
+    function isValidReadReceipt(data, chanId, actorId) {
+      return data.keys().hasAll(['channelId', 'actorId', 'name', 'lastReadAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'channelId', 'actorId', 'name', 'accountId', 'senderId',
+          'isRegistered', 'lastReadAt', 'lastReadMessageId', 'updatedAt'
+        ])
+        && data.channelId is string && data.channelId == chanId && data.channelId.size() <= 128
+        && data.actorId is string && data.actorId == actorId && data.actorId.size() <= 128
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 40
+        && isOptionalString(data, 'accountId', 20)
+        && isOptionalString(data, 'senderId', 128)
+        && isOptionalBool(data, 'isRegistered')
+        && data.lastReadAt is number && data.lastReadAt >= 0
+        && isOptionalString(data, 'lastReadMessageId', 128)
+        && data.updatedAt is number && data.updatedAt >= 0;
     }
 
     function isValidDmThread(data, dmId) {
@@ -280,7 +325,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Lobby Chat channels & messages
+    // Lobby Chat channels, messages, typing presence, & read receipts
     match /channels/{channelId} {
       allow get: if isValidId(channelId);
       allow list: if true;
@@ -292,12 +337,26 @@ service cloud.firestore {
         allow get: if isValidId(channelId) && isValidId(messageId);
         allow list: if isValidId(channelId);
         allow create: if isValidId(channelId) && isValidId(messageId) && isValidMessage(incoming(), channelId);
-        allow update: if false;
+        allow update: if isValidMessageEdit(channelId, messageId);
         allow delete: if isValidId(channelId) && isValidId(messageId);
+      }
+
+      match /typing/{actorId} {
+        allow get: if isValidId(channelId) && isValidId(actorId);
+        allow list: if isValidId(channelId);
+        allow create, update: if isValidId(channelId) && isValidId(actorId) && isValidTypingStatus(incoming(), channelId, actorId);
+        allow delete: if isValidId(channelId) && isValidId(actorId);
+      }
+
+      match /readReceipts/{actorId} {
+        allow get: if isValidId(channelId) && isValidId(actorId);
+        allow list: if isValidId(channelId);
+        allow create, update: if isValidId(channelId) && isValidId(actorId) && isValidReadReceipt(incoming(), channelId, actorId);
+        allow delete: if isValidId(channelId) && isValidId(actorId);
       }
     }
 
-    // Direct Messages threads & messages
+    // Direct Messages threads, messages, typing presence, & read receipts
     match /directMessages/{dmId} {
       allow get: if isValidId(dmId);
       allow list: if true;
@@ -313,8 +372,22 @@ service cloud.firestore {
         allow get: if isValidId(dmId) && isValidId(messageId);
         allow list: if isValidId(dmId);
         allow create: if isValidId(dmId) && isValidId(messageId) && isValidMessage(incoming(), dmId);
-        allow update: if false;
+        allow update: if isValidMessageEdit(dmId, messageId);
         allow delete: if isValidId(dmId) && isValidId(messageId);
+      }
+
+      match /typing/{actorId} {
+        allow get: if isValidId(dmId) && isValidId(actorId);
+        allow list: if isValidId(dmId);
+        allow create, update: if isValidId(dmId) && isValidId(actorId) && isValidTypingStatus(incoming(), dmId, actorId);
+        allow delete: if isValidId(dmId) && isValidId(actorId);
+      }
+
+      match /readReceipts/{actorId} {
+        allow get: if isValidId(dmId) && isValidId(actorId);
+        allow list: if isValidId(dmId);
+        allow create, update: if isValidId(dmId) && isValidId(actorId) && isValidReadReceipt(incoming(), dmId, actorId);
+        allow delete: if isValidId(dmId) && isValidId(actorId);
       }
     }
 

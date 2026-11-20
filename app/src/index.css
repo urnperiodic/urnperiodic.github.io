@@ -260,30 +260,23 @@ html, body, #root {
     radial-gradient(circle at 82% 84%, rgba(251, 113, 133, 0.12) 0%, transparent 44%),
     radial-gradient(rgba(249, 168, 212, 0.11) 1px, transparent 1px);
   background-size: 100% 100%, 100% 100%, 100% 100%, 28px 28px;
-  background-attachment: fixed;
 }
 [data-theme='girls'][data-mode='light'] body {
   background-color: #fffbfc;
   background-image:
-    radial-gradient(ellipse 60% 45% at 10% 8%, rgba(244, 114, 182, 0.15) 0%, transparent 65%),
-    radial-gradient(ellipse 55% 45% at 90% 10%, rgba(251, 146, 180, 0.14) 0%, transparent 62%),
+    radial-gradient(ellipse 60% 45% at 10% 8%, rgba(244, 114, 182, 0.14) 0%, transparent 65%),
+    radial-gradient(ellipse 55% 45% at 90% 10%, rgba(251, 146, 180, 0.13) 0%, transparent 62%),
     radial-gradient(ellipse 65% 50% at 80% 88%, rgba(232, 121, 249, 0.08) 0%, transparent 65%),
-    radial-gradient(ellipse 50% 45% at 18% 85%, rgba(253, 186, 116, 0.08) 0%, transparent 60%),
-    radial-gradient(rgba(219, 39, 119, 0.19) 1.25px, transparent 1.25px);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 28px 28px;
-  background-attachment: fixed;
+    radial-gradient(rgba(219, 39, 119, 0.17) 1.25px, transparent 1.25px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 28px 28px;
 }
 [data-theme='girls'][data-mode='light'] header {
-  background-color: rgba(255, 255, 255, 0.86) !important;
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  background-color: rgba(255, 251, 253, 0.96) !important;
   border-bottom-color: rgba(219, 39, 119, 0.14);
-  box-shadow: 0 4px 24px -12px rgba(219, 39, 119, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 12px -6px rgba(219, 39, 119, 0.12);
 }
 [data-theme='girls'][data-mode='light'] header + section {
-  background: linear-gradient(180deg, rgba(253, 242, 246, 0.92) 0%, rgba(255, 250, 252, 0.86) 100%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: linear-gradient(180deg, rgba(253, 242, 246, 0.98) 0%, rgba(255, 250, 252, 0.96) 100%);
   border-bottom-color: rgba(219, 39, 119, 0.14);
 }
 [data-theme='girls'][data-mode='light'] ::selection {
@@ -291,22 +284,15 @@ html, body, #root {
   color: #831843;
 }
 [data-theme='girls'][data-mode='dark'] .custom-card:hover {
-  box-shadow: 0 12px 28px -10px rgba(244, 114, 182, 0.42), 0 0 0 1px rgba(244, 114, 182, 0.35);
+  border-color: rgba(244, 114, 182, 0.55);
 }
 [data-theme='girls'][data-mode='light'] .custom-card {
   background: linear-gradient(180deg, #ffffff 0%, #fff8fb 100%);
   border-color: rgba(219, 39, 119, 0.14);
-  box-shadow:
-    0 1px 2px rgba(45, 22, 36, 0.04),
-    0 8px 22px -12px rgba(219, 39, 119, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+  box-shadow: 0 2px 8px -4px rgba(219, 39, 119, 0.12);
 }
 [data-theme='girls'][data-mode='light'] .custom-card:hover {
-  border-color: rgba(219, 39, 119, 0.42);
-  box-shadow:
-    0 18px 36px -14px rgba(219, 39, 119, 0.25),
-    0 4px 12px -4px rgba(45, 22, 36, 0.06),
-    0 0 0 1px rgba(219, 39, 119, 0.18);
+  border-color: rgba(219, 39, 119, 0.45);
 }
 [data-theme='girls'][data-mode='light'] ::-webkit-scrollbar-thumb {
   background: rgba(219, 39, 119, 0.22);
@@ -316,20 +302,29 @@ html, body, #root {
 }
 
 @keyframes girlsFloatSlow {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  50% { transform: translate3d(0, -10px, 0) rotate(6deg); }
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -8px, 0); }
 }
 @keyframes girlsTwinkle {
-  0%, 100% { opacity: 0.32; transform: scale(0.88) rotate(0deg); }
-  50% { opacity: 0.85; transform: scale(1.12) rotate(12deg); }
+  0%, 100% { opacity: 0.36; transform: scale3d(0.92, 0.92, 1); }
+  50% { opacity: 0.85; transform: scale3d(1.08, 1.08, 1); }
 }
 @keyframes girlsDrift {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(-4deg); }
-  50% { transform: translate3d(8px, -12px, 0) rotate(6deg); }
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(6px, -8px, 0); }
 }
-.girls-float-slow { animation: girlsFloatSlow 7.5s ease-in-out infinite; }
-.girls-twinkle { animation: girlsTwinkle 4.2s ease-in-out infinite; }
-.girls-drift { animation: girlsDrift 9s ease-in-out infinite; }
+html[data-animations="enabled"] .girls-float-slow {
+  animation: girlsFloatSlow 7.5s ease-in-out infinite;
+  will-change: transform;
+}
+html[data-animations="enabled"] .girls-twinkle {
+  animation: girlsTwinkle 4.2s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+html[data-animations="enabled"] .girls-drift {
+  animation: girlsDrift 9s ease-in-out infinite;
+  will-change: transform;
+}
 
 /* ⚫ NO THEME (MONOCHROME BLACK / WHITE) */
 [data-theme='none'][data-mode='dark'] {
@@ -398,13 +393,16 @@ body {
 .custom-card {
   background-color: var(--card-bg);
   border: 1px solid var(--card-border);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.16s cubic-bezier(0.2, 0, 0, 1), border-color 0.16s ease;
 }
 
 .custom-card:hover {
-  transform: translateY(-4px);
+  transform: translate3d(0, -3px, 0);
   border-color: var(--accent-color);
-  box-shadow: 0 10px 20px -10px var(--accent-shadow);
+}
+
+.custom-card:active {
+  transform: scale3d(0.985, 0.985, 1);
 }
 
 .custom-badge {
@@ -1389,42 +1387,21 @@ html {
 /* Fast image decoding and viewport-contained rendering */
 .custom-card {
   content-visibility: auto;
-  contain-intrinsic-size: 320px 240px;
+  contain-intrinsic-size: 280px 220px;
+  contain: layout style paint;
 }
 
 /* When animations are disabled (Default on start for Chromebooks or when Anim switch is toggled OFF) */
 html[data-animations="disabled"],
 html[data-animations="disabled"] *,
 html[data-animations="disabled"] *::before,
-html[data-animations="disabled"] *::after,
-html[data-animations="disabled"] *:hover,
-html[data-animations="disabled"] *:focus,
-html[data-animations="disabled"] *:active,
-body.animations-disabled,
-body.animations-disabled *,
-body.animations-disabled *::before,
-body.animations-disabled *::after,
-body.animations-disabled *:hover,
-body.animations-disabled *:focus,
-body.animations-disabled *:active,
-.animations-disabled,
-.animations-disabled *,
-.animations-disabled *::before,
-.animations-disabled *::after,
-.animations-disabled *:hover,
-.animations-disabled *:focus,
-.animations-disabled *:active {
+html[data-animations="disabled"] *::after {
   animation: none !important;
-  animation-duration: 0.0001ms !important;
-  animation-iteration-count: 1 !important;
-  animation-delay: 0ms !important;
   transition: none !important;
-  transition-duration: 0.0001ms !important;
-  transition-delay: 0ms !important;
   scroll-behavior: auto !important;
 }
 
-/* Explicitly kill Tailwind and custom animation keyframes */
+/* Explicitly kill Tailwind, Girls, and custom animation keyframes */
 html[data-animations="disabled"] .animate-pulse,
 html[data-animations="disabled"] .animate-bounce,
 html[data-animations="disabled"] .animate-spin,
@@ -1432,88 +1409,45 @@ html[data-animations="disabled"] .animate-ping,
 html[data-animations="disabled"] .animate-fade-in,
 html[data-animations="disabled"] .animate-shake,
 html[data-animations="disabled"] .animate-in,
-body.animations-disabled .animate-pulse,
-body.animations-disabled .animate-bounce,
-body.animations-disabled .animate-spin,
-body.animations-disabled .animate-ping,
-body.animations-disabled .animate-fade-in,
-body.animations-disabled .animate-shake,
-body.animations-disabled .animate-in,
-.animations-disabled .animate-pulse,
-.animations-disabled .animate-bounce,
-.animations-disabled .animate-spin,
-.animations-disabled .animate-ping,
-.animations-disabled .animate-fade-in,
-.animations-disabled .animate-shake,
-.animations-disabled .animate-in {
+html[data-animations="disabled"] .animate-chat-pop,
+html[data-animations="disabled"] .girls-float-slow,
+html[data-animations="disabled"] .girls-twinkle,
+html[data-animations="disabled"] .girls-drift {
   animation: none !important;
+  will-change: auto !important;
 }
 
 /* Completely remove expensive GPU fill-rate filters and multi-pass blurs */
 html[data-animations="disabled"] .bg-orbs,
-html[data-animations="disabled"] .orb,
-body.animations-disabled .bg-orbs,
-body.animations-disabled .orb,
-.animations-disabled .bg-orbs,
-.animations-disabled .orb {
+html[data-animations="disabled"] .orb {
   display: none !important;
 }
 
 html[data-animations="disabled"] [class*="backdrop-blur"],
-body.animations-disabled [class*="backdrop-blur"],
-.animations-disabled [class*="backdrop-blur"],
-html[data-animations="disabled"] .backdrop-blur-md,
-html[data-animations="disabled"] .backdrop-blur-xl,
-html[data-animations="disabled"] .backdrop-blur-sm,
-body.animations-disabled .backdrop-blur-md,
-body.animations-disabled .backdrop-blur-xl,
-body.animations-disabled .backdrop-blur-sm,
-.animations-disabled .backdrop-blur-md,
-.animations-disabled .backdrop-blur-xl,
-.animations-disabled .backdrop-blur-sm {
+html[data-animations="disabled"] header,
+html[data-animations="disabled"] header + section {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
-/* Flatten heavy hover transforms and animated shadows when animations are disabled */
+/* Flatten hover transforms when animations are disabled */
 html[data-animations="disabled"] .custom-card:hover,
-body.animations-disabled .custom-card:hover,
-.animations-disabled .custom-card:hover,
+html[data-animations="disabled"] .custom-card:active,
 html[data-animations="disabled"] [class*="hover:scale"]:hover,
-body.animations-disabled [class*="hover:scale"]:hover,
-.animations-disabled [class*="hover:scale"]:hover,
 html[data-animations="disabled"] [class*="active:scale"]:active,
-body.animations-disabled [class*="active:scale"]:active,
-.animations-disabled [class*="active:scale"]:active,
 html[data-animations="disabled"] [class*="hover:-translate"]:hover,
-body.animations-disabled [class*="hover:-translate"]:hover,
-.animations-disabled [class*="hover:-translate"]:hover,
 html[data-animations="disabled"] [class*="hover:translate"]:hover,
-body.animations-disabled [class*="hover:translate"]:hover,
-.animations-disabled [class*="hover:translate"]:hover {
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-html[data-animations="disabled"] .custom-theme-option:hover,
-body.animations-disabled .custom-theme-option:hover,
-.animations-disabled .custom-theme-option:hover {
+html[data-animations="disabled"] .custom-theme-option:hover {
   transform: none !important;
 }
 
 html[data-animations="disabled"] .gemini-logo-svg,
-html[data-animations="disabled"] .gemini-logo-svg-large,
-body.animations-disabled .gemini-logo-svg,
-body.animations-disabled .gemini-logo-svg-large,
-.animations-disabled .gemini-logo-svg,
-.animations-disabled .gemini-logo-svg-large {
+html[data-animations="disabled"] .gemini-logo-svg-large {
   animation: none !important;
   filter: none !important;
 }
 
-html[data-animations="disabled"] .shimmer-bg,
-body.animations-disabled .shimmer-bg,
-.animations-disabled .shimmer-bg {
+html[data-animations="disabled"] .shimmer-bg {
   animation: none !important;
 }
 

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  ArrowLeft,
   Ban,
   BarChart3,
   Check,
-  Clapperboard,
   Copy,
   Download,
   Edit3,
@@ -83,7 +83,6 @@ const WORKSPACE_ICONS = {
   gamesAccess: Gamepad2,
   moviesAccess: Tv,
   moreMoviesAccess: Film,
-  moreMoreMoviesAccess: Clapperboard,
   youtubeAccess: Youtube,
   lobbyChatAccess: MessageSquare,
   aiAccess: Sparkles,
@@ -95,7 +94,6 @@ const DEFAULT_CREATE_PERMS = {
   gamesAccess: true,
   moviesAccess: true,
   moreMoviesAccess: true,
-  moreMoreMoviesAccess: true,
   youtubeAccess: true,
   lobbyChatAccess: true,
   aiAccess: false,
@@ -112,6 +110,7 @@ export default function AdminAccountsModal({
   activeAccount,
   workspaceConfig = DEFAULT_WORKSPACE_CONFIG,
   games = [],
+  isInline = false,
 }) {
   const isLight = mode === 'light';
   const [activeTab, setActiveTab] = useState('accounts');
@@ -644,13 +643,23 @@ export default function AdminAccountsModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100000] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-fade-in"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      className={
+        isInline
+          ? 'w-full flex-1 flex flex-col min-h-0 animate-fade-in'
+          : 'fixed inset-0 z-[100000] bg-black/80 backdrop-blur-sm flex items-stretch justify-center p-0 animate-fade-in'
+      }
+      onClick={
+        isInline
+          ? undefined
+          : (e) => {
+              if (e.target === e.currentTarget) onClose();
+            }
+      }
     >
       <div
-        className={`w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden ${
+        className={`w-full flex-1 flex flex-col overflow-hidden ${
+          isInline ? 'rounded-2xl border shadow-xl min-h-[calc(100vh-120px)]' : 'h-full'
+        } ${
           isLight
             ? 'bg-white border-neutral-200 text-neutral-900'
             : 'bg-[#0e0d16] border-white/15 text-white'
@@ -658,24 +667,37 @@ export default function AdminAccountsModal({
       >
         {/* Header */}
         <div
-          className={`flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b shrink-0 ${
+          className={`flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b shrink-0 ${
             isLight ? 'border-neutral-200 bg-neutral-50' : 'border-white/10 bg-white/[0.03]'
           }`}
         >
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 ${
+                isLight
+                  ? 'bg-white border-neutral-300 text-neutral-800 hover:bg-neutral-100'
+                  : 'bg-white/5 border-white/15 text-white hover:bg-white/10 hover:border-[var(--accent-color)]'
+              }`}
+              title="Back to Games & Portals"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+              <span>Back to Games</span>
+            </button>
             <div className="w-9 h-9 rounded-xl bg-[var(--accent-color)] text-[var(--bg-color)] flex items-center justify-center shadow-sm shrink-0">
               <Shield className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-black uppercase tracking-wider">Owner Access & Account Control Center</h2>
-              <p className={`text-[11px] ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>
-                Control all global & per-account workspace access, accounts, passwords, and Lobby Chat moderation
+              <h2 className="text-sm font-black uppercase tracking-wider">Owner Access &amp; Account Control Center</h2>
+              <p className={`text-[11px] hidden sm:block ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>
+                Control all global &amp; per-account workspace access, accounts, passwords, and Lobby Chat moderation
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Modal Tabs */}
+            {/* Panel Tabs */}
             <div
               className={`flex items-center p-1 rounded-xl border overflow-x-auto ${
                 isLight ? 'bg-neutral-100 border-neutral-200' : 'bg-black/40 border-white/10'
@@ -751,7 +773,7 @@ export default function AdminAccountsModal({
               className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                 isLight ? 'text-neutral-500 hover:bg-neutral-200 hover:text-black' : 'text-neutral-400 hover:bg-white/10 hover:text-white'
               }`}
-              title="Close"
+              title="Close Admin Control Center"
             >
               <X className="w-4 h-4" />
             </button>
@@ -759,7 +781,7 @@ export default function AdminAccountsModal({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
           {feedback && (
             <div
               className={`px-3.5 py-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between ${
@@ -1913,7 +1935,7 @@ export default function AdminAccountsModal({
                     return (
                       <div
                         key={acc.usernameLower}
-                        className={`rounded-xl border px-2.5 py-2 transition-colors space-y-1.5 ${
+                        className={`rounded-xl border px-3.5 py-2.5 transition-colors space-y-2 ${
                           !acc.isActive
                             ? isLight
                               ? 'bg-neutral-100/80 border-neutral-300 opacity-75'
@@ -1923,9 +1945,9 @@ export default function AdminAccountsModal({
                               : 'bg-white/[0.03] border-white/10'
                         }`}
                       >
-                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
-                          {/* Identity & Stats */}
-                          <div className="flex items-start gap-2 min-w-0 flex-1">
+                        {/* Row 1: Identity, Stats & Quick Tools */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                          <div className="flex items-start gap-2.5 min-w-0 flex-1">
                             <div className="relative shrink-0 mt-0.5">
                               <div
                                 className={`w-7 h-7 rounded-md border flex items-center justify-center font-mono font-black text-[11px] ${
@@ -1947,7 +1969,7 @@ export default function AdminAccountsModal({
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-mono font-bold text-xs truncate">@{acc.username}</span>
+                                <span className="font-mono font-bold text-xs">@{acc.username}</span>
                                 <span
                                   className={`text-[8.5px] font-mono font-extrabold uppercase tracking-wider px-1.5 py-[1px] rounded border flex items-center gap-1 ${
                                     online
@@ -1985,7 +2007,7 @@ export default function AdminAccountsModal({
                                     Disabled
                                   </span>
                                 )}
-                                <span className={`text-[9.5px] font-mono tabular-nums ml-1 ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>
+                                <span className={`text-[10px] font-mono tabular-nums ml-1 ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>
                                   {acc.favorites.length} fav · {acc.recentlyPlayed.length} rec ·{' '}
                                   {formatDurationMs(getAccountTodayTimeMs(acc, presenceNow))} today ·{' '}
                                   {formatDurationMs(acc.totalTimeMs || 0)} total ·{' '}
@@ -2022,188 +2044,18 @@ export default function AdminAccountsModal({
                                   }`}
                                 >
                                   <StickyNote className="w-2.5 h-2.5 shrink-0 text-amber-400" />
-                                  <span className="truncate max-w-[340px]">{acc.adminNotes}</span>
+                                  <span className="truncate max-w-[380px]">{acc.adminNotes}</span>
                                 </button>
                               )}
                             </div>
                           </div>
 
-                          {/* Status, Moderation & Account Management Actions */}
-                          <div className="flex flex-wrap items-center gap-1 lg:justify-end">
-                            <button
-                              type="button"
-                              disabled={busyKey === `${acc.usernameLower}:isAdmin`}
-                              onClick={() => handleToggleField(acc, 'isAdmin')}
-                              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
-                                acc.isAdmin
-                                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                                  : isLight
-                                    ? 'bg-neutral-100 border-neutral-300 text-neutral-600'
-                                    : 'bg-white/5 border-white/10 text-neutral-400'
-                              }`}
-                              title={acc.isAdmin ? 'Admin privileges enabled (click to revoke)' : 'Grant Admin privileges to this account'}
-                            >
-                              <Shield className="w-2.5 h-2.5" />
-                              <span>{acc.isAdmin ? 'Admin' : 'Make Admin'}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={acc.isAdmin || busyKey === `${acc.usernameLower}:allowGlobalOverride`}
-                              onClick={() => handleToggleField(acc, 'allowGlobalOverride')}
-                              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 transition-all ${
-                                acc.isAdmin ? 'cursor-default opacity-75' : 'cursor-pointer'
-                              } ${
-                                acc.isAdmin || acc.allowGlobalOverride
-                                  ? 'bg-violet-500/20 border-violet-500/50 text-violet-300'
-                                  : isLight
-                                    ? 'bg-neutral-100 border-neutral-300 text-neutral-600'
-                                    : 'bg-white/5 border-white/10 text-neutral-400'
-                              }`}
-                              title={
-                                acc.isAdmin
-                                  ? 'Admins always bypass global restrictions'
-                                  : acc.allowGlobalOverride
-                                    ? 'Global Override ON: bypasses global OFF for non-AI workspaces (excludes AI Chat)'
-                                    : 'Global Override OFF: allow this account to keep enabled non-AI workspaces when globally OFF (excludes AI Chat)'
-                              }
-                            >
-                              <Key className="w-2.5 h-2.5" />
-                              <span>
-                                {acc.isAdmin
-                                  ? 'Override (Admin)'
-                                  : acc.allowGlobalOverride
-                                    ? 'Override: ON'
-                                    : 'Override'}
-                              </span>
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={acc.isAdmin || busyKey === `${acc.usernameLower}:allowAiOverride`}
-                              onClick={() => handleToggleField(acc, 'allowAiOverride')}
-                              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 transition-all ${
-                                acc.isAdmin ? 'cursor-default opacity-75' : 'cursor-pointer'
-                              } ${
-                                acc.isAdmin || acc.allowAiOverride
-                                  ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300'
-                                  : isLight
-                                    ? 'bg-neutral-100 border-neutral-300 text-neutral-600'
-                                    : 'bg-white/5 border-white/10 text-neutral-400'
-                              }`}
-                              title={
-                                acc.isAdmin
-                                  ? 'Admins always have AI access'
-                                  : acc.allowAiOverride
-                                    ? 'AI Override ON: this account can access AI Chat even when AI Chat is globally OFF'
-                                    : 'AI Override OFF: click to grant AI Chat access even when AI Chat is globally OFF'
-                              }
-                            >
-                              <Sparkles className="w-2.5 h-2.5" />
-                              <span>
-                                {acc.isAdmin
-                                  ? 'AI (Admin)'
-                                  : acc.allowAiOverride
-                                    ? 'AI Ovrd: ON'
-                                    : 'AI Ovrd'}
-                              </span>
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={busyKey === `${acc.usernameLower}:defaultGirlsTheme`}
-                              onClick={() => handleToggleField(acc, 'defaultGirlsTheme')}
-                              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
-                                acc.defaultGirlsTheme
-                                  ? 'bg-pink-500/20 border-pink-400/50 text-pink-300'
-                                  : isLight
-                                    ? 'bg-neutral-100 border-neutral-300 text-neutral-600 hover:bg-neutral-200'
-                                    : 'bg-white/5 border-white/10 text-neutral-400 hover:bg-white/10'
-                              }`}
-                              title={
-                                acc.defaultGirlsTheme
-                                  ? `Girls theme assigned (${GIRLS_THEME_POLICY_META[workspaceConfig?.girlsThemePolicy || 'default_if_unset']?.label}). Click to remove.`
-                                  : 'Assign Girls theme default to this user'
-                              }
-                            >
-                              <Heart className="w-2.5 h-2.5" />
-                              <span>{acc.defaultGirlsTheme ? 'Girls: ON' : 'Girls'}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={busyKey === `${acc.usernameLower}:allowPasswordlessUrl`}
-                              onClick={() => handleToggleField(acc, 'allowPasswordlessUrl')}
-                              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
-                                acc.allowPasswordlessUrl
-                                  ? 'bg-cyan-500/20 border-cyan-400/50 text-cyan-300'
-                                  : isLight
-                                    ? 'bg-neutral-100 border-neutral-300 text-neutral-600 hover:bg-neutral-200'
-                                    : 'bg-white/5 border-white/10 text-neutral-400 hover:bg-white/10'
-                              }`}
-                              title={
-                                acc.allowPasswordlessUrl
-                                  ? `/${acc.username} passwordless URL sign-in ON — click to require /${acc.username}password (default)`
-                                  : `Default /${acc.username}password required — click to manually allow /${acc.username}-only sign-in`
-                              }
-                            >
-                              <Key className="w-2.5 h-2.5" />
-                              <span>{acc.allowPasswordlessUrl ? '/user: ON' : '/userpass'}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={busyKey === `${acc.usernameLower}:isActive`}
-                              onClick={() => handleToggleField(acc, 'isActive')}
-                              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
-                                acc.isActive
-                                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
-                                  : 'bg-neutral-500/15 border-neutral-500/30 text-neutral-400'
-                              }`}
-                              title={acc.isActive ? 'Account enabled (click to disable)' : 'Account disabled (click to enable)'}
-                            >
-                              <UserCheck className="w-2.5 h-2.5" />
-                              <span>{acc.isActive ? 'Active' : 'Disabled'}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={busyKey === `${acc.usernameLower}:chatMuted`}
-                              onClick={() => handleToggleField(acc, 'chatMuted')}
-                              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
-                                acc.chatMuted
-                                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                                  : isLight
-                                    ? 'bg-neutral-100 border-neutral-300 text-neutral-600'
-                                    : 'bg-white/5 border-white/10 text-neutral-400'
-                              }`}
-                              title="Mute or unmute user in Lobby Chat"
-                            >
-                              <VolumeX className="w-2.5 h-2.5" />
-                              <span>{acc.chatMuted ? 'Muted' : 'Mute'}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={busyKey === `${acc.usernameLower}:chatBanned`}
-                              onClick={() => handleToggleField(acc, 'chatBanned')}
-                              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
-                                acc.chatBanned
-                                  ? 'bg-rose-500/20 border-rose-500/50 text-rose-400'
-                                  : isLight
-                                    ? 'bg-neutral-100 border-neutral-300 text-neutral-600'
-                                    : 'bg-white/5 border-white/10 text-neutral-400'
-                              }`}
-                              title="Ban or unban user from Lobby Chat"
-                            >
-                              <Ban className="w-2.5 h-2.5" />
-                              <span>{acc.chatBanned ? 'Banned' : 'Ban'}</span>
-                            </button>
-
+                          {/* Quick Account Utility Actions (Right Side of Row 1) */}
+                          <div className="flex flex-wrap items-center gap-1 shrink-0 sm:justify-end">
                             <button
                               type="button"
                               onClick={() => handleToggleRevealPassword(acc)}
-                              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                              className={`px-2 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
                                 revealedPasswords[acc.usernameLower]?.visible
                                   ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
                                   : isLight
@@ -2239,7 +2091,7 @@ export default function AdminAccountsModal({
                                   setResetPassValue('');
                                 }
                               }}
-                              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                              className={`px-2 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
                                 resetTarget === acc.usernameLower
                                   ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)]'
                                   : isLight
@@ -2267,7 +2119,7 @@ export default function AdminAccountsModal({
                                   setNoteDraft(acc.adminNotes || '');
                                 }
                               }}
-                              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                              className={`px-2 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
                                 noteTarget === acc.usernameLower
                                   ? 'bg-[var(--accent-color)] text-[var(--bg-color)] border-[var(--accent-color)]'
                                   : hasNote
@@ -2339,7 +2191,7 @@ export default function AdminAccountsModal({
                                   setConfirmDeleteKey(null);
                                   setPurgeTargetKey(acc.usernameLower);
                                 }}
-                                className="px-1.5 py-0.5 rounded-md border border-amber-500/35 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all"
+                                className="px-2 py-0.5 rounded-md border border-amber-500/35 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all"
                                 title={`Delete all Lobby Chat messages sent by @${acc.username}`}
                               >
                                 <Eraser className="w-2.5 h-2.5" />
@@ -2383,12 +2235,187 @@ export default function AdminAccountsModal({
                           </div>
                         </div>
 
-                        {/* Per-Account Workspace Access Toggles */}
+                        {/* Row 2: Account Permissions, Status & Workspaces */}
                         <div
-                          className={`pt-1.5 border-t flex flex-wrap items-center gap-1 ${
+                          className={`pt-2 border-t flex flex-wrap items-center gap-1.5 ${
                             isLight ? 'border-neutral-200' : 'border-white/10'
                           }`}
                         >
+                          <span className={`text-[9px] font-mono font-bold uppercase mr-0.5 ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>
+                            Controls:
+                          </span>
+                          <button
+                            type="button"
+                            disabled={busyKey === `${acc.usernameLower}:isAdmin`}
+                            onClick={() => handleToggleField(acc, 'isAdmin')}
+                            className={`px-1.5 py-[2px] rounded border text-[9px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                              acc.isAdmin
+                                ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                                : isLight
+                                  ? 'bg-neutral-100 border-neutral-300 text-neutral-600'
+                                  : 'bg-white/5 border-white/10 text-neutral-400'
+                            }`}
+                            title={acc.isAdmin ? 'Admin privileges enabled (click to revoke)' : 'Grant Admin privileges to this account'}
+                          >
+                            <Shield className="w-2.5 h-2.5" />
+                            <span>{acc.isAdmin ? 'Admin' : 'Make Admin'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={acc.isAdmin || busyKey === `${acc.usernameLower}:allowGlobalOverride`}
+                            onClick={() => handleToggleField(acc, 'allowGlobalOverride')}
+                            className={`px-1.5 py-[2px] rounded border text-[9px] font-mono font-bold flex items-center gap-1 transition-all ${
+                              acc.isAdmin ? 'cursor-default opacity-75' : 'cursor-pointer'
+                            } ${
+                              acc.isAdmin || acc.allowGlobalOverride
+                                ? 'bg-violet-500/20 border-violet-500/50 text-violet-300'
+                                : isLight
+                                  ? 'bg-neutral-100 border-neutral-300 text-neutral-600'
+                                  : 'bg-white/5 border-white/10 text-neutral-400'
+                            }`}
+                            title={
+                              acc.isAdmin
+                                ? 'Admins always bypass global restrictions'
+                                : acc.allowGlobalOverride
+                                  ? 'Global Override ON: bypasses global OFF for non-AI workspaces (excludes AI Chat)'
+                                  : 'Global Override OFF: allow this account to keep enabled non-AI workspaces when globally OFF (excludes AI Chat)'
+                            }
+                          >
+                            <Key className="w-2.5 h-2.5" />
+                            <span>
+                              {acc.isAdmin
+                                ? 'Override (Admin)'
+                                : acc.allowGlobalOverride
+                                  ? 'Override: ON'
+                                  : 'Override'}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={acc.isAdmin || busyKey === `${acc.usernameLower}:allowAiOverride`}
+                            onClick={() => handleToggleField(acc, 'allowAiOverride')}
+                            className={`px-1.5 py-[2px] rounded border text-[9px] font-mono font-bold flex items-center gap-1 transition-all ${
+                              acc.isAdmin ? 'cursor-default opacity-75' : 'cursor-pointer'
+                            } ${
+                              acc.isAdmin || acc.allowAiOverride
+                                ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300'
+                                : isLight
+                                  ? 'bg-neutral-100 border-neutral-300 text-neutral-600'
+                                  : 'bg-white/5 border-white/10 text-neutral-400'
+                            }`}
+                            title={
+                              acc.isAdmin
+                                ? 'Admins always have AI access'
+                                : acc.allowAiOverride
+                                  ? 'AI Override ON: this account can access AI Chat even when AI Chat is globally OFF'
+                                  : 'AI Override OFF: click to grant AI Chat access even when AI Chat is globally OFF'
+                            }
+                          >
+                            <Sparkles className="w-2.5 h-2.5" />
+                            <span>
+                              {acc.isAdmin
+                                ? 'AI (Admin)'
+                                : acc.allowAiOverride
+                                  ? 'AI Ovrd: ON'
+                                  : 'AI Ovrd'}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={busyKey === `${acc.usernameLower}:defaultGirlsTheme`}
+                            onClick={() => handleToggleField(acc, 'defaultGirlsTheme')}
+                            className={`px-1.5 py-[2px] rounded border text-[9px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                              acc.defaultGirlsTheme
+                                ? 'bg-pink-500/20 border-pink-400/50 text-pink-300'
+                                : isLight
+                                  ? 'bg-neutral-100 border-neutral-300 text-neutral-600 hover:bg-neutral-200'
+                                  : 'bg-white/5 border-white/10 text-neutral-400 hover:bg-white/10'
+                            }`}
+                            title={
+                              acc.defaultGirlsTheme
+                                ? `Girls theme assigned (${GIRLS_THEME_POLICY_META[workspaceConfig?.girlsThemePolicy || 'default_if_unset']?.label}). Click to remove.`
+                                : 'Assign Girls theme default to this user'
+                            }
+                          >
+                            <Heart className="w-2.5 h-2.5" />
+                            <span>{acc.defaultGirlsTheme ? 'Girls: ON' : 'Girls'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={busyKey === `${acc.usernameLower}:allowPasswordlessUrl`}
+                            onClick={() => handleToggleField(acc, 'allowPasswordlessUrl')}
+                            className={`px-1.5 py-[2px] rounded border text-[9px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                              acc.allowPasswordlessUrl
+                                ? 'bg-cyan-500/20 border-cyan-400/50 text-cyan-300'
+                                : isLight
+                                  ? 'bg-neutral-100 border-neutral-300 text-neutral-600 hover:bg-neutral-200'
+                                  : 'bg-white/5 border-white/10 text-neutral-400 hover:bg-white/10'
+                            }`}
+                            title={
+                              acc.allowPasswordlessUrl
+                                ? `/${acc.username} passwordless URL sign-in ON — click to require /${acc.username}password (default)`
+                                : `Default /${acc.username}password required — click to manually allow /${acc.username}-only sign-in`
+                            }
+                          >
+                            <Key className="w-2.5 h-2.5" />
+                            <span>{acc.allowPasswordlessUrl ? '/user: ON' : '/userpass'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={busyKey === `${acc.usernameLower}:isActive`}
+                            onClick={() => handleToggleField(acc, 'isActive')}
+                            className={`px-1.5 py-[2px] rounded border text-[9px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                              acc.isActive
+                                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                                : 'bg-neutral-500/15 border-neutral-500/30 text-neutral-400'
+                            }`}
+                            title={acc.isActive ? 'Account enabled (click to disable)' : 'Account disabled (click to enable)'}
+                          >
+                            <UserCheck className="w-2.5 h-2.5" />
+                            <span>{acc.isActive ? 'Active' : 'Disabled'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={busyKey === `${acc.usernameLower}:chatMuted`}
+                            onClick={() => handleToggleField(acc, 'chatMuted')}
+                            className={`px-1.5 py-[2px] rounded border text-[9px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                              acc.chatMuted
+                                ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                                : isLight
+                                  ? 'bg-neutral-100 border-neutral-300 text-neutral-600'
+                                  : 'bg-white/5 border-white/10 text-neutral-400'
+                            }`}
+                            title="Mute or unmute user in Lobby Chat"
+                          >
+                            <VolumeX className="w-2.5 h-2.5" />
+                            <span>{acc.chatMuted ? 'Muted' : 'Mute'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={busyKey === `${acc.usernameLower}:chatBanned`}
+                            onClick={() => handleToggleField(acc, 'chatBanned')}
+                            className={`px-1.5 py-[2px] rounded border text-[9px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                              acc.chatBanned
+                                ? 'bg-rose-500/20 border-rose-500/50 text-rose-400'
+                                : isLight
+                                  ? 'bg-neutral-100 border-neutral-300 text-neutral-600'
+                                  : 'bg-white/5 border-white/10 text-neutral-400'
+                            }`}
+                            title="Ban or unban user from Lobby Chat"
+                          >
+                            <Ban className="w-2.5 h-2.5" />
+                            <span>{acc.chatBanned ? 'Banned' : 'Ban'}</span>
+                          </button>
+
+                          <span className={`mx-1 h-3.5 w-[1px] hidden sm:inline-block ${isLight ? 'bg-neutral-300' : 'bg-white/15'}`} />
+
                           <span className={`text-[9px] font-mono font-bold uppercase mr-0.5 ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>
                             Workspaces:
                           </span>
