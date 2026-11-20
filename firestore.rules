@@ -80,6 +80,7 @@ service cloud.firestore {
         && isOptionalString(data, 'adminNotes', 500)
         && isOptionalBool(data, 'defaultGirlsTheme')
         && isOptionalBool(data, 'requirePasswordOnUrl')
+        && isOptionalBool(data, 'allowPasswordlessUrl')
         && (!('favorites' in data) || data.favorites == null || (data.favorites is list && data.favorites.size() <= 500))
         && (!('recentlyPlayed' in data) || data.recentlyPlayed == null || (data.recentlyPlayed is list && data.recentlyPlayed.size() <= 30))
         && isOptionalString(data, 'preferredTheme', 64)
@@ -205,7 +206,7 @@ service cloud.firestore {
           'username', 'passwordSalt', 'passwordHash', 'encryptedPassword', 'isActive', 'isAdmin', 'allowGlobalOverride', 'allowAiOverride',
           'gamesAccess', 'moviesAccess', 'moreMoviesAccess', 'moreMoreMoviesAccess', 'youtubeAccess',
           'lobbyChatAccess', 'aiAccess', 'decoysAccess', 'downloadAccess',
-          'chatMuted', 'chatBanned', 'roleBadge', 'badgeColor', 'adminNotes', 'defaultGirlsTheme', 'requirePasswordOnUrl',
+          'chatMuted', 'chatBanned', 'roleBadge', 'badgeColor', 'adminNotes', 'defaultGirlsTheme', 'requirePasswordOnUrl', 'allowPasswordlessUrl',
           'favorites', 'recentlyPlayed', 'preferredTheme', 'preferredMode', 'accountSettings',
           'totalTimeMs', 'todayTimeMs', 'todayDateKey', 'sessionCount', 'currentActivity', 'lastActivityAt', 'activityTimeMs',
           'updatedAt', 'lastLoginAt', 'isOnline', 'lastSeenAt'

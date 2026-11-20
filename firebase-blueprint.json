@@ -135,7 +135,11 @@
         },
         "requirePasswordOnUrl": {
           "type": "boolean",
-          "description": "Whether direct /username URL sign-in requires appending /password at the end (false by default so /username signs in without a password)."
+          "description": "Legacy field for direct /username URL password requirement."
+        },
+        "allowPasswordlessUrl": {
+          "type": "boolean",
+          "description": "Whether direct /username URL sign-in without a password has been manually enabled (false by default; /usernamepassword is the default)."
         },
         "totalTimeMs": {
           "type": "number",

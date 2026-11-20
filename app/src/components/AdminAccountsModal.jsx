@@ -2132,6 +2132,27 @@ export default function AdminAccountsModal({
 
                             <button
                               type="button"
+                              disabled={busyKey === `${acc.usernameLower}:allowPasswordlessUrl`}
+                              onClick={() => handleToggleField(acc, 'allowPasswordlessUrl')}
+                              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                                acc.allowPasswordlessUrl
+                                  ? 'bg-cyan-500/20 border-cyan-400/50 text-cyan-300'
+                                  : isLight
+                                    ? 'bg-neutral-100 border-neutral-300 text-neutral-600 hover:bg-neutral-200'
+                                    : 'bg-white/5 border-white/10 text-neutral-400 hover:bg-white/10'
+                              }`}
+                              title={
+                                acc.allowPasswordlessUrl
+                                  ? `/${acc.username} passwordless URL sign-in ON — click to require /${acc.username}password (default)`
+                                  : `Default /${acc.username}password required — click to manually allow /${acc.username}-only sign-in`
+                              }
+                            >
+                              <Key className="w-2.5 h-2.5" />
+                              <span>{acc.allowPasswordlessUrl ? '/user: ON' : '/userpass'}</span>
+                            </button>
+
+                            <button
+                              type="button"
                               disabled={busyKey === `${acc.usernameLower}:isActive`}
                               onClick={() => handleToggleField(acc, 'isActive')}
                               className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all ${

@@ -78,7 +78,7 @@ export default function AccountModal({
   const [linkLabel, setLinkLabel] = useState('');
   const [linkCode, setLinkCode] = useState('');
   const [linkDestination, setLinkDestination] = useState('all');
-  const [linkAboutBlank, setLinkAboutBlank] = useState(false);
+  const [linkAboutBlank, setLinkAboutBlank] = useState(true);
   const [linkRequirePassword, setLinkRequirePassword] = useState(false);
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkError, setLinkError] = useState('');
@@ -395,9 +395,7 @@ export default function AccountModal({
                           type="button"
                           onClick={() =>
                             handleCopyUrl(
-                              `${typeof window !== 'undefined' ? window.location.origin : ''}/${encodeURIComponent(activeAccount.username)}${
-                                activeAccount.requirePasswordOnUrl ? '/' : ''
-                              }`,
+                              `${typeof window !== 'undefined' ? window.location.origin : ''}/${encodeURIComponent(activeAccount.username)}`,
                               'direct-prefix',
                             )
                           }
@@ -413,24 +411,22 @@ export default function AccountModal({
                           <span>
                             {copiedLinkId === 'direct-prefix'
                               ? 'Copied'
-                              : activeAccount.requirePasswordOnUrl
-                                ? 'Copy Prefix'
-                                : 'Copy Link'}
+                              : activeAccount.allowPasswordlessUrl
+                                ? 'Copy Link'
+                                : 'Copy Prefix'}
                           </span>
                         </button>
                       </div>
                       <div className={`text-[10.5px] font-mono break-all ${isLight ? 'text-cyan-900' : 'text-cyan-200/90'}`}>
                         {typeof window !== 'undefined' ? window.location.origin : ''}/{activeAccount.username}
-                        {activeAccount.requirePasswordOnUrl ? (
-                          <span>
-                            /<strong>YOUR_PASSWORD</strong>
-                          </span>
+                        {!activeAccount.allowPasswordlessUrl ? (
+                          <strong>YOUR_PASSWORD</strong>
                         ) : null}
                       </div>
                       <p className={`text-[10px] leading-relaxed ${isLight ? 'text-cyan-800/80' : 'text-cyan-100/75'}`}>
-                        {activeAccount.requirePasswordOnUrl
-                          ? 'Password required: add /YOUR_PASSWORD after your username to sign in.'
-                          : `Instant access: just add /${activeAccount.username} at the end of the site URL to sign in without a password (adding /YOUR_PASSWORD works too).`}
+                        {activeAccount.allowPasswordlessUrl
+                          ? `/username-only enabled: add /${activeAccount.username} at the end of the URL to sign in without a password (or /${activeAccount.username}YOUR_PASSWORD). Opens in about:blank by default.`
+                          : `Default sign-in: add your password right after your username (/${activeAccount.username}YOUR_PASSWORD) to sign in. Opens in about:blank by default.`}
                       </p>
                       <button
                         type="button"
@@ -440,7 +436,7 @@ export default function AccountModal({
                           setLinkError('');
                           try {
                             await updateManagedAccount(db, auth, activeAccount.usernameLower, {
-                              requirePasswordOnUrl: !activeAccount.requirePasswordOnUrl,
+                              allowPasswordlessUrl: !activeAccount.allowPasswordlessUrl,
                             });
                           } catch (err) {
                             setLinkError(err?.message || 'Could not update direct URL setting.');
@@ -449,27 +445,27 @@ export default function AccountModal({
                           }
                         }}
                         className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg border text-left cursor-pointer transition-all ${
-                          activeAccount.requirePasswordOnUrl
+                          activeAccount.allowPasswordlessUrl
                             ? isLight
-                              ? 'bg-amber-50 border-amber-400 text-amber-950'
-                              : 'bg-amber-500/15 border-amber-400/50 text-amber-100'
+                              ? 'bg-emerald-50 border-emerald-400 text-emerald-950'
+                              : 'bg-emerald-500/15 border-emerald-400/50 text-emerald-100'
                             : isLight
                               ? 'bg-white border-cyan-200 text-cyan-900 hover:bg-cyan-100/60'
                               : 'bg-black/25 border-white/10 text-neutral-200 hover:bg-black/40'
                         }`}
                       >
                         <span className="flex items-center gap-1.5 text-[10.5px] font-bold">
-                          <Lock className="w-3 h-3 text-amber-400 shrink-0" />
-                          <span>Require password on /{activeAccount.username} link</span>
+                          <KeyRound className="w-3 h-3 text-[var(--accent-color)] shrink-0" />
+                          <span>Allow /{activeAccount.username} sign-in without password</span>
                         </span>
                         <span
                           className={`w-8 h-4.5 rounded-full p-0.5 transition-colors flex items-center shrink-0 ${
-                            activeAccount.requirePasswordOnUrl ? 'bg-amber-500' : isLight ? 'bg-neutral-300' : 'bg-white/20'
+                            activeAccount.allowPasswordlessUrl ? 'bg-emerald-500' : isLight ? 'bg-neutral-300' : 'bg-white/20'
                           }`}
                         >
                           <span
                             className={`w-3.5 h-3.5 rounded-full bg-white shadow transition-transform ${
-                              activeAccount.requirePasswordOnUrl ? 'translate-x-3.5' : 'translate-x-0'
+                              activeAccount.allowPasswordlessUrl ? 'translate-x-3.5' : 'translate-x-0'
                             }`}
                           />
                         </span>
@@ -1215,7 +1211,7 @@ export default function AccountModal({
               </button>
 
               <p className={`text-[10.5px] text-center leading-relaxed ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>
-                Tip: You can sign in directly by adding <code>/username</code> (or <code>/username/password</code>) at the end of the URL.
+                Tip: Sign in directly by adding <code>/usernamepassword</code> at the end of the URL (opens in <code>about:blank</code> by default).
               </p>
             </form>
           )}

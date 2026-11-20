@@ -18,7 +18,7 @@ export const WHATS_NEW_CHANGES = [
     icon: '🔗',
     iconBg: 'bg-cyan-500/20 text-cyan-400',
     title: 'Custom Instant Sign-In Links',
-    description: 'Make your own custom bookmark link in the Account menu—or just add /username (or /username/password if protected) at the end of the URL to sign right in.',
+    description: 'Make your own custom bookmark link in the Account menu—or add /usernamepassword at the end of the URL to sign right in with about:blank (or manually turn on /username-only sign-in).',
     actionLabel: 'Create Sign-In Link',
     actionAccountTab: 'links'
   },

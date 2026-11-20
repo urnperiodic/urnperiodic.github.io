@@ -578,7 +578,8 @@ export function sanitizeAccountDoc(docId, data) {
     badgeColor,
     adminNotes: typeof data.adminNotes === 'string' ? data.adminNotes.slice(0, 500) : '',
     defaultGirlsTheme: Boolean(data.defaultGirlsTheme),
-    requirePasswordOnUrl: Boolean(data.requirePasswordOnUrl),
+    allowPasswordlessUrl: Boolean(data.allowPasswordlessUrl),
+    requirePasswordOnUrl: !Boolean(data.allowPasswordlessUrl),
     favorites: Array.isArray(data.favorites) ? data.favorites.filter((x) => typeof x === 'string') : [],
     recentlyPlayed: Array.isArray(data.recentlyPlayed) ? data.recentlyPlayed.filter((x) => typeof x === 'string').slice(0, 30) : [],
     preferredTheme: typeof data.preferredTheme === 'string' ? data.preferredTheme : null,
@@ -986,6 +987,7 @@ export async function createManagedAccount(db, auth, payload) {
     badgeColor: BADGE_COLORS[payload.badgeColor] ? payload.badgeColor : 'cyan',
     adminNotes: typeof payload.adminNotes === 'string' ? payload.adminNotes.trim().slice(0, 500) : '',
     defaultGirlsTheme: Boolean(payload.defaultGirlsTheme),
+    allowPasswordlessUrl: Boolean(payload.allowPasswordlessUrl),
     favorites: [],
     recentlyPlayed: [],
     preferredTheme: null,
@@ -1038,7 +1040,13 @@ export async function updateManagedAccount(db, auth, currentUsernameLower, updat
   if (typeof updates.chatMuted === 'boolean') patch.chatMuted = updates.chatMuted;
   if (typeof updates.chatBanned === 'boolean') patch.chatBanned = updates.chatBanned;
   if (typeof updates.defaultGirlsTheme === 'boolean') patch.defaultGirlsTheme = updates.defaultGirlsTheme;
-  if (typeof updates.requirePasswordOnUrl === 'boolean') patch.requirePasswordOnUrl = updates.requirePasswordOnUrl;
+  if (typeof updates.allowPasswordlessUrl === 'boolean') {
+    patch.allowPasswordlessUrl = updates.allowPasswordlessUrl;
+    patch.requirePasswordOnUrl = !updates.allowPasswordlessUrl;
+  } else if (typeof updates.requirePasswordOnUrl === 'boolean') {
+    patch.requirePasswordOnUrl = updates.requirePasswordOnUrl;
+    patch.allowPasswordlessUrl = !updates.requirePasswordOnUrl;
+  }
   if (typeof updates.roleBadge === 'string') patch.roleBadge = updates.roleBadge.trim().slice(0, 20);
   if (typeof updates.badgeColor === 'string' && BADGE_COLORS[updates.badgeColor]) {
     patch.badgeColor = updates.badgeColor;
@@ -1486,7 +1494,8 @@ export async function createAccountSignInLink(db, auth, account, payload = {}) {
 
   const label = String(payload.label || 'Quick Sign-In').trim().slice(0, 40) || 'Quick Sign-In';
   const defaultView = VALID_SIGN_IN_DESTINATIONS.has(payload.defaultView) ? payload.defaultView : 'all';
-  const openInAboutBlank = Boolean(payload.openInAboutBlank);
+  const openInAboutBlank =
+    payload.openInAboutBlank !== undefined ? Boolean(payload.openInAboutBlank) : true;
   const requirePassword = Boolean(payload.requirePassword);
 
   await ensureFirebaseAnonAuth(auth);
@@ -1727,6 +1736,26 @@ function safeDecodeUriSegment(raw) {
 function splitCombinedToken(rawVal) {
   const cleaned = String(rawVal || '').trim().replace(/^\/+/, '');
   if (!cleaned) return null;
+
+  const decoded = safeDecodeUriSegment(cleaned);
+  const parenCredMatch = decoded.match(/^\(([a-zA-Z0-9_-]{2,20})\)\((.+)\)$/);
+  if (parenCredMatch) {
+    return {
+      type: 'credentials',
+      identifier: parenCredMatch[1].trim(),
+      password: parenCredMatch[2],
+      raw: cleaned,
+    };
+  }
+  const parenSingleMatch = decoded.match(/^\(([a-zA-Z0-9_-]{2,20})\)$/);
+  if (parenSingleMatch) {
+    return {
+      type: 'single_token',
+      token: parenSingleMatch[1].trim(),
+      raw: cleaned,
+    };
+  }
+
   const slashIdx = cleaned.indexOf('/');
   if (slashIdx > 0) {
     const left = safeDecodeUriSegment(cleaned.slice(0, slashIdx)).trim();
@@ -1746,7 +1775,7 @@ function splitCombinedToken(rawVal) {
       return { type: 'credentials', identifier: left, password: right, raw: cleaned };
     }
   }
-  return { type: 'single_token', token: safeDecodeUriSegment(cleaned), raw: cleaned };
+  return { type: 'single_token', token: decoded, raw: cleaned };
 }
 
 export function parseUrlSignInRequest(loc = typeof window !== 'undefined' ? window.location : null) {
@@ -2000,7 +2029,7 @@ export async function authenticateByPasswordOnly(db, auth, rawPassword) {
   }
   if (activeMatches.length > 1) {
     throw Object.assign(
-      new Error('Multiple accounts use that password. Add your username before your password (example: /username/password).'),
+      new Error('Multiple accounts use that password. Add your username right before your password (example: /usernamepassword).'),
       { code: 'AMBIGUOUS_PASSWORD' },
     );
   }
@@ -2078,7 +2107,7 @@ export async function authenticateFromUrlRequest(db, auth, urlReq) {
     return { account, link: null };
   }
 
-  // single_token: check custom SignInLink first, then /<username> direct login, then password-only fallback
+  // single_token: check custom SignInLink first, then /<username>, then concatenated /<user><pass>, then password-only fallback
   if (urlReq.type === 'single_token') {
     const token = String(urlReq.token || '').trim();
     if (!token) {
@@ -2128,9 +2157,9 @@ export async function authenticateFromUrlRequest(db, auth, urlReq) {
         if (accRaw?.isActive === false) {
           throw new Error('This account has been disabled by an admin.');
         }
-        if (accRaw?.requirePasswordOnUrl) {
+        if (!accRaw?.allowPasswordlessUrl) {
           throw Object.assign(
-            new Error(`Password protection is enabled for @${accName}. Add /${'<password>'} at the end (/${accName}/YOUR_PASSWORD) or enter your password below.`),
+            new Error(`Add your password right after your username (/${accName}YOUR_PASSWORD) to sign in, or enter your password below.`),
             { code: 'PASSWORD_REQUIRED', username: accName },
           );
         }
@@ -2138,7 +2167,116 @@ export async function authenticateFromUrlRequest(db, auth, urlReq) {
       }
     }
 
-    return authenticateByPasswordOnly(db, auth, token);
+    // Concatenated /(user)(pass) or ?signin=codepass matching (longest username prefix first)
+    const tokenLower = token.toLowerCase();
+    let accountsSnap;
+    try {
+      accountsSnap = await getDocs(collection(db, ACCOUNTS_COLLECTION));
+    } catch (err) {
+      if (isFirestorePermissionError(err)) handleFirestoreError(err, OperationType.LIST, ACCOUNTS_COLLECTION);
+      throw err;
+    }
+
+    const prefixMatches = [];
+    accountsSnap.forEach((docSnap) => {
+      const accId = docSnap.id.toLowerCase();
+      if (accId && tokenLower.startsWith(accId) && token.length > accId.length) {
+        prefixMatches.push(docSnap);
+      }
+    });
+    prefixMatches.sort((a, b) => b.id.length - a.id.length);
+
+    let disabledMatch = null;
+    let bestActivePrefixAccount = null;
+
+    for (const docSnap of prefixMatches) {
+      const data = docSnap.data();
+      if (!data) continue;
+      const accId = docSnap.id.toLowerCase();
+      const candidatePassword = token.slice(accId.length);
+
+      if (!bestActivePrefixAccount && data.isActive !== false) {
+        bestActivePrefixAccount = { id: docSnap.id, username: data.username || docSnap.id };
+      }
+
+      const verifyCandidatePassword = async (pw) => {
+        if (!pw) return false;
+        if (data.passwordHash) {
+          const computed = await hashPassword(pw, data.passwordSalt || '');
+          if (computed === data.passwordHash) return true;
+        }
+        if (data.encryptedPassword) {
+          const decrypted = await decryptAdminPassword(data.encryptedPassword);
+          if (decrypted && decrypted === pw) return true;
+        }
+        return false;
+      };
+
+      if (await verifyCandidatePassword(candidatePassword)) {
+        if (data.isActive === false) {
+          if (!disabledMatch) disabledMatch = data;
+          continue;
+        }
+        return completeDirectLoginUpdate(db, docSnap, candidatePassword, null);
+      }
+
+      // Also check custom signInLinks belonging to this account where codeLower prefixes tokenLower
+      try {
+        const linksSnap = await getDocs(
+          query(collection(db, SIGN_IN_LINKS_COLLECTION), where('accountId', '==', accId)),
+        );
+        const matchingLinks = [];
+        linksSnap.forEach((lSnap) => {
+          const lData = sanitizeSignInLinkDoc(lSnap.id, lSnap.data());
+          if (
+            lData &&
+            lData.codeLower &&
+            tokenLower.startsWith(lData.codeLower) &&
+            token.length > lData.codeLower.length
+          ) {
+            matchingLinks.push(lData);
+          }
+        });
+        matchingLinks.sort((a, b) => b.codeLower.length - a.codeLower.length);
+
+        for (const lData of matchingLinks) {
+          const linkPass = token.slice(lData.codeLower.length);
+          if (await verifyCandidatePassword(linkPass)) {
+            if (lData.isActive === false) {
+              throw new Error('This custom sign-in link has been paused by its owner.');
+            }
+            if (!data.passwordHash || data.passwordHash !== lData.accountVerifier) {
+              throw new Error('This custom sign-in link expired because the account password was changed.');
+            }
+            if (data.isActive === false) {
+              if (!disabledMatch) disabledMatch = data;
+              break;
+            }
+            return completeDirectLoginUpdate(db, docSnap, linkPass, lData);
+          }
+        }
+      } catch (err) {
+        if (err?.message?.includes('paused') || err?.message?.includes('expired')) {
+          throw err;
+        }
+      }
+    }
+
+    if (disabledMatch) {
+      throw new Error('This account has been disabled by an admin.');
+    }
+
+    try {
+      return await authenticateByPasswordOnly(db, auth, token);
+    } catch (err) {
+      if (bestActivePrefixAccount && err?.message === 'No account matched that password or sign-in link.') {
+        throw Object.assign(
+          new Error(`Incorrect password for @${bestActivePrefixAccount.username}.`),
+          { code: 'INVALID_PASSWORD', username: bestActivePrefixAccount.username },
+        );
+      }
+      throw err;
+    }
   }
 
   throw new Error('Invalid sign-in link.');
