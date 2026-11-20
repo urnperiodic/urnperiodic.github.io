@@ -49,6 +49,11 @@ export const DEFAULT_CLARITY_SETTINGS = {
 
 export const CLARITY_STORAGE_KEY = 'clarity.v1';
 
+export const PIPED_INSTANCES = [
+  'https://api.piped.private.coffee',
+  'https://pipedapi.kavin.rocks',
+];
+
 export const INVIDIOUS_INSTANCES = [
   'https://inv.nadeko.net',
   'https://invidious.nerdvpn.de',
@@ -154,14 +159,49 @@ export const ClarityParser = {
     return '';
   },
 
+  toEmbedUrl(item) {
+    if (!item) return '';
+    if (item.kind === 'playlist' && item.listId) {
+      return `https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(item.listId)}&autoplay=1&rel=0`;
+    }
+    if (item.videoId) {
+      const startParam = item.start ? `&start=${Math.max(0, Number(item.start) || 0)}` : '';
+      return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(item.videoId)}?autoplay=1&rel=0${startParam}`;
+    }
+    return '';
+  },
+
   shareUrl(item) {
     return this.toClassroomUrl(item);
   },
 };
 
-export function openClarityVideoInAboutBlank(item, decoyMeta = {}) {
+export function openClarityVideoUrl(item) {
   const targetUrl = ClarityParser.toClassroomUrl(item);
   if (!targetUrl) return { opened: false, url: '' };
+
+  let win = null;
+  try {
+    win = window.open(targetUrl, '_blank');
+    if (win) {
+      try {
+        win.opener = null;
+      } catch {
+        // Ignore cross-origin opener restrictions
+      }
+      return { opened: true, url: targetUrl };
+    }
+  } catch {
+    win = null;
+  }
+
+  return { opened: false, url: targetUrl };
+}
+
+export function openClarityVideoInAboutBlank(item, decoyMeta = {}) {
+  const embedUrl = ClarityParser.toEmbedUrl(item);
+  const classroomUrl = ClarityParser.toClassroomUrl(item);
+  if (!embedUrl && !classroomUrl) return { opened: false, url: '' };
 
   let win = null;
   try {
@@ -171,12 +211,12 @@ export function openClarityVideoInAboutBlank(item, decoyMeta = {}) {
   }
 
   if (!win) {
-    return { opened: false, url: targetUrl };
+    return { opened: false, url: classroomUrl || embedUrl };
   }
 
   const safeTitle = String(decoyMeta.title || 'Google Classroom').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const safeFavicon = String(decoyMeta.favicon || 'https://ssl.gstatic.com/classroom/favicon.png').replace(/"/g, '&quot;');
-  const safeSrc = targetUrl.replace(/"/g, '&quot;');
+  const safeEmbed = (embedUrl || classroomUrl).replace(/"/g, '&quot;');
 
   try {
     win.document.open();
@@ -190,25 +230,107 @@ export function openClarityVideoInAboutBlank(item, decoyMeta = {}) {
   <link rel="shortcut icon" href="${safeFavicon}">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100vw; height: 100vh; overflow: hidden; background: #0b0d14; }
-    iframe { width: 100vw; height: 100vh; border: none; display: block; background: #0b0d14; }
+    html, body { width: 100vw; height: 100vh; overflow: hidden; background: #000; }
+    iframe { width: 100vw; height: 100vh; border: none; display: block; background: #000; }
   </style>
 </head>
 <body>
   <iframe
-    src="${safeSrc}"
+    src="${safeEmbed}"
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
     allowfullscreen
-    referrerpolicy="no-referrer"
+    referrerpolicy="strict-origin-when-cross-origin"
   ></iframe>
 </body>
 </html>`);
     win.document.close();
   } catch {
-    return { opened: false, url: targetUrl };
+    return { opened: false, url: classroomUrl || embedUrl };
   }
 
-  return { opened: true, url: targetUrl };
+  return { opened: true, url: classroomUrl || embedUrl };
+}
+
+export function openClassroomInAboutBlank(item, decoyMeta = {}) {
+  const classroomUrl = ClarityParser.toClassroomUrl(item);
+  if (!classroomUrl) return { opened: false, url: '' };
+
+  let win = null;
+  try {
+    win = window.open('about:blank', '_blank');
+  } catch {
+    win = null;
+  }
+
+  if (!win) {
+    return { opened: false, url: classroomUrl };
+  }
+
+  const safeTitle = String(decoyMeta.title || 'Google Classroom')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  const safeFavicon = String(
+    decoyMeta.favicon || 'https://ssl.gstatic.com/classroom/favicon.png'
+  ).replace(/"/g, '&quot;');
+  const safeUrlAttr = classroomUrl.replace(/"/g, '&quot;');
+  const safeUrlJs = JSON.stringify(classroomUrl);
+
+  try {
+    win.document.open();
+    win.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <title>${safeTitle}</title>
+  <link rel="icon" href="${safeFavicon}">
+  <link rel="shortcut icon" href="${safeFavicon}">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100vw; height: 100vh; overflow: hidden;
+      background: #0b0d14; color: #eef1f8;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .wrap { text-align: center; padding: 24px; }
+    .spinner {
+      width: 34px; height: 34px; margin: 0 auto 14px;
+      border: 3px solid rgba(255,255,255,0.14); border-top-color: #6b8cff;
+      border-radius: 50%; animation: spin 0.75s linear infinite;
+    }
+    p { font-size: 14px; color: #9aa3b8; margin-bottom: 10px; }
+    a { color: #8ca8ff; font-size: 13px; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="spinner"></div>
+    <p>Opening ${safeTitle}…</p>
+    <a href="${safeUrlAttr}" rel="noreferrer">Continue to Classroom</a>
+  </div>
+  <script>
+    (function () {
+      try { window.opener = null; } catch (e) {}
+      window.location.replace(${safeUrlJs});
+    })();
+  </script>
+</body>
+</html>`);
+    win.document.close();
+    try {
+      win.opener = null;
+    } catch {
+      // Ignore opener restrictions
+    }
+  } catch {
+    return { opened: false, url: classroomUrl };
+  }
+
+  return { opened: true, url: classroomUrl };
 }
 
 export function timeAgo(ts) {
@@ -314,9 +436,29 @@ export function calculateRelevance(q, item) {
   return score;
 }
 
-export async function fetchServerSearch(q) {
+export async function fetchServerSearch(q, externalSignal) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 11000);
+  const onAbort = () => ctrl.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      clearTimeout(timer);
+      return null;
+    }
+    externalSignal.addEventListener('abort', onAbort, { once: true });
+  }
+
   try {
-    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+    const apiBase =
+      typeof window !== 'undefined' &&
+      window.location?.origin &&
+      window.location.origin !== 'null'
+        ? window.location.origin
+        : '';
+    const res = await fetch(`${apiBase}/api/search?q=${encodeURIComponent(q)}`, {
+      signal: ctrl.signal,
+      cache: 'no-store',
+    });
     const contentType = res.headers.get('content-type') || '';
     if (res.ok && contentType.includes('application/json')) {
       const data = await res.json();
@@ -330,14 +472,88 @@ export async function fetchServerSearch(q) {
             : '',
         }));
       }
+      return [];
     }
   } catch {
     // Fallback below
+  } finally {
+    clearTimeout(timer);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onAbort);
+    }
   }
   return null;
 }
 
-export async function fetchInvidiousSearch(q) {
+export async function fetchPipedSearch(q, externalSignal) {
+  if (externalSignal?.aborted) return null;
+
+  const tryInstance = (base) =>
+    new Promise((resolve, reject) => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => {
+        ctrl.abort();
+        reject(new Error('timeout'));
+      }, 7500);
+      const onAbort = () => {
+        clearTimeout(timer);
+        ctrl.abort();
+        reject(new Error('aborted'));
+      };
+      if (externalSignal) {
+        externalSignal.addEventListener('abort', onAbort, { once: true });
+      }
+
+      fetch(`${base}/search?q=${encodeURIComponent(q)}&filter=videos`, {
+        signal: ctrl.signal,
+      })
+        .then((r) => {
+          if (!r.ok) throw new Error('http ' + r.status);
+          return r.json();
+        })
+        .then((data) => {
+          clearTimeout(timer);
+          if (externalSignal) externalSignal.removeEventListener('abort', onAbort);
+          const list = Array.isArray(data?.items) ? data.items : [];
+          const mapped = list
+            .map((x) => {
+              const match =
+                typeof x.url === 'string' ? x.url.match(/[?&]v=([A-Za-z0-9_-]{11})/) : null;
+              const videoId = match?.[1] || '';
+              if (!videoId || x.isShort) return null;
+              return {
+                kind: 'video',
+                videoId,
+                title: decodeHtml(x.title),
+                author: decodeHtml(x.uploaderName),
+                description: decodeHtml(x.shortDescription || ''),
+                viewCount: typeof x.views === 'number' ? x.views : 0,
+                lengthSeconds: typeof x.duration === 'number' && x.duration > 0 ? x.duration : 0,
+                publishedText: x.uploadedDate || '',
+                thumb: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+              };
+            })
+            .filter(Boolean);
+          if (!mapped.length) return reject(new Error('empty'));
+          resolve(mapped);
+        })
+        .catch((e) => {
+          clearTimeout(timer);
+          if (externalSignal) externalSignal.removeEventListener('abort', onAbort);
+          reject(e);
+        });
+    });
+
+  try {
+    return await Promise.any(PIPED_INSTANCES.map(tryInstance));
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchInvidiousSearch(q, externalSignal) {
+  if (externalSignal?.aborted) return null;
+
   const tryInstance = (base) =>
     new Promise((resolve, reject) => {
       const ctrl = new AbortController();
@@ -345,6 +561,14 @@ export async function fetchInvidiousSearch(q) {
         ctrl.abort();
         reject(new Error('timeout'));
       }, 7000);
+      const onAbort = () => {
+        clearTimeout(timer);
+        ctrl.abort();
+        reject(new Error('aborted'));
+      };
+      if (externalSignal) {
+        externalSignal.addEventListener('abort', onAbort, { once: true });
+      }
 
       fetch(`${base}/api/v1/search?q=${encodeURIComponent(q)}&type=video`, {
         signal: ctrl.signal,
@@ -355,6 +579,7 @@ export async function fetchInvidiousSearch(q) {
         })
         .then((list) => {
           clearTimeout(timer);
+          if (externalSignal) externalSignal.removeEventListener('abort', onAbort);
           if (!Array.isArray(list) || !list.length) return reject(new Error('empty'));
           const mapped = list
             .filter((x) => x.type === 'video' && x.videoId)
@@ -373,6 +598,7 @@ export async function fetchInvidiousSearch(q) {
         })
         .catch((e) => {
           clearTimeout(timer);
+          if (externalSignal) externalSignal.removeEventListener('abort', onAbort);
           reject(e);
         });
     });
@@ -384,12 +610,25 @@ export async function fetchInvidiousSearch(q) {
   }
 }
 
-export async function fetchRemoteSearch(q) {
-  const serverResults = await fetchServerSearch(q);
-  if (serverResults !== null && serverResults.length > 0) {
+export async function fetchRemoteSearch(q, externalSignal) {
+  const serverResults = await fetchServerSearch(q, externalSignal);
+  if (externalSignal?.aborted) return null;
+  if (Array.isArray(serverResults) && serverResults.length > 0) {
     return serverResults;
   }
-  return await fetchInvidiousSearch(q);
+
+  const pipedResults = await fetchPipedSearch(q, externalSignal);
+  if (externalSignal?.aborted) return null;
+  if (Array.isArray(pipedResults) && pipedResults.length > 0) {
+    return pipedResults;
+  }
+
+  const invidiousResults = await fetchInvidiousSearch(q, externalSignal);
+  if (Array.isArray(invidiousResults) && invidiousResults.length > 0) {
+    return invidiousResults;
+  }
+
+  return Array.isArray(serverResults) ? serverResults : null;
 }
 
 export function searchLibrary(q, libraryItems) {

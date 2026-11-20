@@ -11,6 +11,7 @@ import {
   fmtDuration,
   fmtViews,
   openClarityVideoInAboutBlank,
+  openClassroomInAboutBlank,
   searchLibrary,
   timeAgo,
 } from '../utils/clarityYoutube';
@@ -27,6 +28,8 @@ function getItemThumb(item) {
   return '';
 }
 
+const VALID_CLARITY_THEMES = new Set([...CLARITY_THEMES.map((t) => t.id), 'youtube']);
+
 export default function YouTubeWorkspace({
   decoyTitle = 'Google Classroom',
   decoyFavicon = 'https://ssl.gstatic.com/classroom/favicon.png',
@@ -35,7 +38,13 @@ export default function YouTubeWorkspace({
   const [settings, setSettings] = useState(() => {
     try {
       const raw = localStorage.getItem(CLARITY_STORAGE_KEY);
-      return raw ? { ...DEFAULT_CLARITY_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_CLARITY_SETTINGS };
+      if (!raw) return { ...DEFAULT_CLARITY_SETTINGS };
+      const parsed = JSON.parse(raw);
+      const safeTheme =
+        parsed && typeof parsed.theme === 'string' && VALID_CLARITY_THEMES.has(parsed.theme)
+          ? parsed.theme
+          : DEFAULT_CLARITY_SETTINGS.theme;
+      return { ...DEFAULT_CLARITY_SETTINGS, ...parsed, theme: safeTheme };
     } catch {
       return { ...DEFAULT_CLARITY_SETTINGS };
     }
@@ -59,6 +68,8 @@ export default function YouTubeWorkspace({
   const searchInputRef = useRef(null);
   const toastTimeoutRef = useRef(null);
   const searchSeqRef = useRef(0);
+  const searchAbortRef = useRef(null);
+  const searchDebounceRef = useRef(null);
 
   const showToast = useCallback((msg) => {
     setToastMsg(msg);
@@ -71,6 +82,8 @@ export default function YouTubeWorkspace({
   useEffect(() => {
     return () => {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      if (searchAbortRef.current) searchAbortRef.current.abort();
     };
   }, []);
 
@@ -211,13 +224,16 @@ export default function YouTubeWorkspace({
         thumb: getItemThumb(item),
       };
 
-      // Open immediately inside synchronous click/submit handler so popup blockers allow the new tab
+      // Open immediately inside synchronous click/submit handler so popup blockers allow about:blank
       if (launchAboutBlank) {
-        const result = openClarityVideoInAboutBlank(normalized);
+        const result = openClarityVideoInAboutBlank(normalized, {
+          title: decoyTitle,
+          favicon: decoyFavicon,
+        });
         if (result.opened) {
-          showToast('Opened Classroom video');
+          showToast('Opened in about:blank');
         } else if (result.url) {
-          showToast('Popup blocked — click "Open Video" below');
+          showToast('Popup blocked — click "Open in about:blank" below');
         }
       }
 
@@ -241,6 +257,11 @@ export default function YouTubeWorkspace({
       const query = q.trim();
       const seq = ++searchSeqRef.current;
 
+      if (searchAbortRef.current) {
+        searchAbortRef.current.abort();
+        searchAbortRef.current = null;
+      }
+
       if (!query) {
         setSubmittedSearchQuery('');
         setSearchResults([]);
@@ -249,12 +270,15 @@ export default function YouTubeWorkspace({
         return;
       }
 
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
+
       setSubmittedSearchQuery(query);
       setIsSearching(true);
       setSearchStatus('Searching…');
 
-      const remote = await fetchRemoteSearch(query);
-      if (seq !== searchSeqRef.current) return;
+      const remote = await fetchRemoteSearch(query, controller.signal);
+      if (seq !== searchSeqRef.current || controller.signal.aborted) return;
 
       const libMatches = searchLibrary(query, [...settings.favorites, ...settings.history]);
       const seen = new Set();
@@ -286,10 +310,12 @@ export default function YouTubeWorkspace({
       setSearchResults(finalResults);
       setIsSearching(false);
       setSearchStatus(
-        remote
+        remote && remote.length > 0
           ? `${finalResults.length} result${finalResults.length === 1 ? '' : 's'}`
           : finalResults.length
           ? 'Matches from your library'
+          : remote === null
+          ? 'Search API unreachable — try again'
           : 'No results found'
       );
     },
@@ -298,15 +324,58 @@ export default function YouTubeWorkspace({
 
   const handleSearchChange = (value) => {
     searchSeqRef.current += 1;
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
+    if (searchAbortRef.current) {
+      searchAbortRef.current.abort();
+      searchAbortRef.current = null;
+    }
+
     setSearchValue(value);
-    setSubmittedSearchQuery('');
-    setSearchResults([]);
-    setIsSearching(false);
-    setSearchStatus('');
+    setIsSearchActive(true);
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setSubmittedSearchQuery('');
+      setSearchResults([]);
+      setIsSearching(false);
+      setSearchStatus('');
+      return;
+    }
+
+    if (ClarityParser.parse(trimmed) || ClarityParser.looksLikeUrl(trimmed)) {
+      setSubmittedSearchQuery('');
+      setSearchResults([]);
+      setIsSearching(false);
+      setSearchStatus('Press Enter to open link');
+      return;
+    }
+
+    if (trimmed.length >= 2) {
+      setIsSearching(true);
+      setSubmittedSearchQuery(trimmed);
+      setSearchStatus('Searching…');
+      searchDebounceRef.current = window.setTimeout(() => {
+        searchDebounceRef.current = null;
+        executeSearch(trimmed);
+      }, 380);
+    } else {
+      setSubmittedSearchQuery('');
+      setSearchResults([]);
+      setIsSearching(false);
+      setSearchStatus('');
+    }
   };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
+
     const v = searchValue.trim();
     if (!v) {
       searchInputRef.current?.focus();
@@ -605,13 +674,17 @@ export default function YouTubeWorkspace({
   const currentThumb = getItemThumb(currentVideo);
   const libraryItems = libraryTab === 'history' ? settings.history : settings.favorites;
 
+  const activeTheme = VALID_CLARITY_THEMES.has(settings.theme)
+    ? settings.theme
+    : DEFAULT_CLARITY_SETTINGS.theme;
+
   return (
     <div
       ref={rootRef}
       className={`clarity-video-root ${settings.motion === 0 ? 'clarity-no-motion' : ''} ${
         !settings.fx ? 'clarity-fx-off' : ''
       }`}
-      data-clarity-theme={settings.theme}
+      data-clarity-theme={activeTheme}
       style={rootStyle}
     >
       {/* Ambient Background */}
@@ -697,7 +770,7 @@ export default function YouTubeWorkspace({
               <button
                 type="button"
                 className="clarity-resume-nav-btn"
-                title="Resume last video"
+                title="Resume last video in about:blank"
                 onClick={() => playVideo(lastHistoryItem, { launchAboutBlank: true })}
               >
                 ▶ Resume
@@ -830,7 +903,13 @@ export default function YouTubeWorkspace({
                                   alt=""
                                   loading="lazy"
                                   onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
+                                    const img = e.currentTarget;
+                                    if (r.videoId && !img.dataset.fallback) {
+                                      img.dataset.fallback = '1';
+                                      img.src = `https://i.ytimg.com/vi/${r.videoId}/mqdefault.jpg`;
+                                    } else {
+                                      img.style.display = 'none';
+                                    }
                                   }}
                                 />
                               )}
@@ -877,8 +956,8 @@ export default function YouTubeWorkspace({
                     </div>
                     <h3>Search YouTube or paste any link above</h3>
                     <p>
-                      Click any result or press Go on a YouTube URL to open it directly via{' '}
-                      <strong>Classroom</strong>.
+                      Click any result or press Go on a YouTube URL to play it in{' '}
+                      <strong>about:blank</strong> or open via Classroom.
                     </p>
                   </div>
                 )}
@@ -919,7 +998,7 @@ export default function YouTubeWorkspace({
                     <svg viewBox="0 0 24 24">
                       <path d="M7 4.6v14.8c0 .9 1 1.5 1.8 1L20.6 13c.8-.5.8-1.6 0-2L8.8 3.6c-.8-.5-1.8.1-1.8 1z" />
                     </svg>
-                    Open Video
+                    Open in about:blank
                   </span>
                   {classroomUrl && (
                     <span className="clarity-launch-badge" title={classroomUrl}>
@@ -944,19 +1023,49 @@ export default function YouTubeWorkspace({
                 </div>
 
                 <div className="clarity-player-actions">
+                  <button
+                    type="button"
+                    className="clarity-chip-btn"
+                    onClick={() => {
+                      const result = openClarityVideoInAboutBlank(currentVideo, {
+                        title: decoyTitle,
+                        favicon: decoyFavicon,
+                      });
+                      showToast(
+                        result.opened
+                          ? 'Opened in about:blank'
+                          : 'Popup blocked — allow popups to open about:blank'
+                      );
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24">
+                      <path d="M7 4.6v14.8c0 .9 1 1.5 1.8 1L20.6 13c.8-.5.8-1.6 0-2L8.8 3.6c-.8-.5-1.8.1-1.8 1z" />
+                    </svg>
+                    about:blank
+                  </button>
+
                   {classroomUrl && (
-                    <a
-                      href={classroomUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
                       className="clarity-chip-btn"
-                      title="Open video in a new tab"
+                      title="Open Classroom link via about:blank"
+                      onClick={() => {
+                        const result = openClassroomInAboutBlank(currentVideo, {
+                          title: decoyTitle,
+                          favicon: decoyFavicon,
+                        });
+                        showToast(
+                          result.opened
+                            ? 'Opened Classroom tab via about:blank'
+                            : 'Popup blocked — allow popups to open Classroom tab'
+                        );
+                      }}
                     >
                       <svg viewBox="0 0 24 24">
                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
                       </svg>
-                      Open Video
-                    </a>
+                      Classroom Tab
+                    </button>
                   )}
 
                   {classroomUrl && (

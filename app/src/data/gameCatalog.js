@@ -1,5 +1,6 @@
-import { games as gamesData, ogGames } from './games';
+import { games as gamesData, ogGames, resolveGmfilesRelativePath } from './games';
 import { GMFILES_PATH_LOOKUP } from './gmfilesPaths';
+import { resolvePublicFileUrl } from './gameSource';
 
 const ogTitlesSet = new Set(ogGames.map(g => g.title));
 
@@ -10,7 +11,13 @@ const inferPlatformTag = (game) => {
   }
 
   const rawUrl = game?.url || '';
-  const mappedUrl = GMFILES_PATH_LOOKUP[rawUrl] || rawUrl;
+  const fileName = String(rawUrl).split('/').pop() || rawUrl;
+  const mappedUrl =
+    GMFILES_PATH_LOOKUP[rawUrl] ||
+    GMFILES_PATH_LOOKUP[fileName] ||
+    resolveGmfilesRelativePath(fileName) ||
+    resolvePublicFileUrl(rawUrl) ||
+    rawUrl;
   const normalizedUrl = String(mappedUrl || '').replace(/^\/+/, '');
   const segments = normalizedUrl.split(/[\\/]+/).filter(Boolean);
   const isPublicGamePath = segments.some(segment => /^(gmfiles|public)$/i.test(segment)) || normalizedUrl.startsWith('gmfiles/');

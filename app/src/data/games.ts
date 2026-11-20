@@ -1,27 +1,75 @@
 import { Game } from '../types';
 import { GMFILES_PATH_LOOKUP } from './gmfilesPaths';
+import { PUBLIC_GAMES_BASE_URL, resolvePublicFileUrl } from './gameSource';
 
-export const PUBLIC_GAMES_BASE_URL = '/Gmfiles/';
+export { PUBLIC_GAMES_BASE_URL };
 const GENIZY_MATH_BASE_URL = 'https://genizymath.github.io/';
 
+declare const __PUBLIC_FILE_MAP__: Record<string, string> | undefined;
+const PUBLIC_FILE_MAP: Record<string, string> =
+  typeof __PUBLIC_FILE_MAP__ !== 'undefined' && __PUBLIC_FILE_MAP__ ? __PUBLIC_FILE_MAP__ : {};
+
+const GMFILES_LOWER_LOOKUP: Record<string, string> = Object.entries(GMFILES_PATH_LOOKUP).reduce(
+  (acc, [key, value]) => {
+    acc[key.toLowerCase()] = value;
+    return acc;
+  },
+  {} as Record<string, string>
+);
+
+export const resolveGmfilesRelativePath = (input: string): string | null => {
+  if (!input) return null;
+  const clean = input.trim().replace(/^\/+/, '').replace(/^public\//i, '').replace(/^gmfiles\//i, '');
+  const fileName = clean.split('/').pop() || clean;
+  return (
+    GMFILES_PATH_LOOKUP[fileName] ||
+    GMFILES_LOWER_LOOKUP[fileName.toLowerCase()] ||
+    null
+  );
+};
+
 const resolveLocalGmfilesUrl = (url: string): string => {
+  if (!url) return url;
+
   if (url.startsWith(GENIZY_MATH_BASE_URL)) {
     return `/${url.slice(GENIZY_MATH_BASE_URL.length)}`;
   }
 
-  if (!url || url.startsWith('http') || url.startsWith('/')) {
+  if (/^(https?:|data:|blob:)/i.test(url)) {
     return url;
   }
 
-  if (url.includes('/')) {
-    return `${PUBLIC_GAMES_BASE_URL}${url}`;
+  // Strip optional leading slashes and "public/" prefix so 'public/foo.html', '/foo.html', and 'foo.html' all work identically
+  const clean = url.trim().replace(/^\/+/, '').replace(/^public\//i, '');
+  const fileName = clean.split('/').pop() || clean;
+
+  // 1. Check if the file exists anywhere in /public via build-time map
+  const publicHit =
+    PUBLIC_FILE_MAP[fileName] ||
+    PUBLIC_FILE_MAP[fileName.toLowerCase()];
+  if (publicHit) {
+    return publicHit;
   }
 
-  const fileName = url.split('/').pop() || url;
-  const mappedPath = GMFILES_PATH_LOOKUP[fileName];
+  // 2. Check GMFILES_PATH_LOOKUP (exact and case-insensitive)
+  const mappedPath =
+    GMFILES_PATH_LOOKUP[fileName] ||
+    GMFILES_LOWER_LOOKUP[fileName.toLowerCase()];
+  if (mappedPath) {
+    return `${PUBLIC_GAMES_BASE_URL}${mappedPath}`;
+  }
 
-  return mappedPath ? `${PUBLIC_GAMES_BASE_URL}${mappedPath}` : `${PUBLIC_GAMES_BASE_URL}${url}`;
+  // 3. If caller specified an explicit root/subpath (e.g. '/iframe/...' or 'Gmfiles/...'), preserve it
+  if (clean.toLowerCase().startsWith('gmfiles/')) {
+    return `/${clean}`;
+  }
+  if (clean.includes('/')) {
+    return url.startsWith('/') ? `/${clean}` : `${PUBLIC_GAMES_BASE_URL}${clean}`;
+  }
+
+  return resolvePublicFileUrl(clean, 'Gmfiles');
 };
+
 
 const legacyGameData: Game[] = [
   {
@@ -341,22 +389,20 @@ const gameData: Game[] = [
   {
     title: 'Slope',
     description: 'This is just for the girls ig',
-    url: 'slope.html',
-    thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQx297eMTVtsXI_06aeirEVF0faUqhwEwvx_rzSMF-yHw&s=10',
+    url: 'https://ubg365.github.io/slope/play.html',
+    thumbnail: 'https://i.ytimg.com/vi/jvjZ4rnERmM/maxresdefault.jpg',
     category: 'Solo',
     featured: false,
-    isOg: true,
-    girlsFeatured: true
+    isOg: true
   },
   {
     title: 'Epilepsy game',
     description: 'This is just for the girls ig',
-    url: 'cldeathrun.html',
+    url: 'https://ubg365.github.io/death-run-3d/',
     thumbnail: 'https://play-lh.googleusercontent.com/IeGUGo20PsUgjtAajcZWsz09ypyAIITXS8jDzzLAFdoR65Zy_3PVOP-ckq5b_A_vPzuV=w526-h296-rw',
     category: 'Solo',
     featured: false,
-    isOg: true,
-    girlsFeatured: true
+    isOg: true
   },
   {
     title: '2048',
@@ -374,8 +420,7 @@ const gameData: Game[] = [
     thumbnail: 'https://i.ytimg.com/vi/WUTrv--kZtI/maxresdefault.jpg',
     category: 'Solo',
     featured: true,
-    isOg: true,
-    girlsFeatured: true
+    isOg: true
   },
   {
     title: 'OvO',
@@ -482,8 +527,7 @@ const gameData: Game[] = [
     url: 'https://urnperiodic.github.io/suika-game/',
     thumbnail: 'https://media.tenor.com/7vR97sAI99IAAAAe/watermelon-game-suika-game.png',
     category: 'solo',
-    featured: false,
-    girlsFeatured: true
+    featured: false
   },
   {
     title: 'Crazy Cattle 3D',
@@ -553,7 +597,7 @@ const gameData: Game[] = [
     title: 'Adventure Capitalist',
     description: 'Grow your business empire in this classic capitalist clicker!',
     url: 'clAdventureCapatalist.html',
-    thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTPYgHeeaerNJsgWwXN8vDjwHyeLTN9gzF0Za_GUJnKNQ&s=10',
+    thumbnail: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=300&q=80',
     category: 'Solo',
     featured: false
   },
@@ -779,9 +823,9 @@ const gameData: Game[] = [
   },
   {
     title: '2048 Cupcakes',
-    description: 'Girlies',
+    description: 'Merge cute frosted cupcakes instead of numbers to bake the ultimate dessert.',
     url: 'cl2048cupcakes.html',
-    thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdVN_qRCADXsdeNU_BQwsmMU2s6KahLAnEvNKA2SAYaQ&s=10',
+    thumbnail: '',
     category: 'Solo',
     featured: false,
     girlsFeatured: true

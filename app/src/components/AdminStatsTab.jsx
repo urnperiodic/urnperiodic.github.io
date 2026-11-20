@@ -41,6 +41,7 @@ const ACTIVITY_COLORS = {
   youtube: '#f43f5e',
   movies: '#a855f7',
   moremovies: '#f59e0b',
+  moremoremovies: '#ec4899',
   lobbychat: '#10b981',
   ai: '#06b6d4',
   catalog: '#94a3b8',

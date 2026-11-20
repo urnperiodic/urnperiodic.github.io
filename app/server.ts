@@ -1,4 +1,5 @@
 import express from "express";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
@@ -25,7 +26,12 @@ async function startServer() {
     res.json({ status: "healthy", timestamp: new Date().toISOString() });
   });
 
-  // Clarity Video YouTube Search Route (YouTube Data API v3 + Invidious Fallback)
+  // Clarity Video YouTube Search Route (YouTube Data API v3 + InnerTube + HTML + Piped + Invidious)
+  const PIPED_INSTANCES = [
+    "https://api.piped.private.coffee",
+    "https://pipedapi.kavin.rocks",
+  ];
+
   const INVIDIOUS_INSTANCES = [
     "https://inv.nadeko.net",
     "https://invidious.nerdvpn.de",
@@ -52,6 +58,256 @@ async function startServer() {
     const m = parseInt(match[2] || "0", 10);
     const s = parseInt(match[3] || "0", 10);
     return h * 3600 + m * 60 + s;
+  };
+
+  const parseColonDurationSec = (text?: string): number => {
+    if (!text) return 0;
+    const parts = text.trim().split(":").map((p) => parseInt(p, 10));
+    if (parts.some((n) => Number.isNaN(n))) return 0;
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    if (parts.length === 1) return parts[0];
+    return 0;
+  };
+
+  const parseCompactViewCount = (text?: string): number => {
+    if (!text) return 0;
+    const clean = text.replace(/,/g, "").trim();
+    const match = clean.match(/([\d.]+)\s*([KMB])?/i);
+    if (!match) return 0;
+    const num = parseFloat(match[1]);
+    if (Number.isNaN(num)) return 0;
+    const suffix = (match[2] || "").toUpperCase();
+    if (suffix === "B") return Math.round(num * 1e9);
+    if (suffix === "M") return Math.round(num * 1e6);
+    if (suffix === "K") return Math.round(num * 1e3);
+    return Math.round(num);
+  };
+
+  const collectVideoRenderers = (data: any): any[] => {
+    const sections =
+      data?.contents?.twoColumnSearchResultsRenderer?.primaryContents
+        ?.sectionListRenderer?.contents || data;
+    if (!sections) return [];
+
+    const results: any[] = [];
+    const seen = new Set<string>();
+
+    const walk = (node: any) => {
+      if (!node || typeof node !== "object" || results.length >= 25) return;
+      if (node.videoRenderer && node.videoRenderer.videoId) {
+        const v = node.videoRenderer;
+        if (!seen.has(v.videoId)) {
+          seen.add(v.videoId);
+          const title =
+            v.title?.runs?.map((r: any) => r.text).join("") ||
+            v.title?.simpleText ||
+            "";
+          const author =
+            v.ownerText?.runs?.[0]?.text ||
+            v.longBylineText?.runs?.[0]?.text ||
+            v.shortBylineText?.runs?.[0]?.text ||
+            "";
+          const description =
+            v.detailedMetadataSnippets?.[0]?.snippetText?.runs
+              ?.map((r: any) => r.text)
+              .join("") ||
+            v.descriptionSnippet?.runs?.map((r: any) => r.text).join("") ||
+            "";
+          const lengthText =
+            v.lengthText?.simpleText ||
+            v.thumbnailOverlays?.find(
+              (o: any) => o?.thumbnailOverlayTimeStatusRenderer?.text?.simpleText
+            )?.thumbnailOverlayTimeStatusRenderer?.text?.simpleText ||
+            "";
+          const viewText =
+            v.viewCountText?.simpleText ||
+            v.viewCountText?.runs?.map((r: any) => r.text).join("") ||
+            v.shortViewCountText?.simpleText ||
+            "";
+          const publishedAt = v.publishedTimeText?.simpleText || "";
+          const thumb = `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`;
+
+          results.push({
+            kind: "video",
+            videoId: v.videoId,
+            title: decodeHtmlEntities(title),
+            author: decodeHtmlEntities(author),
+            description: decodeHtmlEntities(description),
+            viewCount: parseCompactViewCount(viewText),
+            lengthSeconds: parseColonDurationSec(lengthText),
+            publishedAt,
+            thumb,
+          });
+        }
+        return;
+      }
+      if (Array.isArray(node)) {
+        for (const item of node) walk(item);
+      } else {
+        for (const key of Object.keys(node)) {
+          walk(node[key]);
+        }
+      }
+    };
+
+    walk(sections);
+    return results;
+  };
+
+  const extractYtInitialData = (html: string): any | null => {
+    const markers = ["var ytInitialData = ", 'window["ytInitialData"] = '];
+    let startIdx = -1;
+    for (const m of markers) {
+      const idx = html.indexOf(m);
+      if (idx !== -1) {
+        startIdx = idx + m.length;
+        break;
+      }
+    }
+    if (startIdx === -1) return null;
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let i = startIdx; i < html.length; i++) {
+      const ch = html[i];
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (ch === "\\") {
+          escaped = true;
+        } else if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+      } else if (ch === "{") {
+        depth++;
+      } else if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          try {
+            return JSON.parse(html.slice(startIdx, i + 1));
+          } catch {
+            return null;
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  const fetchYouTubeInnerTubeSearch = async (q: string): Promise<any[]> => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch(
+        "https://www.youtube.com/youtubei/v1/search?prettyPrint=false",
+        {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+            "X-YouTube-Client-Name": "1",
+            "X-YouTube-Client-Version": "2.20241101.00.00",
+            Cookie: "SOCS=CAI; CONSENT=YES+cb",
+          },
+          body: JSON.stringify({
+            context: {
+              client: {
+                clientName: "WEB",
+                clientVersion: "2.20241101.00.00",
+                hl: "en",
+                gl: "US",
+              },
+            },
+            query: q,
+            params: "EgIQAQ%3D%3D",
+          }),
+        }
+      );
+      if (!response.ok) return [];
+      const data = await response.json();
+      return collectVideoRenderers(data);
+    } catch {
+      return [];
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+
+  const fetchYouTubeHtmlSearch = async (q: string): Promise<any[]> => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 9000);
+    try {
+      const response = await fetch(
+        `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`,
+        {
+          signal: controller.signal,
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+            Cookie: "SOCS=CAI; CONSENT=YES+cb",
+          },
+        }
+      );
+      if (!response.ok) return [];
+      const html = await response.text();
+      const data = extractYtInitialData(html);
+      if (!data) return [];
+      return collectVideoRenderers(data);
+    } catch {
+      return [];
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+
+  const fetchPipedFallback = async (q: string): Promise<any[]> => {
+    const tryInstance = async (base: string): Promise<any[]> => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 7000);
+      try {
+        const response = await fetch(
+          `${base}/search?q=${encodeURIComponent(q)}&filter=videos`,
+          { signal: controller.signal }
+        );
+        if (!response.ok) throw new Error(`piped ${response.status}`);
+        const data = await response.json();
+        const items = Array.isArray(data?.items) ? data.items : [];
+        const mapped = items
+          .map((x: any) => {
+            const match = typeof x.url === "string" ? x.url.match(/[?&]v=([A-Za-z0-9_-]{11})/) : null;
+            const videoId = match?.[1] || "";
+            if (!videoId || x.isShort) return null;
+            return {
+              kind: "video",
+              videoId,
+              title: decodeHtmlEntities(x.title),
+              author: decodeHtmlEntities(x.uploaderName),
+              description: decodeHtmlEntities(x.shortDescription || ""),
+              viewCount: typeof x.views === "number" ? x.views : 0,
+              lengthSeconds: typeof x.duration === "number" && x.duration > 0 ? x.duration : 0,
+              publishedAt: x.uploadedDate || "",
+              thumb: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+            };
+          })
+          .filter(Boolean);
+        if (!mapped.length) throw new Error("empty");
+        return mapped;
+      } finally {
+        clearTimeout(timeout);
+      }
+    };
+    const results = await Promise.any(PIPED_INSTANCES.map(tryInstance));
+    return Array.isArray(results) ? results : [];
   };
 
   const fetchInvidiousFallback = async (q: string): Promise<any[]> => {
@@ -90,19 +346,41 @@ async function startServer() {
   };
 
   app.get("/api/search", async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
     const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
     if (!q) {
       return res.status(400).json({ error: "Missing query parameter q" });
     }
 
+    const searchWithFallbacks = async (): Promise<any[]> => {
+      const innerTubeResults = await fetchYouTubeInnerTubeSearch(q);
+      if (innerTubeResults.length > 0) return innerTubeResults;
+
+      const ytResults = await fetchYouTubeHtmlSearch(q);
+      if (ytResults.length > 0) return ytResults;
+
+      try {
+        const pipedResults = await fetchPipedFallback(q);
+        if (pipedResults.length > 0) return pipedResults;
+      } catch {
+        // Continue to Invidious fallback
+      }
+
+      try {
+        const invResults = await fetchInvidiousFallback(q);
+        if (invResults.length > 0) return invResults;
+      } catch {
+        // Exhausted all backends
+      }
+
+      console.warn(`[search] All search backends returned 0 results for query: ${q}`);
+      return [];
+    };
+
     const apiKey = process.env.YOUTUBE_API_KEY;
     if (!apiKey) {
-      try {
-        const fallback = await fetchInvidiousFallback(q);
-        return res.status(200).json(fallback);
-      } catch {
-        return res.status(200).json([]);
-      }
+      const fallback = await searchWithFallbacks();
+      return res.status(200).json(fallback);
     }
 
     try {
@@ -111,12 +389,13 @@ async function startServer() {
       )}&key=${apiKey}`;
       const searchRes = await fetch(searchUrl);
       if (!searchRes.ok) {
-        const fallback = await fetchInvidiousFallback(q);
+        const fallback = await searchWithFallbacks();
         return res.status(200).json(fallback);
       }
       const data = await searchRes.json();
       if (!data.items || !Array.isArray(data.items) || !data.items.length) {
-        return res.status(200).json([]);
+        const fallback = await searchWithFallbacks();
+        return res.status(200).json(fallback);
       }
 
       const videoIds = data.items
@@ -173,12 +452,8 @@ async function startServer() {
 
       return res.status(200).json(results);
     } catch {
-      try {
-        const fallback = await fetchInvidiousFallback(q);
-        return res.status(200).json(fallback);
-      } catch {
-        return res.status(200).json([]);
-      }
+      const fallback = await searchWithFallbacks();
+      return res.status(200).json(fallback);
     }
   });
 
@@ -354,6 +629,62 @@ Always focus on being genuinely useful and producing high-quality answers.`
   app.use('/Websitedownload', express.static(path.join(process.cwd(), 'Websitedownload')));
 
   const publicPath = path.join(process.cwd(), 'public');
+
+  const findFileInPublic = (targetFileName: string): string | null => {
+    if (!targetFileName || !fs.existsSync(publicPath)) return null;
+    const lowerTarget = targetFileName.toLowerCase();
+    let ciMatch: string | null = null;
+
+    const walk = (dir: string): string | null => {
+      let entries: fs.Dirent[] = [];
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return null;
+      }
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          const found = walk(fullPath);
+          if (found) return found;
+        } else if (entry.isFile()) {
+          if (entry.name === targetFileName) return fullPath;
+          if (!ciMatch && entry.name.toLowerCase() === lowerTarget) {
+            ciMatch = fullPath;
+          }
+        }
+      }
+      return null;
+    };
+
+    return walk(publicPath) || ciMatch;
+  };
+
+  // Strip optional /public/ prefix and resolve any bare filename or moved file inside public/
+  app.use((req, res, next) => {
+    const rawPath = decodeURIComponent((req.path || '').split('?')[0]);
+    if (!rawPath || rawPath === '/' || rawPath.startsWith('/api/') || rawPath.startsWith('/src/') || rawPath.startsWith('/@')) {
+      return next();
+    }
+
+    const stripped = rawPath.replace(/^\/public\//i, '/');
+    const directCandidate = path.join(publicPath, stripped);
+    if (fs.existsSync(directCandidate) && fs.statSync(directCandidate).isFile()) {
+      return res.sendFile(directCandidate);
+    }
+
+    const hasStaticExt = /\.(html?|png|jpe?g|webp|gif|svg|ico|swf|wasm|mp3|ogg|wav|mp4|webm|json|txt|xml|pdf|woff2?|ttf)$/i.test(stripped);
+    if (hasStaticExt || stripped.startsWith('/Gmfiles/') || stripped.startsWith('/thumbnails/')) {
+      const baseName = path.basename(stripped);
+      const found = findFileInPublic(baseName);
+      if (found) {
+        return res.sendFile(found);
+      }
+    }
+
+    return next();
+  });
+
   app.use('/Gmfiles', express.static(path.join(publicPath, 'Gmfiles')));
   app.use('/Gmfiles', (_req, res) => {
     res.status(404).send('Game file not found');
