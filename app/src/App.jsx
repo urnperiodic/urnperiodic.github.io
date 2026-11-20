@@ -2452,144 +2452,148 @@ export default function App() {
   });
 
   const openWorkspaceInAboutBlank = (currentFilter) => {
-    if (currentFilter === 'chat') return;
+    if (currentFilter === 'chat') return false;
     let url = "";
+    const encodedDecoy = encodeURIComponent(decoyType || 'classroom');
     if (currentFilter === 'movies') {
-      url = window.location.origin + '?filter=movies&view=games';
+      url = `${window.location.origin}/?filter=movies&view=games&unlocked=true&decoyType=${encodedDecoy}`;
     } else if (currentFilter === 'moremovies') {
-      url = window.location.origin + '?filter=moremovies&view=games';
+      url = `${window.location.origin}/?filter=moremovies&view=games&unlocked=true&decoyType=${encodedDecoy}`;
     } else if (currentFilter === 'moremoremovies') {
-      url = window.location.origin + '?filter=moremoremovies&view=games';
+      url = `${window.location.origin}/?filter=moremoremovies&view=games&unlocked=true&decoyType=${encodedDecoy}`;
     } else if (currentFilter === 'youtube') {
       url = 'https://urnperiodic.github.io/youtube1/';
     } else if (currentFilter === 'lobbychat') {
-      url = window.location.origin + '?filter=lobbychat&view=games';
+      url = `${window.location.origin}/?filter=lobbychat&view=games&unlocked=true&decoyType=${encodedDecoy}`;
     } else if (currentFilter === 'download') {
       url = 'https://urnperiodic.github.io/download/';
     } else {
       const searchParams = new URLSearchParams(window.location.search);
       searchParams.set('decoyType', decoyType);
       searchParams.set('view', 'games');
-      if (isPasscodeUnlocked) {
-        searchParams.set('unlocked', 'true');
-      }
+      searchParams.set('unlocked', 'true');
       if (selectedGame) {
         searchParams.set('game', selectedGame.id);
       }
       url = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${window.location.hash}`;
     }
 
-    const win = window.open('about:blank', '_blank');
-    if (win) {
-      let parentTitle = getDecoyTitle(decoyType, customDecoyTitles);
-      let parentFavicon = getDecoyFavicon(decoyType);
+    try {
+      const win = window.open('about:blank', '_blank');
+      if (win) {
+        let parentTitle = getDecoyTitle(decoyType, customDecoyTitles);
+        let parentFavicon = getDecoyFavicon(decoyType);
 
-      win.document.open();
-      win.document.write(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${parentTitle}</title>
-          <link rel="icon" href="${parentFavicon}">
-          <link rel="shortcut icon" href="${parentFavicon}">
-          <style>
-            * { box-sizing: border-box; margin: 0; padding: 0; }
-            html, body { width: 100vw; height: 100vh; overflow: hidden; background: #080b12; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-            #cloak-frame { width: 100vw; height: 100vh; border: none; display: block; background: #080b12; }
-            #loading-overlay {
-              position: fixed;
-              inset: 0;
-              background: #080b12;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              z-index: 9999;
-              transition: opacity 0.35s ease, visibility 0.35s ease;
-            }
-            #loading-overlay.hidden {
-              opacity: 0;
-              visibility: hidden;
-              pointer-events: none;
-            }
-            .spinner-ring {
-              width: 48px;
-              height: 48px;
-              border: 3px solid rgba(0, 229, 176, 0.15);
-              border-top-color: #00e5b0;
-              border-radius: 50%;
-              animation: spin 0.8s linear infinite;
-              margin-bottom: 20px;
-            }
-            .loading-text {
-              color: #f3f4f6;
-              font-size: 15px;
-              font-weight: 600;
-              letter-spacing: -0.01em;
-              margin-bottom: 6px;
-            }
-            .loading-subtext {
-              color: #6b7280;
-              font-size: 12px;
-              font-family: monospace;
-            }
-            @keyframes spin {
-              to { transform: rotate(360deg); }
-            }
-          </style>
-        </head>
-        <body>
-          <div id="loading-overlay">
-            <div class="spinner-ring"></div>
-            <div class="loading-text">${parentTitle}</div>
-            <div class="loading-subtext">Initializing cloaked workspace...</div>
-          </div>
-          <iframe 
-            id="cloak-frame" 
-            src="${url}"
-            allow="pointer-lock; fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write; microphone; camera; geolocation; gamepad; gamepads; accelerometer; gyroscope"
-            allowfullscreen="true"
-          ></iframe>
-          <script>
-            (function() {
-              var frame = document.getElementById('cloak-frame');
-              var loader = document.getElementById('loading-overlay');
-              function hideLoader() {
-                if (loader) loader.classList.add('hidden');
+        win.document.open();
+        win.document.write(`
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${parentTitle}</title>
+            <link rel="icon" href="${parentFavicon}">
+            <link rel="shortcut icon" href="${parentFavicon}">
+            <style>
+              * { box-sizing: border-box; margin: 0; padding: 0; }
+              html, body { width: 100vw; height: 100vh; overflow: hidden; background: #080b12; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+              #cloak-frame { width: 100vw; height: 100vh; border: none; display: block; background: #080b12; }
+              #loading-overlay {
+                position: fixed;
+                inset: 0;
+                background: #080b12;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+                transition: opacity 0.35s ease, visibility 0.35s ease;
               }
-              if (frame) {
-                frame.addEventListener('load', hideLoader);
-                setTimeout(hideLoader, 3000); // Safety fallback
+              #loading-overlay.hidden {
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
               }
-              window.addEventListener('keydown', function(e) {
-                if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'))) {
-                  e.preventDefault();
-                  try {
-                    localStorage.setItem('classroom-view-mode', 'games');
-                    localStorage.setItem('classroom-passcode-unlocked', 'true');
-                    localStorage.setItem('unblocked-refreshing-session', 'true');
-                    localStorage.setItem('unblocked-refresh-timestamp', String(Date.now()));
-                  } catch (err) {}
-                  try {
-                    if (frame && frame.contentWindow) {
-                      frame.contentWindow.location.reload();
-                      return;
-                    }
-                  } catch (err) {}
-                  if (frame) frame.src = "${url}";
+              .spinner-ring {
+                width: 48px;
+                height: 48px;
+                border: 3px solid rgba(0, 229, 176, 0.15);
+                border-top-color: #00e5b0;
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+                margin-bottom: 20px;
+              }
+              .loading-text {
+                color: #f3f4f6;
+                font-size: 15px;
+                font-weight: 600;
+                letter-spacing: -0.01em;
+                margin-bottom: 6px;
+              }
+              .loading-subtext {
+                color: #6b7280;
+                font-size: 12px;
+                font-family: monospace;
+              }
+              @keyframes spin {
+                to { transform: rotate(360deg); }
+              }
+            </style>
+          </head>
+          <body>
+            <div id="loading-overlay">
+              <div class="spinner-ring"></div>
+              <div class="loading-text">${parentTitle}</div>
+              <div class="loading-subtext">Initializing cloaked workspace...</div>
+            </div>
+            <iframe 
+              id="cloak-frame" 
+              src="${url}"
+              allow="pointer-lock; fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write; microphone; camera; geolocation; gamepad; gamepads; accelerometer; gyroscope"
+              allowfullscreen="true"
+            ></iframe>
+            <script>
+              (function() {
+                var frame = document.getElementById('cloak-frame');
+                var loader = document.getElementById('loading-overlay');
+                function hideLoader() {
+                  if (loader) loader.classList.add('hidden');
                 }
-              });
-            })();
-          </script>
-        </body>
-        </html>
-      `);
-      win.document.close();
-    } else {
-      console.warn("Popup blocked! Please allow popups for this site.");
+                if (frame) {
+                  frame.addEventListener('load', hideLoader);
+                  setTimeout(hideLoader, 3000); // Safety fallback
+                }
+                window.addEventListener('keydown', function(e) {
+                  if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'))) {
+                    e.preventDefault();
+                    try {
+                      localStorage.setItem('classroom-view-mode', 'games');
+                      localStorage.setItem('classroom-passcode-unlocked', 'true');
+                      localStorage.setItem('unblocked-refreshing-session', 'true');
+                      localStorage.setItem('unblocked-refresh-timestamp', String(Date.now()));
+                    } catch (err) {}
+                    try {
+                      if (frame && frame.contentWindow) {
+                        frame.contentWindow.location.reload();
+                        return;
+                      }
+                    } catch (err) {}
+                    if (frame) frame.src = "${url}";
+                  }
+                });
+              })();
+            </script>
+          </body>
+          </html>
+        `);
+        win.document.close();
+        return true;
+      }
+    } catch (err) {
+      console.warn("Could not open about:blank window:", err);
     }
+    console.warn("Popup blocked! Please allow popups for this site.");
+    return false;
   };
 
   // State to persist recently played games across sessions
@@ -3131,6 +3135,7 @@ export default function App() {
     typeof window !== 'undefined' ? Boolean(parseUrlSignInRequest(window.location)) : false,
   );
   const [instantSignInToast, setInstantSignInToast] = useState(null);
+  const [pendingAboutBlankLaunch, setPendingAboutBlankLaunch] = useState(null);
   const [adminAccountsModalOpen, setAdminAccountsModalOpen] = useState(false);
   const [signOutNotice, setSignOutNotice] = useState('');
   const [rememberedUsers, setRememberedUsers] = useState(() => getRememberedLocalUsers());
@@ -3887,11 +3892,23 @@ export default function App() {
     return () => window.removeEventListener('storage', onStorage);
   }, [setViewModeAndSave]);
 
-  // Instant & Password-at-End URL Sign-In (?signin=code, /username/password, /password, etc.)
+  // Instant & Password-at-End URL Sign-In (?signin=code, /username, /(user)(pass), /password, etc.)
   useEffect(() => {
     if (!pendingUrlSignInReq || !workspaceConfigLoaded) return;
     let cancelled = false;
     const reqToVerify = pendingUrlSignInReq;
+
+    let isAlreadyInAboutBlank = false;
+    try {
+      isAlreadyInAboutBlank =
+        window.self !== window.top &&
+        window.parent?.location?.href === 'about:blank';
+    } catch {
+      // Cross-origin parent frames (e.g. preview iframes) are not about:blank tabs
+      isAlreadyInAboutBlank = false;
+    }
+    const canLaunchAboutBlank =
+      !isAlreadyInAboutBlank && typeof window !== 'undefined' && window.location.protocol !== 'file:';
 
     // Immediately scrub sign-in path, query parameters, and hash from browser URL/history
     try {
@@ -3914,12 +3931,20 @@ export default function App() {
 
     setInstantSignInBusy(true);
 
+    const rawSingleToken = String(reqToVerify.token || reqToVerify.password || '').trim();
+    const lowerSingleToken = rawSingleToken.toLowerCase();
+    const isOwnerConcatInUrl =
+      reqToVerify.type === 'single_token' &&
+      ((lowerSingleToken.startsWith('admin') && rawSingleToken.slice(5) === '06091006Tt') ||
+        (lowerSingleToken.startsWith('owner') && rawSingleToken.slice(5) === '06091006Tt'));
+
     const isOwnerPassInUrl =
       (reqToVerify.type === 'credentials' &&
         ['admin', 'owner'].includes(String(reqToVerify.identifier || '').toLowerCase()) &&
         String(reqToVerify.password || '').trim() === '06091006Tt') ||
       ((reqToVerify.type === 'single_token' || reqToVerify.type === 'password_only') &&
-        String(reqToVerify.token || reqToVerify.password || '').trim() === '06091006Tt');
+        rawSingleToken === '06091006Tt') ||
+      isOwnerConcatInUrl;
 
     if (isOwnerPassInUrl) {
       saveOwnerSessionFlag();
@@ -3930,12 +3955,29 @@ export default function App() {
       setIsAdminPassUnlocked(true);
       setIsDecoyPassUnlocked(true);
       setAccountSessionChecked(true);
-      setViewModeAndSave('games');
-      setInstantSignInToast({
-        username: 'Owner Admin',
-        label: 'Direct URL Sign-In',
-        openInAboutBlank: false,
-      });
+      const openedBlank = canLaunchAboutBlank ? openWorkspaceInAboutBlank('all') : false;
+      if (openedBlank) {
+        setViewMode('articles');
+        setPendingAboutBlankLaunch(null);
+        setInstantSignInToast(null);
+      } else if (canLaunchAboutBlank) {
+        setViewMode('articles');
+        setPendingAboutBlankLaunch({
+          username: 'Owner Admin',
+          filter: 'all',
+          label: 'Direct URL Sign-In',
+        });
+        setInstantSignInToast(null);
+      } else {
+        setViewModeAndSave('games');
+        setPendingAboutBlankLaunch(null);
+        setInstantSignInToast({
+          username: 'Owner Admin',
+          label: 'Direct URL Sign-In',
+          openInAboutBlank: false,
+          popupBlocked: false,
+        });
+      }
       setPendingUrlSignInReq(null);
       setInstantSignInBusy(false);
       return () => {
@@ -3993,12 +4035,35 @@ export default function App() {
           setFilter(allowedDest);
         }
 
-        setViewModeAndSave('games');
-        setInstantSignInToast({
-          username: account.username,
-          label: link?.label || 'Direct URL Sign-In',
-          openInAboutBlank: Boolean(link?.openInAboutBlank),
-        });
+        const preferAboutBlank = link ? Boolean(link.openInAboutBlank) : true;
+        const shouldAutoAboutBlank =
+          preferAboutBlank && canLaunchAboutBlank && allowedDest !== 'chat';
+        const openedBlank = shouldAutoAboutBlank
+          ? openWorkspaceInAboutBlank(allowedDest || 'all')
+          : false;
+
+        if (openedBlank) {
+          setViewMode('articles');
+          setPendingAboutBlankLaunch(null);
+          setInstantSignInToast(null);
+        } else if (shouldAutoAboutBlank) {
+          setViewMode('articles');
+          setPendingAboutBlankLaunch({
+            username: account.username,
+            filter: allowedDest || 'all',
+            label: link?.label || 'Direct URL Sign-In',
+          });
+          setInstantSignInToast(null);
+        } else {
+          setViewModeAndSave('games');
+          setPendingAboutBlankLaunch(null);
+          setInstantSignInToast({
+            username: account.username,
+            label: link?.label || 'Direct URL Sign-In',
+            openInAboutBlank: false,
+            popupBlocked: false,
+          });
+        }
       })
       .catch((err) => {
         if (cancelled) return;
@@ -4025,7 +4090,8 @@ export default function App() {
 
   useEffect(() => {
     if (!instantSignInToast) return;
-    const t = setTimeout(() => setInstantSignInToast(null), 8500);
+    const ms = instantSignInToast.popupBlocked ? 15000 : 8500;
+    const t = setTimeout(() => setInstantSignInToast(null), ms);
     return () => clearTimeout(t);
   }, [instantSignInToast]);
 
@@ -5806,8 +5872,54 @@ export default function App() {
           <KeyRound className="w-5 h-5 animate-pulse" />
         </div>
         <p className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--text-primary)]">
-          Signing in with your custom link...
+          Signing in...
         </p>
+      </div>
+    );
+  }
+
+  if (pendingAboutBlankLaunch) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-color)] text-[var(--text-primary)] flex items-center justify-center p-6 select-none">
+        <div className="w-full max-w-sm rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-2xl text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--accent-color)] text-[var(--bg-color)] flex items-center justify-center mx-auto shadow-md">
+            <KeyRound className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-base font-black uppercase tracking-wider text-[var(--text-primary)]">
+              Signed in as @{pendingAboutBlankLaunch.username}
+            </h2>
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+              Your browser blocked automatic popups. Click below to open your workspace in <code>about:blank</code>.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const targetFilter = pendingAboutBlankLaunch.filter || 'all';
+              const opened = openWorkspaceInAboutBlank(targetFilter);
+              setPendingAboutBlankLaunch(null);
+              if (opened) {
+                setViewMode('articles');
+              } else {
+                setViewModeAndSave('games');
+              }
+            }}
+            className="w-full py-3 px-4 rounded-xl bg-[var(--accent-color)] text-[var(--bg-color)] font-black text-xs uppercase tracking-wider hover:opacity-90 active:scale-[0.99] transition-all cursor-pointer shadow-lg"
+          >
+            Open in about:blank
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPendingAboutBlankLaunch(null);
+              setViewModeAndSave('games');
+            }}
+            className="w-full py-2 px-3 rounded-lg border border-[var(--card-border)] text-[11px] font-mono font-bold text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+          >
+            Continue in this tab instead
+          </button>
+        </div>
       </div>
     );
   }
@@ -11172,19 +11284,24 @@ export default function App() {
                   Signed in as @{instantSignInToast.username}
                 </div>
                 <div className="text-[10.5px] text-[var(--text-muted)] truncate">
-                  via custom link “{instantSignInToast.label}”
+                  {instantSignInToast.popupBlocked
+                    ? 'Click to open in about:blank'
+                    : `via "${instantSignInToast.label}"`}
                 </div>
               </div>
               {instantSignInToast.openInAboutBlank && (
                 <button
                   type="button"
                   onClick={() => {
-                    openWorkspaceInAboutBlank(filter);
+                    const opened = openWorkspaceInAboutBlank(filter);
+                    if (opened) {
+                      setViewMode('articles');
+                    }
                     setInstantSignInToast(null);
                   }}
-                  className="px-2 py-1 rounded-md bg-[var(--accent-color)] text-[var(--bg-color)] text-[10px] font-black uppercase tracking-wider cursor-pointer shrink-0 hover:opacity-90"
+                  className="px-2.5 py-1 rounded-md bg-[var(--accent-color)] text-[var(--bg-color)] text-[10px] font-black uppercase tracking-wider cursor-pointer shrink-0 hover:opacity-90"
                 >
-                  Cloak
+                  Open about:blank
                 </button>
               )}
               <button
